@@ -1,0 +1,338 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Antikythera Orchestrator API",
+        "version": "0.1.0"
+    },
+    "paths": {
+        "/blueprints/start": {
+            "post": {
+                "summary": "Start Blueprint",
+                "operationId": "start_blueprint_blueprints_start_post",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StartBlueprintRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "202": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StartBlueprintResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions": {
+            "get": {
+                "summary": "List Sessions",
+                "operationId": "list_sessions_sessions_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/SessionInfo"
+                                    },
+                                    "type": "array",
+                                    "title": "Response List Sessions Sessions Get"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/blueprints": {
+            "get": {
+                "summary": "List Blueprints",
+                "operationId": "list_blueprints_blueprints_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "$ref": "#/components/schemas/BlueprintInfo"
+                                    },
+                                    "type": "array",
+                                    "title": "Response List Blueprints Blueprints Get"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/blueprints/upload": {
+            "post": {
+                "summary": "Upload Blueprint",
+                "description": "Upload a blueprint JSON file to the database.\n\nParameters\n----------\nfile : UploadFile\n    The blueprint JSON file to upload.\n\nReturns\n-------\nUploadBlueprintResponse\n    Response containing the blueprint ID and success message.\n\nRaises\n------\nHTTPException\n    If the file is not a JSON file or cannot be parsed.",
+                "operationId": "upload_blueprint_blueprints_upload_post",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_upload_blueprint_blueprints_upload_post"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UploadBlueprintResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "BlueprintInfo": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Name"
+                    },
+                    "version": {
+                        "type": "string",
+                        "title": "Version"
+                    },
+                    "description": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Description"
+                    },
+                    "task_count": {
+                        "type": "integer",
+                        "title": "Task Count"
+                    },
+                    "uploaded_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Uploaded At"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "id",
+                    "name",
+                    "version",
+                    "description",
+                    "task_count",
+                    "uploaded_at"
+                ],
+                "title": "BlueprintInfo"
+            },
+            "Body_upload_blueprint_blueprints_upload_post": {
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "title": "File"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "file"
+                ],
+                "title": "Body_upload_blueprint_blueprints_upload_post"
+            },
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "SessionInfo": {
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "title": "Session Id"
+                    },
+                    "blueprint_id": {
+                        "type": "string",
+                        "title": "Blueprint Id"
+                    },
+                    "broker_host": {
+                        "type": "string",
+                        "title": "Broker Host"
+                    },
+                    "broker_port": {
+                        "type": "integer",
+                        "title": "Broker Port"
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "title": "Started At"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "session_id",
+                    "blueprint_id",
+                    "broker_host",
+                    "broker_port",
+                    "started_at"
+                ],
+                "title": "SessionInfo"
+            },
+            "StartBlueprintRequest": {
+                "properties": {
+                    "blueprint_id": {
+                        "type": "string",
+                        "title": "Blueprint Id",
+                        "description": "ID of the blueprint to start."
+                    },
+                    "broker_host": {
+                        "type": "string",
+                        "title": "Broker Host",
+                        "description": "MQTT broker host.",
+                        "default": "127.0.0.1"
+                    },
+                    "broker_port": {
+                        "type": "integer",
+                        "maximum": 65535.0,
+                        "minimum": 1.0,
+                        "title": "Broker Port",
+                        "description": "MQTT broker port.",
+                        "default": 1883
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "blueprint_id"
+                ],
+                "title": "StartBlueprintRequest"
+            },
+            "StartBlueprintResponse": {
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "title": "Session Id"
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "session_id",
+                    "message"
+                ],
+                "title": "StartBlueprintResponse"
+            },
+            "UploadBlueprintResponse": {
+                "properties": {
+                    "blueprint_id": {
+                        "type": "string",
+                        "title": "Blueprint Id"
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "blueprint_id",
+                    "message"
+                ],
+                "title": "UploadBlueprintResponse"
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            }
+        }
+    }
+}
