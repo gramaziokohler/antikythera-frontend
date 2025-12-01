@@ -3,10 +3,9 @@ import type { UploadBlueprintResponse } from '../types'
 
 interface UploadBlueprintProps {
   apiBaseUrl: string
-  onUploadSuccess?: () => void
 }
 
-export function UploadBlueprint({ apiBaseUrl, onUploadSuccess }: UploadBlueprintProps) {
+export function UploadBlueprint({ apiBaseUrl }: UploadBlueprintProps) {
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploadMessage, setUploadMessage] = useState<string>('')
 
@@ -41,11 +40,6 @@ export function UploadBlueprint({ apiBaseUrl, onUploadSuccess }: UploadBlueprint
       // Clear file input
       const fileInput = document.getElementById('file-input') as HTMLInputElement
       if (fileInput) fileInput.value = ''
-      
-      // Notify parent component of successful upload
-      if (onUploadSuccess) {
-        onUploadSuccess()
-      }
     } catch (err) {
       setUploadMessage(err instanceof Error ? err.message : 'Upload failed')
     }

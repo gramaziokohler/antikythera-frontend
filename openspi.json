@@ -125,10 +125,111 @@
                     }
                 }
             }
+        },
+        "/sessions/{session_id}/diagram": {
+            "get": {
+                "summary": "Get Session Diagram",
+                "operationId": "get_session_diagram_sessions__session_id__diagram_get",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Session Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BlueprintDiagramResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{session_id}/data": {
+            "get": {
+                "summary": "Get Session Data",
+                "operationId": "get_session_data_sessions__session_id__data_get",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Session Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionDataResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
         "schemas": {
+            "BlueprintDiagramResponse": {
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "title": "Session Id"
+                    },
+                    "diagram": {
+                        "type": "string",
+                        "title": "Diagram"
+                    },
+                    "state": {
+                        "type": "string",
+                        "title": "State"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "session_id",
+                    "diagram",
+                    "state"
+                ],
+                "title": "BlueprintDiagramResponse"
+            },
             "BlueprintInfo": {
                 "properties": {
                     "id": {
@@ -202,6 +303,29 @@
                 "type": "object",
                 "title": "HTTPValidationError"
             },
+            "SessionDataResponse": {
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "title": "Session Id"
+                    },
+                    "data": {
+                        "type": "string",
+                        "title": "Data"
+                    },
+                    "state": {
+                        "type": "string",
+                        "title": "State"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "session_id",
+                    "data",
+                    "state"
+                ],
+                "title": "SessionDataResponse"
+            },
             "SessionInfo": {
                 "properties": {
                     "session_id": {
@@ -224,6 +348,10 @@
                         "type": "string",
                         "format": "date-time",
                         "title": "Started At"
+                    },
+                    "state": {
+                        "type": "string",
+                        "title": "State"
                     }
                 },
                 "type": "object",
@@ -232,7 +360,8 @@
                     "blueprint_id",
                     "broker_host",
                     "broker_port",
-                    "started_at"
+                    "started_at",
+                    "state"
                 ],
                 "title": "SessionInfo"
             },

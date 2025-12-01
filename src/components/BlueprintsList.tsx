@@ -3,9 +3,10 @@ import type { BlueprintInfo, StartBlueprintResponse } from '../types'
 
 interface BlueprintsListProps {
   apiBaseUrl: string
+  onSessionStart: (sessionId: string) => void
 }
 
-export function BlueprintsList({ apiBaseUrl }: BlueprintsListProps) {
+export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListProps) {
   const [blueprints, setBlueprints] = useState<BlueprintInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -48,7 +49,8 @@ export function BlueprintsList({ apiBaseUrl }: BlueprintsListProps) {
       if (!response.ok) throw new Error('Failed to start blueprint')
       
       const data: StartBlueprintResponse = await response.json()
-      setStartMessage(`${data.message} (Session: ${data.session_id})`)
+      setStartMessage(`${data.message}`)
+      onSessionStart(data.session_id)
     } catch (err) {
       setStartMessage(err instanceof Error ? err.message : 'Failed to start blueprint')
     }

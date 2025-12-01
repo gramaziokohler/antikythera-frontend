@@ -1,32 +1,40 @@
-import { useRef } from 'react'
+import { useState } from 'react'
 import './App.css'
 import { UploadBlueprint } from './components/UploadBlueprint'
 import { BlueprintsList } from './components/BlueprintsList'
+import { SessionMonitor } from './components/SessionMonitor'
 
 const API_BASE_URL = 'http://localhost:8000'
 
 function App() {
-  const blueprintsListRef = useRef<{ refresh: () => void } | null>(null)
-
-  const handleUploadSuccess = () => {
-    // Refresh blueprints list after successful upload
-    if (blueprintsListRef.current) {
-      blueprintsListRef.current.refresh()
-    }
-  }
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
 
   return (
     <div className="app">
       <h1>Antikythera Orchestrator</h1>
       
-      <UploadBlueprint 
-        apiBaseUrl={API_BASE_URL}
-        onUploadSuccess={handleUploadSuccess}
-      />
-      
-      <BlueprintsList 
-        apiBaseUrl={API_BASE_URL}
-      />
+      <div className="app-layout">
+        <div className="left-pane">
+          <UploadBlueprint 
+            apiBaseUrl={API_BASE_URL}
+          />
+          
+          <BlueprintsList 
+            apiBaseUrl={API_BASE_URL}
+            onSessionStart={setActiveSessionId}
+          />
+        </div>
+
+        {activeSessionId && (
+          <div className="right-pane">
+            <SessionMonitor
+              apiBaseUrl={API_BASE_URL}
+              sessionId={activeSessionId}
+              onClose={() => setActiveSessionId(null)}
+            />
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -30,3 +30,15 @@ export interface SessionInfo {
   broker_port: number;
   started_at: string;
 }
+
+export interface BlueprintDiagramResponse {
+  session_id: string;
+  diagram: string;
+  state: string;
+}
+
+export interface SessionDataResponse {
+  session_id: string;
+  data: string;
+  state: string;
+}
