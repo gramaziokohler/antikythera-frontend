@@ -11,7 +11,9 @@ function App() {
 
   return (
     <div className="app">
-      <h1>Antikythera</h1>
+      <div className="logo-container">
+        <img src="/antikythera.png" alt="Antikythera" className="logo" />
+      </div>
       
       <div className="app-layout">
         <div className="left-pane">

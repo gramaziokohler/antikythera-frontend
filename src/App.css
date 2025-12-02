@@ -8,6 +8,17 @@
   overflow: hidden;
 }
 
+.logo-container {
+  text-align: center;
+  padding: 2rem 0 1.5rem 0;
+}
+
+.logo {
+  max-height: 150px;
+  height: auto;
+  width: auto;
+}
+
 h1 {
   text-align: center;
   color: #23395B;
