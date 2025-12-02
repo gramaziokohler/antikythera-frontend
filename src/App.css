@@ -59,6 +59,20 @@ h1::after {
   padding: 1.5rem;
 }
 
+.placeholder-pane {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-text {
+  color: #5a6c8a;
+  font-size: 1.5rem;
+  font-weight: 400;
+  opacity: 0.4;
+  text-align: center;
+}
+
 h1 {
   text-align: center;
   color: #23395B;
