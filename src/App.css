@@ -6,41 +6,41 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 .logo-container {
-  text-align: center;
-  padding: 2rem 0 1.5rem 0;
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding-bottom: 2rem;
+  margin-bottom: -2rem;
+  align-items: flex-end;
+  z-index: 2;
+}
+
+.logo-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  pointer-events: none;
 }
 
 .logo {
-  max-height: 150px;
+  max-height: 100px;
   height: auto;
   width: auto;
 }
 
-h1 {
-  text-align: center;
+.app-title {
   color: #23395B;
-  margin: 2rem 0 1.5rem 0;
-  padding: 0 2rem;
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  position: relative;
-  padding-bottom: 1rem;
-}
-
-h1::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80px;
-  height: 4px;
-  background: linear-gradient(90deg, #D81E5B, #23395B);
-  border-radius: 2px;
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 200;
+  padding-bottom: 0.5rem;
 }
 
 .app-layout {
@@ -84,29 +84,6 @@ h1::after {
   font-weight: 400;
   opacity: 0.4;
   text-align: center;
-}
-
-h1 {
-  text-align: center;
-  color: #23395B;
-  margin-bottom: 3rem;
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  position: relative;
-  padding-bottom: 1rem;
-}
-
-h1::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80px;
-  height: 4px;
-  background: linear-gradient(90deg, #D81E5B, #23395B);
-  border-radius: 2px;
 }
 
 h2 {

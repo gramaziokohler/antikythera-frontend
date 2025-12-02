@@ -11,8 +11,10 @@ function App() {
 
   return (
     <div className="app">
+      
       <div className="logo-container">
         <img src="/antikythera.png" alt="Antikythera" className="logo" />
+        <h1 className="app-title">antikythera</h1>
       </div>
       
       <div className="app-layout">
