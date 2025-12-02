@@ -462,6 +462,36 @@ button:focus-visible {
   line-height: 1.6;
 }
 
+.diagram-source {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(35, 57, 91, 0.1);
+  padding-top: 1rem;
+}
+
+.diagram-source summary {
+  cursor: pointer;
+  color: #23395B;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.diagram-source summary:hover {
+  background: rgba(35, 57, 91, 0.05);
+}
+
+.diagram-source pre {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: #f8f9fb;
+  border: 1px solid rgba(35, 57, 91, 0.1);
+  border-radius: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 .loading {
   color: #5a6c8a;
   font-style: italic;

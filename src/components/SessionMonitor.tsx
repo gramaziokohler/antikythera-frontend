@@ -126,6 +126,12 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
           <div className="diagram-container" ref={mermaidRef}>
             {!diagram && <p className="loading">Loading diagram...</p>}
           </div>
+          {diagram && (
+            <details className="diagram-source">
+              <summary>View Mermaid Source</summary>
+              <pre className="data-content">{diagram.diagram}</pre>
+            </details>
+          )}
         </div>
 
         {/* Data Store Section */}
