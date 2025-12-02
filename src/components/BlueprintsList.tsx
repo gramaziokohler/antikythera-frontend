@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { BlueprintInfo, StartBlueprintResponse } from '../types'
+import type { BlueprintInfo, StartBlueprintResponse, DeleteBlueprintResponse } from '../types'
 
 interface BlueprintsListProps {
   apiBaseUrl: string
@@ -11,6 +11,7 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListPro
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [startMessage, setStartMessage] = useState<string>('')
+  const [deleteMessage, setDeleteMessage] = useState<string>('')
 
   useEffect(() => {
     fetchBlueprints()
@@ -33,6 +34,7 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListPro
 
   const handleStart = async (blueprintId: string) => {
     setStartMessage('')
+    setDeleteMessage('')
     try {
       const response = await fetch(`${apiBaseUrl}/blueprints/start`, {
         method: 'POST',
@@ -53,6 +55,30 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListPro
       onSessionStart(data.session_id)
     } catch (err) {
       setStartMessage(err instanceof Error ? err.message : 'Failed to start blueprint')
+    }
+  }
+
+  const handleDelete = async (blueprintId: string) => {
+    setDeleteMessage('')
+    setStartMessage('')
+    if (!confirm('Are you sure you want to delete this blueprint?')) {
+      return
+    }
+    
+    try {
+      const response = await fetch(`${apiBaseUrl}/blueprints/${blueprintId}`, {
+        method: 'DELETE',
+      })
+      
+      if (!response.ok) throw new Error('Failed to delete blueprint')
+      
+      const data: DeleteBlueprintResponse = await response.json()
+      setDeleteMessage(data.message)
+      
+      // Refresh the list
+      fetchBlueprints()
+    } catch (err) {
+      setDeleteMessage(err instanceof Error ? err.message : 'Failed to delete blueprint')
     }
   }
 
@@ -77,17 +103,26 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListPro
             <p><strong>Description:</strong> {blueprint.description || 'N/A'}</p>
             <p><strong>Tasks:</strong> {blueprint.task_count}</p>
             <p><strong>Uploaded:</strong> {new Date(blueprint.uploaded_at).toLocaleString()}</p>
-            <button 
-              className="start-button"
-              onClick={() => handleStart(blueprint.id)}
-            >
-              Start Blueprint
-            </button>
+            <div className="blueprint-actions">
+              <button 
+                className="start-button"
+                onClick={() => handleStart(blueprint.id)}
+              >
+                Start Blueprint
+              </button>
+              <button 
+                className="delete-button"
+                onClick={() => handleDelete(blueprint.id)}
+              >
+                Delete
+              </button>
+            </div>
           </div>
         ))}
       </div>
       
       {startMessage && <p className="message">{startMessage}</p>}
+      {deleteMessage && <p className="message">{deleteMessage}</p>}
     </section>
   )
 }

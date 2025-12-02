@@ -126,6 +126,45 @@
                 }
             }
         },
+        "/blueprints/{blueprint_id}": {
+            "delete": {
+                "summary": "Delete Blueprint",
+                "operationId": "delete_blueprint_blueprints__blueprint_id__delete",
+                "parameters": [
+                    {
+                        "name": "blueprint_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Blueprint Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeleteBlueprintResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/sessions/{session_id}/diagram": {
             "get": {
                 "summary": "Get Session Diagram",
@@ -289,6 +328,24 @@
                     "file"
                 ],
                 "title": "Body_upload_blueprint_blueprints_upload_post"
+            },
+            "DeleteBlueprintResponse": {
+                "properties": {
+                    "blueprint_id": {
+                        "type": "string",
+                        "title": "Blueprint Id"
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "blueprint_id",
+                    "message"
+                ],
+                "title": "DeleteBlueprintResponse"
             },
             "HTTPValidationError": {
                 "properties": {

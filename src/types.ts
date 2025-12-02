@@ -23,6 +23,11 @@ export interface UploadBlueprintResponse {
   message: string;
 }
 
+export interface DeleteBlueprintResponse {
+  blueprint_id: string;
+  message: string;
+}
+
 export interface SessionInfo {
   session_id: string;
   blueprint_id: string;

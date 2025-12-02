@@ -275,9 +275,15 @@ button:focus-visible {
   font-weight: 600;
 }
 
-.start-button {
-  width: 100%;
+.blueprint-actions {
+  display: flex;
+  gap: 0.5rem;
   margin-top: 1rem;
+}
+
+.start-button {
+  flex: 1;
+  margin-top: 0;
   background: linear-gradient(135deg, #D81E5B, #c91a52);
   box-shadow: 0 2px 8px rgba(216, 30, 91, 0.3);
   padding: 0.6rem 1.2rem;
@@ -287,6 +293,21 @@ button:focus-visible {
 .start-button:hover {
   background: linear-gradient(135deg, #c91a52, #b31749);
   box-shadow: 0 4px 12px rgba(216, 30, 91, 0.4);
+}
+
+.delete-button {
+  padding: 0.6rem 1.2rem;
+  font-size: 0.85rem;
+  background: transparent;
+  border: 1px solid #c91a52;
+  color: #c91a52;
+  box-shadow: none;
+}
+
+.delete-button:hover {
+  background: #c91a52;
+  color: white;
+  box-shadow: 0 2px 8px rgba(216, 30, 91, 0.3);
 }
 
 /* Messages */
