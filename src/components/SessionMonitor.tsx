@@ -33,8 +33,8 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
         barGap: 8,
         topPadding: 50,
         gridLineStartPadding: 35,
-        fontSize: 14,
-        sectionFontSize: 16,
+        fontSize: 24,
+        sectionFontSize: 24,
         numberSectionStyles: 4,
       }
     })

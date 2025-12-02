@@ -98,10 +98,9 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListPro
       <div className="blueprints-list">
         {blueprints.map((blueprint) => (
           <div key={blueprint.id} className="blueprint-card">
-            <h3>{blueprint.name}</h3>
-            <p><strong>Version:</strong> {blueprint.version}</p>
-            <p><strong>Description:</strong> {blueprint.description || 'N/A'}</p>
-            <p><strong>Tasks:</strong> {blueprint.task_count}</p>
+            <h3>{blueprint.name} (v{blueprint.version})</h3>
+            <p>{blueprint.description || 'N/A'}</p>
+            <p><strong>Task count:</strong> {blueprint.task_count}</p>
             <p><strong>Uploaded:</strong> {new Date(blueprint.uploaded_at).toLocaleString()}</p>
             <div className="blueprint-actions">
               <button 
