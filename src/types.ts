@@ -47,3 +47,40 @@ export interface SessionDataResponse {
   data: string;
   state: string;
 }
+
+export interface GraphNode {
+  id: string;
+  label: string;
+  status: string;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
+export interface Task {
+  id: string;
+  name: string;
+  status: string;
+  dependencies: string[];
+}
+
+export interface Blueprint {
+  id: string;
+  name: string;
+  tasks: Task[];
+}
+
+export interface SessionDetailsResponse {
+  session_id: string;
+  blueprint: Blueprint;
+  state: string;
+}
+
+

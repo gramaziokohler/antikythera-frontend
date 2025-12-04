@@ -163,6 +163,42 @@
                         }
                     }
                 }
+            },
+            "get": {
+                "summary": "Get Blueprint",
+                "description": "Retrieve a blueprint by its ID.\n\nIf the blueprint is currently active in a session, the active (possibly expanded)\nversion is returned. Otherwise, the stored version is returned.\n\nParameters\n----------\nblueprint_id : str\n    The ID of the blueprint to retrieve.\n\nReturns\n-------\nResponse\n    The blueprint data as a JSON response.\n\nRaises\n------\nHTTPException\n    If the blueprint is not found.",
+                "operationId": "get_blueprint_blueprints__blueprint_id__get",
+                "parameters": [
+                    {
+                        "name": "blueprint_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Blueprint Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/sessions/{session_id}/diagram": {
@@ -227,6 +263,121 @@
                                 "schema": {
                                     "$ref": "#/components/schemas/SessionDataResponse"
                                 }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/models/upload": {
+            "post": {
+                "summary": "Upload Model",
+                "description": "Upload a model JSON file to the database.\n\nParameters\n----------\nfile : UploadFile\n    The model JSON file to upload.\n\nReturns\n-------\nUploadModelResponse\n    Response containing the model ID and success message.\n\nRaises\n------\nHTTPException\n    If the file is not a JSON file or cannot be parsed.",
+                "operationId": "upload_model_models_upload_post",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_upload_model_models_upload_post"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UploadModelResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/models/{model_id}": {
+            "get": {
+                "summary": "Get Model",
+                "description": "Retrieve a model by its ID.\n\nParameters\n----------\nmodel_id : str\n    The ID of the model to retrieve.\n\nReturns\n-------\nResponse\n    The model data as a JSON response.\n\nRaises\n------\nHTTPException\n    If the model is not found.",
+                "operationId": "get_model_models__model_id__get",
+                "parameters": [
+                    {
+                        "name": "model_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Model Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{session_id}": {
+            "get": {
+                "summary": "Get Session Details",
+                "description": "Retrieve full details of a session including blueprints and parameters.\n\nParameters\n----------\nsession_id : str\n    The ID of the session to retrieve.\n\nReturns\n-------\nResponse\n    The session data as a JSON response.\n\nRaises\n------\nHTTPException\n    If the session is not found.",
+                "operationId": "get_session_details_sessions__session_id__get",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Session Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
                             }
                         }
                     },
@@ -328,6 +479,20 @@
                     "file"
                 ],
                 "title": "Body_upload_blueprint_blueprints_upload_post"
+            },
+            "Body_upload_model_models_upload_post": {
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "title": "File"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "file"
+                ],
+                "title": "Body_upload_model_models_upload_post"
             },
             "DeleteBlueprintResponse": {
                 "properties": {
@@ -442,6 +607,14 @@
                         "title": "Broker Port",
                         "description": "MQTT broker port.",
                         "default": 1883
+                    },
+                    "params": {
+                        "additionalProperties": {
+                            "type": "string"
+                        },
+                        "type": "object",
+                        "title": "Params",
+                        "description": "Arbitrary parameters for the session."
                     }
                 },
                 "type": "object",
@@ -485,6 +658,24 @@
                     "message"
                 ],
                 "title": "UploadBlueprintResponse"
+            },
+            "UploadModelResponse": {
+                "properties": {
+                    "model_id": {
+                        "type": "string",
+                        "title": "Model Id"
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "model_id",
+                    "message"
+                ],
+                "title": "UploadModelResponse"
             },
             "ValidationError": {
                 "properties": {
