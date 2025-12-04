@@ -12,6 +12,7 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListPro
   const [error, setError] = useState<string | null>(null)
   const [startMessage, setStartMessage] = useState<string>('')
   const [deleteMessage, setDeleteMessage] = useState<string>('')
+  const [blueprintParams, setBlueprintParams] = useState<Record<string, Array<{ key: string, value: string }>>>({})
 
   useEffect(() => {
     fetchBlueprints()
@@ -35,6 +36,16 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListPro
   const handleStart = async (blueprintId: string) => {
     setStartMessage('')
     setDeleteMessage('')
+
+    const paramsList = blueprintParams[blueprintId] || []
+    const params: Record<string, string> = {}
+    
+    for (const p of paramsList) {
+      if (p.key.trim()) {
+        params[p.key.trim()] = p.value
+      }
+    }
+
     try {
       const response = await fetch(`${apiBaseUrl}/blueprints/start`, {
         method: 'POST',
@@ -45,6 +56,7 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListPro
           blueprint_id: blueprintId,
           broker_host: '127.0.0.1',
           broker_port: 1883,
+          params: Object.keys(params).length > 0 ? params : undefined,
         }),
       })
       
@@ -82,6 +94,29 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListPro
     }
   }
 
+  const addParam = (blueprintId: string) => {
+    setBlueprintParams(prev => ({
+      ...prev,
+      [blueprintId]: [...(prev[blueprintId] || []), { key: '', value: '' }]
+    }))
+  }
+
+  const updateParam = (blueprintId: string, index: number, field: 'key' | 'value', value: string) => {
+    setBlueprintParams(prev => {
+      const currentParams = [...(prev[blueprintId] || [])]
+      currentParams[index] = { ...currentParams[index], [field]: value }
+      return { ...prev, [blueprintId]: currentParams }
+    })
+  }
+
+  const removeParam = (blueprintId: string, index: number) => {
+    setBlueprintParams(prev => {
+      const currentParams = [...(prev[blueprintId] || [])]
+      currentParams.splice(index, 1)
+      return { ...prev, [blueprintId]: currentParams }
+    })
+  }
+
   return (
     <section className="blueprints-section">
       <h2>Available Blueprints</h2>
@@ -102,12 +137,52 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListPro
             <p>{blueprint.description || 'N/A'}</p>
             <p><strong>Task count:</strong> {blueprint.task_count}</p>
             <p><strong>Uploaded:</strong> {new Date(blueprint.uploaded_at).toLocaleString()}</p>
+            
+            <div className="blueprint-params">
+              <details>
+                <summary>Parameters</summary>
+                <div className="params-list">
+                  {(blueprintParams[blueprint.id] || []).map((param, index) => (
+                    <div key={index} className="param-row">
+                      <input
+                        type="text"
+                        placeholder="Key"
+                        value={param.key}
+                        onChange={(e) => updateParam(blueprint.id, index, 'key', e.target.value)}
+                        className="param-input"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Value"
+                        value={param.value}
+                        onChange={(e) => updateParam(blueprint.id, index, 'value', e.target.value)}
+                        className="param-input"
+                      />
+                      <button
+                        onClick={() => removeParam(blueprint.id, index)}
+                        className="remove-param-btn"
+                        title="Remove parameter"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => addParam(blueprint.id)}
+                    className="add-param-btn"
+                  >
+                    + Add Parameter
+                  </button>
+                </div>
+              </details>
+            </div>
+
             <div className="blueprint-actions">
               <button 
                 className="start-button"
                 onClick={() => handleStart(blueprint.id)}
               >
-                Start Blueprint
+                Start
               </button>
               <button 
                 className="delete-button"

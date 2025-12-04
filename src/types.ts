@@ -11,6 +11,7 @@ export interface StartBlueprintRequest {
   blueprint_id: string;
   broker_host?: string;
   broker_port?: number;
+  params?: Record<string, string>;
 }
 
 export interface StartBlueprintResponse {

@@ -69,7 +69,7 @@ export function ModelsList({ apiBaseUrl }: ModelsListProps) {
             <span className="model-id">{modelId}</span>
             <button 
               onClick={() => handleDelete(modelId)}
-              className="delete-button"
+              className="model-delete-btn"
               title="Delete model"
             >
               ×

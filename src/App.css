@@ -671,7 +671,7 @@ button:focus-visible {
   font-size: 0.9rem;
 }
 
-.delete-button {
+.model-delete-btn {
   background: transparent;
   color: #94a3b8;
   border: none;
@@ -682,16 +682,128 @@ button:focus-visible {
   min-width: auto;
   opacity: 0;
   transition: all 0.2s;
+  cursor: pointer;
 }
 
-.model-item:hover .delete-button {
+.model-item:hover .model-delete-btn {
   opacity: 1;
 }
 
-.delete-button:hover {
+.model-delete-btn:hover {
   color: #dc2626;
   background: rgba(220, 38, 38, 0.1);
   transform: scale(1.1);
   box-shadow: none;
+  border-radius: 4px;
+}
+
+
+/* Blueprint Parameters */
+.blueprint-params {
+  margin: 1rem 0;
+}
+
+.blueprint-params summary {
+  cursor: pointer;
+  color: #5a6c8a;
+  font-size: 0.9rem;
+  user-select: none;
+  margin-bottom: 0.5rem;
+}
+
+.blueprint-params summary:hover {
+  color: #23395B;
+}
+
+.params-input {
+  width: 100%;
+  min-height: 80px;
+  padding: 0.75rem;
+  border: 1px solid rgba(35, 57, 91, 0.2);
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  resize: vertical;
+  margin-top: 0.5rem;
+  background: #fff;
+  box-sizing: border-box; /* Ensure padding doesn't overflow width */
+}
+
+.params-input:focus {
+  outline: none;
+  border-color: #D81E5B;
+  box-shadow: 0 0 0 2px rgba(216, 30, 91, 0.1);
+}
+
+
+/* Dynamic Params List */
+.params-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #f8f9fb;
+  border-radius: 6px;
+  border: 1px solid rgba(35, 57, 91, 0.1);
+}
+
+.param-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.param-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid rgba(35, 57, 91, 0.2);
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  min-width: 0; /* Allow shrinking */
+}
+
+.param-input:focus {
+  outline: none;
+  border-color: #D81E5B;
+}
+
+.remove-param-btn {
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  padding: 0.25rem 0.5rem;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: none;
+  min-width: auto;
+}
+
+.remove-param-btn:hover {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+  border-radius: 4px;
+  transform: none;
+  box-shadow: none;
+}
+
+.add-param-btn {
+  align-self: flex-start;
+  background: transparent;
+  color: #23395B;
+  border: 1px dashed rgba(35, 57, 91, 0.3);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  box-shadow: none;
+}
+
+.add-param-btn:hover {
+  background: #fff;
+  border-color: #23395B;
+  transform: none;
+  box-shadow: 0 2px 4px rgba(35, 57, 91, 0.05);
 }
 
