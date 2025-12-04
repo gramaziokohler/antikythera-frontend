@@ -64,22 +64,41 @@ export interface GraphData {
   edges: GraphEdge[];
 }
 
-export interface Task {
-  id: string;
-  name: string;
-  status: string;
-  dependencies: string[];
+export interface AntikytheraDependency {
+  dtype: string;
+  data: {
+    id: string;
+    type: string;
+  };
+  guid: string;
 }
 
-export interface Blueprint {
-  id: string;
-  name: string;
-  tasks: Task[];
+export interface AntikytheraTask {
+  dtype: string;
+  data: {
+    id: string;
+    type: string;
+    description: string | null;
+    state: string;
+    depends_on: AntikytheraDependency[];
+  };
+  guid: string;
+}
+
+export interface AntikytheraBlueprint {
+  dtype: string;
+  data: {
+    id: string;
+    name: string;
+    version: string;
+    description: string | null;
+    tasks: AntikytheraTask[];
+  };
 }
 
 export interface SessionDetailsResponse {
   session_id: string;
-  blueprint: Blueprint;
+  blueprint: AntikytheraBlueprint;
   state: string;
 }
 

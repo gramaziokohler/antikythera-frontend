@@ -59,8 +59,8 @@ export function SessionGraph({ data }: SessionGraphProps) {
 
   useEffect(() => {
     if (!data) return;
-
     const initialNodes: Node[] = data.nodes.map((node) => ({
+      
       id: node.id,
       data: { label: node.label },
       position: { x: 0, y: 0 },
@@ -113,15 +113,18 @@ export function SessionGraph({ data }: SessionGraphProps) {
 }
 
 function getNodeColor(status: string): string {
-  switch (status.toLowerCase()) {
+  console.log('Node status:', status);
+  switch (status?.toLowerCase()) {
+    case 'succeeded':
+      return '#16a34a'; // Green - Success
     case 'completed':
-      return '#23395B'; // Dark Blue
+      return '#23395B'; // Dark Blue (Brand) - Success
     case 'running':
-      return '#D81E5B'; // Pink
+      return '#D81E5B'; // Pink (Brand) - Active
     case 'failed':
-      return '#c91a52'; // Red-ish
+      return '#dc2626'; // Red - Failure
     case 'pending':
     default:
-      return '#9ca3af'; // Gray
+      return '#94a3b8'; // Gray - Waiting
   }
 }

@@ -1,0 +1,426 @@
+{
+    "dtype": "antikythera.models/Blueprint",
+    "data": {
+        "id": "TP6",
+        "name": "Toy Problem 6",
+        "version": "1.0",
+        "description": "Model and basic element sequencer",
+        "tasks": [
+            {
+                "dtype": "antikythera.models/Task",
+                "data": {
+                    "id": "start",
+                    "type": "system.start",
+                    "description": null,
+                    "inputs": {},
+                    "outputs": {
+                        "process_start_time": 1764863202.5394828
+                    },
+                    "depends_on": [],
+                    "params": {},
+                    "argument_mapping": {},
+                    "state": "SUCCEEDED"
+                },
+                "guid": "cf591d98-bd41-4b43-a845-07183ae87ce5"
+            },
+            {
+                "dtype": "antikythera.models/Task",
+                "data": {
+                    "id": "X1_0",
+                    "type": "system.composite",
+                    "description": "Process element - 2a194c80-3853-4a88-b6b8-c783a080b259",
+                    "inputs": {
+                        "element": {
+                            "element_id": "2a194c80-3853-4a88-b6b8-c783a080b259"
+                        }
+                    },
+                    "outputs": {},
+                    "depends_on": [
+                        {
+                            "dtype": "antikythera.models/Dependency",
+                            "data": {
+                                "id": "start",
+                                "type": "FS"
+                            },
+                            "guid": "e25ae0ff-9803-4b50-9d4f-42950c5d795a"
+                        }
+                    ],
+                    "params": {
+                        "blueprint": {
+                            "dynamic": {
+                                "blueprint": "TP6-inner",
+                                "sequencer": "basic_sequencer",
+                                "blueprint_id": "TP6-inner",
+                                "expanded": true
+                            }
+                        }
+                    },
+                    "argument_mapping": {},
+                    "state": "SUCCEEDED"
+                },
+                "guid": "a211b3d7-f97d-4b81-9192-4557b56c7923"
+            },
+            {
+                "dtype": "antikythera.models/Task",
+                "data": {
+                    "id": "X1_1",
+                    "type": "system.composite",
+                    "description": "Process element - 0da7223c-812b-421b-a9ad-ae715870f523",
+                    "inputs": {
+                        "element": {
+                            "element_id": "0da7223c-812b-421b-a9ad-ae715870f523"
+                        }
+                    },
+                    "outputs": {},
+                    "depends_on": [
+                        {
+                            "dtype": "antikythera.models/Dependency",
+                            "data": {
+                                "id": "X1_0",
+                                "type": "FS"
+                            },
+                            "guid": "32ad14c0-30f1-4cb4-8cc2-b95c77d68121"
+                        }
+                    ],
+                    "params": {
+                        "blueprint": {
+                            "dynamic": {
+                                "blueprint": "TP6-inner",
+                                "sequencer": "basic_sequencer",
+                                "blueprint_id": "TP6-inner",
+                                "expanded": true
+                            }
+                        }
+                    },
+                    "argument_mapping": {},
+                    "state": "SUCCEEDED"
+                },
+                "guid": "cabb7582-dd21-45a5-beea-91bcd5e8dc28"
+            },
+            {
+                "dtype": "antikythera.models/Task",
+                "data": {
+                    "id": "X1_2",
+                    "type": "system.composite",
+                    "description": "Process element - cc72b883-1bea-4a6f-814a-f760152ca9ea",
+                    "inputs": {
+                        "element": {
+                            "element_id": "cc72b883-1bea-4a6f-814a-f760152ca9ea"
+                        }
+                    },
+                    "outputs": {},
+                    "depends_on": [
+                        {
+                            "dtype": "antikythera.models/Dependency",
+                            "data": {
+                                "id": "X1_1",
+                                "type": "FS"
+                            },
+                            "guid": "3d0c8996-d20c-4555-bfb7-f3763d6af1e0"
+                        }
+                    ],
+                    "params": {
+                        "blueprint": {
+                            "dynamic": {
+                                "blueprint": "TP6-inner",
+                                "sequencer": "basic_sequencer",
+                                "blueprint_id": "TP6-inner",
+                                "expanded": true
+                            }
+                        }
+                    },
+                    "argument_mapping": {},
+                    "state": "SUCCEEDED"
+                },
+                "guid": "30294085-6566-489e-83d6-9b2342ab35a6"
+            },
+            {
+                "dtype": "antikythera.models/Task",
+                "data": {
+                    "id": "X1_3",
+                    "type": "system.composite",
+                    "description": "Process element - 9284017d-d851-4fab-8c13-b1e251fbb9b0",
+                    "inputs": {
+                        "element": {
+                            "element_id": "9284017d-d851-4fab-8c13-b1e251fbb9b0"
+                        }
+                    },
+                    "outputs": {},
+                    "depends_on": [
+                        {
+                            "dtype": "antikythera.models/Dependency",
+                            "data": {
+                                "id": "X1_2",
+                                "type": "FS"
+                            },
+                            "guid": "c92f1606-c4e0-4ff6-bbad-2a42d739883b"
+                        }
+                    ],
+                    "params": {
+                        "blueprint": {
+                            "dynamic": {
+                                "blueprint": "TP6-inner",
+                                "sequencer": "basic_sequencer",
+                                "blueprint_id": "TP6-inner",
+                                "expanded": true
+                            }
+                        }
+                    },
+                    "argument_mapping": {},
+                    "state": "SUCCEEDED"
+                },
+                "guid": "43c7dd67-8f34-47c9-bad8-b47a6383213c"
+            },
+            {
+                "dtype": "antikythera.models/Task",
+                "data": {
+                    "id": "X1_4",
+                    "type": "system.composite",
+                    "description": "Process element - d18243d6-ac95-4a0b-b2c9-c731f9ca8a9a",
+                    "inputs": {
+                        "element": {
+                            "element_id": "d18243d6-ac95-4a0b-b2c9-c731f9ca8a9a"
+                        }
+                    },
+                    "outputs": {},
+                    "depends_on": [
+                        {
+                            "dtype": "antikythera.models/Dependency",
+                            "data": {
+                                "id": "X1_3",
+                                "type": "FS"
+                            },
+                            "guid": "ffb6ddbd-749e-4abc-b1ca-48263acfc861"
+                        }
+                    ],
+                    "params": {
+                        "blueprint": {
+                            "dynamic": {
+                                "blueprint": "TP6-inner",
+                                "sequencer": "basic_sequencer",
+                                "blueprint_id": "TP6-inner",
+                                "expanded": true
+                            }
+                        }
+                    },
+                    "argument_mapping": {},
+                    "state": "SUCCEEDED"
+                },
+                "guid": "9a2beed7-af18-4f69-b244-502bde3099fa"
+            },
+            {
+                "dtype": "antikythera.models/Task",
+                "data": {
+                    "id": "X1_5",
+                    "type": "system.composite",
+                    "description": "Process element - 5dc898d7-98e8-423f-9780-a67a279d16d5",
+                    "inputs": {
+                        "element": {
+                            "element_id": "5dc898d7-98e8-423f-9780-a67a279d16d5"
+                        }
+                    },
+                    "outputs": {},
+                    "depends_on": [
+                        {
+                            "dtype": "antikythera.models/Dependency",
+                            "data": {
+                                "id": "X1_4",
+                                "type": "FS"
+                            },
+                            "guid": "ac43b49c-129e-4072-bdeb-2bd9816a03e6"
+                        }
+                    ],
+                    "params": {
+                        "blueprint": {
+                            "dynamic": {
+                                "blueprint": "TP6-inner",
+                                "sequencer": "basic_sequencer",
+                                "blueprint_id": "TP6-inner",
+                                "expanded": true
+                            }
+                        }
+                    },
+                    "argument_mapping": {},
+                    "state": "SUCCEEDED"
+                },
+                "guid": "0487f507-418f-4cff-9c02-cce6b83cadfb"
+            },
+            {
+                "dtype": "antikythera.models/Task",
+                "data": {
+                    "id": "X1_6",
+                    "type": "system.composite",
+                    "description": "Process element - a6acc280-ab79-40ea-a59c-5af1d21b13a3",
+                    "inputs": {
+                        "element": {
+                            "element_id": "a6acc280-ab79-40ea-a59c-5af1d21b13a3"
+                        }
+                    },
+                    "outputs": {},
+                    "depends_on": [
+                        {
+                            "dtype": "antikythera.models/Dependency",
+                            "data": {
+                                "id": "X1_5",
+                                "type": "FS"
+                            },
+                            "guid": "98522b6d-2e69-4597-92d1-d780956fbdd0"
+                        }
+                    ],
+                    "params": {
+                        "blueprint": {
+                            "dynamic": {
+                                "blueprint": "TP6-inner",
+                                "sequencer": "basic_sequencer",
+                                "blueprint_id": "TP6-inner",
+                                "expanded": true
+                            }
+                        }
+                    },
+                    "argument_mapping": {},
+                    "state": "SUCCEEDED"
+                },
+                "guid": "e6dff477-5b69-488f-8c46-96ee42ebb38e"
+            },
+            {
+                "dtype": "antikythera.models/Task",
+                "data": {
+                    "id": "X1_7",
+                    "type": "system.composite",
+                    "description": "Process element - 096c4325-f65f-425c-b3e7-e6fbaadea1f5",
+                    "inputs": {
+                        "element": {
+                            "element_id": "096c4325-f65f-425c-b3e7-e6fbaadea1f5"
+                        }
+                    },
+                    "outputs": {},
+                    "depends_on": [
+                        {
+                            "dtype": "antikythera.models/Dependency",
+                            "data": {
+                                "id": "X1_6",
+                                "type": "FS"
+                            },
+                            "guid": "6377c3b9-e713-487c-90e3-ace8b1c7588c"
+                        }
+                    ],
+                    "params": {
+                        "blueprint": {
+                            "dynamic": {
+                                "blueprint": "TP6-inner",
+                                "sequencer": "basic_sequencer",
+                                "blueprint_id": "TP6-inner",
+                                "expanded": true
+                            }
+                        }
+                    },
+                    "argument_mapping": {},
+                    "state": "SUCCEEDED"
+                },
+                "guid": "78edfecd-ede0-4cf5-ad7f-d9e0c3929a07"
+            },
+            {
+                "dtype": "antikythera.models/Task",
+                "data": {
+                    "id": "X1_8",
+                    "type": "system.composite",
+                    "description": "Process element - 4cafc30e-054f-48cb-a46a-36e4217295cb",
+                    "inputs": {
+                        "element": {
+                            "element_id": "4cafc30e-054f-48cb-a46a-36e4217295cb"
+                        }
+                    },
+                    "outputs": {},
+                    "depends_on": [
+                        {
+                            "dtype": "antikythera.models/Dependency",
+                            "data": {
+                                "id": "X1_7",
+                                "type": "FS"
+                            },
+                            "guid": "182f77b3-a365-44d7-86ae-b3fcc8ef7299"
+                        }
+                    ],
+                    "params": {
+                        "blueprint": {
+                            "dynamic": {
+                                "blueprint": "TP6-inner",
+                                "sequencer": "basic_sequencer",
+                                "blueprint_id": "TP6-inner",
+                                "expanded": true
+                            }
+                        }
+                    },
+                    "argument_mapping": {},
+                    "state": "SUCCEEDED"
+                },
+                "guid": "a775bd08-c5f3-459e-aa9e-c8bab63ef86f"
+            },
+            {
+                "dtype": "antikythera.models/Task",
+                "data": {
+                    "id": "X1_9",
+                    "type": "system.composite",
+                    "description": "Process element - ebef397d-cac9-414f-964f-196c47b3ca89",
+                    "inputs": {
+                        "element": {
+                            "element_id": "ebef397d-cac9-414f-964f-196c47b3ca89"
+                        }
+                    },
+                    "outputs": {},
+                    "depends_on": [
+                        {
+                            "dtype": "antikythera.models/Dependency",
+                            "data": {
+                                "id": "X1_8",
+                                "type": "FS"
+                            },
+                            "guid": "83af7ea5-4e3f-4166-a1e7-27513c912fbb"
+                        }
+                    ],
+                    "params": {
+                        "blueprint": {
+                            "dynamic": {
+                                "blueprint": "TP6-inner",
+                                "sequencer": "basic_sequencer",
+                                "blueprint_id": "TP6-inner",
+                                "expanded": true
+                            }
+                        }
+                    },
+                    "argument_mapping": {},
+                    "state": "SUCCEEDED"
+                },
+                "guid": "94aa3924-f958-4963-af5b-b59b7216d3f6"
+            },
+            {
+                "dtype": "antikythera.models/Task",
+                "data": {
+                    "id": "end",
+                    "type": "system.end",
+                    "description": null,
+                    "inputs": {},
+                    "outputs": {
+                        "process_end_time": 1764863225.0186553
+                    },
+                    "depends_on": [
+                        {
+                            "dtype": "antikythera.models/Dependency",
+                            "data": {
+                                "id": "X1_9",
+                                "type": "FS"
+                            },
+                            "guid": "1398a6f7-98ef-461d-8136-029da6fb2f01"
+                        }
+                    ],
+                    "params": {},
+                    "argument_mapping": {},
+                    "state": "SUCCEEDED"
+                },
+                "guid": "a17546f0-4ecc-48c7-9609-95eab7abf477"
+            }
+        ]
+    },
+    "name": "Toy Problem 6",
+    "guid": "460edd38-9ac3-4adc-b8c5-0a7302d79c91"
+}

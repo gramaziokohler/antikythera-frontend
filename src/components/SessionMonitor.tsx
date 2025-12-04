@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
-import mermaid from 'mermaid'
-import type { BlueprintDiagramResponse, SessionDataResponse, GraphData, SessionDetailsResponse } from '../types'
+import { useState, useEffect } from 'react'
+import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
 
 interface SessionMonitorProps {
@@ -10,81 +9,66 @@ interface SessionMonitorProps {
 }
 
 export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonitorProps) {
-  const [diagram, setDiagram] = useState<BlueprintDiagramResponse | null>(null)
   const [sessionData, setSessionData] = useState<SessionDataResponse | null>(null)
   const [graphData, setGraphData] = useState<GraphData | null>(null)
+  const [sessionState, setSessionState] = useState<string>('pending')
   const [error, setError] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<'mermaid' | 'graph'>('mermaid')
-  const mermaidRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Initialize mermaid
-    mermaid.initialize({ 
-      startOnLoad: false,
-      theme: 'base',
-      themeVariables: {
-        primaryColor: '#D81E5B',
-        primaryTextColor: '#fff',
-        primaryBorderColor: '#23395B',
-        lineColor: '#23395B',
-        secondaryColor: '#23395B',
-        tertiaryColor: '#f8f9fb',
-      },
-      gantt: {
-        titleTopMargin: 25,
-        barHeight: 40,
-        barGap: 8,
-        topPadding: 50,
-        gridLineStartPadding: 35,
-        fontSize: 24,
-        sectionFontSize: 24,
-        numberSectionStyles: 4,
-      }
-    })
-
     // Poll endpoints
     const fetchData = async () => {
       try {
-        const [diagramResponse, dataResponse, detailsResponse] = await Promise.all([
-          fetch(`${apiBaseUrl}/sessions/${sessionId}/diagram`),
+        const [dataResponse, sessionResponse] = await Promise.all([
           fetch(`${apiBaseUrl}/sessions/${sessionId}/data`),
           fetch(`${apiBaseUrl}/sessions/${sessionId}`)
         ])
 
-        if (diagramResponse.ok) {
-          const diagramData: BlueprintDiagramResponse = await diagramResponse.json()
-          setDiagram(diagramData)
-          
-          // Stop polling if session has ended
-          if (diagramData.state.toLowerCase() === 'completed' || 
-              diagramData.state.toLowerCase() === 'failed') {
-            return true // Signal to stop polling
-          }
-        }
-
         if (dataResponse.ok) {
+          // used for viewing the data store
+          // TODO: make this prettier than just dump of JSON, make a table or something
           const data: SessionDataResponse = await dataResponse.json()
           setSessionData(data)
         }
 
-        if (detailsResponse.ok) {
-          const details: SessionDetailsResponse = await detailsResponse.json()
+        if (sessionResponse.ok) {
+          // used to follow the execution state. 
+          const sessionDetails: any = await sessionResponse.json()
+          setSessionState(sessionDetails.state)  // overall session state
           
-          // Transform to GraphData
-          const nodes = details.blueprint.tasks.map(task => ({
-            id: task.id,
-            label: task.name,
-            status: task.status
-          }))
-
-          const edges = details.blueprint.tasks.flatMap(task => 
-            task.dependencies.map(depId => ({
-              source: depId,
-              target: task.id
+          // actual execution graph is updated in the Blueprint associated with the session, it needs to be fetched separately
+          const bpId = sessionDetails.data.blueprint.data.id  
+          if (bpId) {
+            const blueprintResponse = await fetch(`${apiBaseUrl}/blueprints/${bpId}`)
+            if (blueprintResponse.ok) {
+              const blueprint = await blueprintResponse.json()
+              
+            // Transform to GraphData
+            const blueprintData = blueprint.data;
+            const tasks = blueprintData.tasks;
+            console.log(`taskWrapper: ${JSON.stringify(tasks[0])}`);
+            const nodes = tasks.map((taskWrapper: any) => ({
+              id: taskWrapper.data.id,
+              label: taskWrapper.data.id,
+              status: taskWrapper.data.state
             }))
-          )
 
-          setGraphData({ nodes, edges })
+            const edges = tasks.flatMap((taskWrapper: any) => 
+              taskWrapper.data.depends_on.map((dep: any) => ({
+                source: dep.data.id,
+                target: taskWrapper.data.id
+              }))
+            )
+
+            setGraphData({ nodes, edges })
+          }
+          }
+
+          // Stop polling if session has ended
+          if (sessionDetails.state && (
+              sessionDetails.state.toLowerCase() === 'completed' || 
+              sessionDetails.state.toLowerCase() === 'failed')) {
+            return true // Signal to stop polling
+          }
         }
         
         return false // Continue polling
@@ -105,24 +89,6 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
     return () => clearInterval(interval)
   }, [apiBaseUrl, sessionId])
 
-  useEffect(() => {
-    // Render mermaid diagram when it changes or view mode switches back
-    if (diagram && mermaidRef.current && viewMode === 'mermaid') {
-      const renderDiagram = async () => {
-        try {
-          const id = `mermaid-${Date.now()}`
-          const { svg } = await mermaid.render(id, diagram.diagram)
-          if (mermaidRef.current) {
-            mermaidRef.current.innerHTML = svg
-          }
-        } catch (err) {
-          console.error('Failed to render mermaid diagram:', err)
-        }
-      }
-      renderDiagram()
-    }
-  }, [diagram, viewMode])
-
   return (
     <div className="session-monitor">
       <div className="session-monitor-header">
@@ -136,60 +102,20 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
         {/* Diagram Section */}
         <div className="monitor-section">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3>Blueprint Diagram</h3>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button 
-                onClick={() => setViewMode('mermaid')}
-                style={{ 
-                  padding: '0.25rem 0.5rem', 
-                  fontSize: '0.8rem',
-                  background: viewMode === 'mermaid' ? '#23395B' : '#f0f0f0',
-                  color: viewMode === 'mermaid' ? 'white' : '#333'
-                }}
-              >
-                Gantt
-              </button>
-              <button 
-                onClick={() => setViewMode('graph')}
-                style={{ 
-                  padding: '0.25rem 0.5rem', 
-                  fontSize: '0.8rem',
-                  background: viewMode === 'graph' ? '#23395B' : '#f0f0f0',
-                  color: viewMode === 'graph' ? 'white' : '#333'
-                }}
-              >
-                Graph (React Flow)
-              </button>
-            </div>
+            <h3>Blueprint Execution Graph</h3>
           </div>
           
-          {diagram && (
-            <div className="diagram-info">
-              <span className="state-badge">{diagram.state}</span>
-            </div>
-          )}
+          <div className="diagram-info">
+            <span className="state-badge">{sessionState}</span>
+          </div>
           
           <div className="diagram-container" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
-            {viewMode === 'mermaid' ? (
-              <>
-                <div ref={mermaidRef} style={{ flex: 1 }}></div>
-                {!diagram && <p className="loading">Loading diagram...</p>}
-              </>
+            {graphData ? (
+              <SessionGraph data={graphData} />
             ) : (
-              graphData ? (
-                <SessionGraph data={graphData} />
-              ) : (
-                <p className="loading">Loading graph...</p>
-              )
+              <p className="loading">Loading graph...</p>
             )}
           </div>
-          
-          {diagram && viewMode === 'mermaid' && (
-            <details className="diagram-source">
-              <summary>View Mermaid Source</summary>
-              <pre className="data-content">{diagram.diagram}</pre>
-            </details>
-          )}
         </div>
 
         {/* Data Store Section */}
