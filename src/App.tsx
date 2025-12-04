@@ -2,7 +2,10 @@ import { useState } from 'react'
 import './App.css'
 import { UploadBlueprint } from './components/UploadBlueprint'
 import { BlueprintsList } from './components/BlueprintsList'
+import { UploadModel } from './components/UploadModel'
+import { ModelsList } from './components/ModelsList'
 import { SessionMonitor } from './components/SessionMonitor'
+import { CollapsibleSection } from './components/CollapsibleSection'
 
 const API_BASE_URL = 'http://localhost:5174/api'
 
@@ -19,14 +22,18 @@ function App() {
       
       <div className="app-layout">
         <div className="left-pane">
-          <UploadBlueprint 
-            apiBaseUrl={API_BASE_URL}
-          />
-          
-          <BlueprintsList 
-            apiBaseUrl={API_BASE_URL}
-            onSessionStart={setActiveSessionId}
-          />
+          <CollapsibleSection title="Blueprints" className="blueprints-section-wrapper">
+            <UploadBlueprint apiBaseUrl={API_BASE_URL} />
+            <BlueprintsList 
+              apiBaseUrl={API_BASE_URL}
+              onSessionStart={setActiveSessionId}
+            />
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Models" className="models-section-wrapper" defaultOpen={false}>
+            <UploadModel apiBaseUrl={API_BASE_URL} />
+            <ModelsList apiBaseUrl={API_BASE_URL} />
+          </CollapsibleSection>
         </div>
 
         {activeSessionId ? (

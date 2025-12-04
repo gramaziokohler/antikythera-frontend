@@ -318,7 +318,68 @@
                 }
             }
         },
+        "/models": {
+            "get": {
+                "summary": "List Models",
+                "description": "List all available model IDs.\n\nReturns\n-------\nlist[str]\n    A list of model IDs.",
+                "operationId": "list_models_models_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "type": "array",
+                                    "title": "Response List Models Models Get"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/models/{model_id}": {
+            "delete": {
+                "summary": "Delete Model",
+                "description": "Delete a model from the database.\n\nParameters\n----------\nmodel_id : str\n    The ID of the model to delete.\n\nReturns\n-------\nDeleteModelResponse\n    Response containing the model ID and success message.\n\nRaises\n------\nHTTPException\n    If the model is not found or cannot be deleted.",
+                "operationId": "delete_model_models__model_id__delete",
+                "parameters": [
+                    {
+                        "name": "model_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Model Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeleteModelResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "get": {
                 "summary": "Get Model",
                 "description": "Retrieve a model by its ID.\n\nParameters\n----------\nmodel_id : str\n    The ID of the model to retrieve.\n\nReturns\n-------\nResponse\n    The model data as a JSON response.\n\nRaises\n------\nHTTPException\n    If the model is not found.",
@@ -331,6 +392,43 @@
                         "schema": {
                             "type": "string",
                             "title": "Model Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{session_id}/blueprint": {
+            "get": {
+                "summary": "Get Session Blueprint",
+                "operationId": "get_session_blueprint_sessions__session_id__blueprint_get",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Session Id"
                         }
                     }
                 ],
@@ -511,6 +609,24 @@
                     "message"
                 ],
                 "title": "DeleteBlueprintResponse"
+            },
+            "DeleteModelResponse": {
+                "properties": {
+                    "model_id": {
+                        "type": "string",
+                        "title": "Model Id"
+                    },
+                    "message": {
+                        "type": "string",
+                        "title": "Message"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "model_id",
+                    "message"
+                ],
+                "title": "DeleteModelResponse"
             },
             "HTTPValidationError": {
                 "properties": {

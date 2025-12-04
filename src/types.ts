@@ -23,6 +23,16 @@ export interface UploadBlueprintResponse {
   message: string;
 }
 
+export interface UploadModelResponse {
+  model_id: string;
+  message: string;
+}
+
+export interface DeleteModelResponse {
+  model_id: string;
+  message: string;
+}
+
 export interface DeleteBlueprintResponse {
   blueprint_id: string;
   message: string;
