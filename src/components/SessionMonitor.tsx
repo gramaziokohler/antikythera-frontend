@@ -36,12 +36,10 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
           setSessionState(sessionDetails.state)  // overall session state
           
           // actual execution graph is updated in the Blueprint associated with the session, it needs to be fetched separately
-          const bpId = sessionDetails.data.blueprint.data.id  
-          if (bpId) {
-            const blueprintResponse = await fetch(`${apiBaseUrl}/blueprints/${bpId}`)
-            if (blueprintResponse.ok) {
-              const blueprint = await blueprintResponse.json()
-              
+          const blueprintResponse = await fetch(`${apiBaseUrl}/sessions/${sessionId}/blueprint`)
+          if (blueprintResponse.ok) {
+            const blueprint = await blueprintResponse.json()
+            
             // Transform to GraphData
             const blueprintData = blueprint.data;
             const tasks = blueprintData.tasks;
@@ -60,16 +58,15 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
             )
 
             setGraphData({ nodes, edges })
-          }
-          }
-
-          // Stop polling if session has ended
-          if (sessionDetails.state && (
-              sessionDetails.state.toLowerCase() === 'completed' || 
-              sessionDetails.state.toLowerCase() === 'failed')) {
-            return true // Signal to stop polling
-          }
         }
+
+        // Stop polling if session has ended
+        if (sessionDetails.state && (
+            sessionDetails.state.toLowerCase() === 'completed' || 
+            sessionDetails.state.toLowerCase() === 'failed')) {
+          return true // Signal to stop polling
+        }
+      }
         
         return false // Continue polling
       } catch (err) {
