@@ -345,13 +345,36 @@ button:focus-visible {
   box-shadow: 0 4px 12px rgba(216, 30, 91, 0.4);
 }
 
+.download-button {
+  padding: 0.6rem;
+  background: transparent;
+  border: 1px solid #23395B;
+  color: #23395B;
+  box-shadow: none;
+  line-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+}
+
+.download-button:hover {
+  background: #23395B;
+  color: white;
+  box-shadow: 0 2px 8px rgba(35, 57, 91, 0.3);
+}
+
 .delete-button {
-  padding: 0.6rem 1.2rem;
-  font-size: 0.85rem;
+  padding: 0.6rem;
   background: transparent;
   border: 1px solid #c91a52;
   color: #c91a52;
   box-shadow: none;
+  line-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
 }
 
 .delete-button:hover {
