@@ -73,10 +73,7 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListPro
   const handleDelete = async (blueprintId: string) => {
     setDeleteMessage('')
     setStartMessage('')
-    if (!confirm('Are you sure you want to delete this blueprint?')) {
-      return
-    }
-    
+   
     try {
       const response = await fetch(`${apiBaseUrl}/blueprints/${blueprintId}`, {
         method: 'DELETE',
