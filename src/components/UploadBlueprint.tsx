@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import type { UploadBlueprintResponse } from '../types'
 
 interface UploadBlueprintProps {
@@ -6,26 +6,16 @@ interface UploadBlueprintProps {
 }
 
 export function UploadBlueprint({ apiBaseUrl }: UploadBlueprintProps) {
-  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const [uploadMessage, setUploadMessage] = useState<string>('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploadFile(e.target.files[0])
-      setUploadMessage('')
-    }
-  }
-
-  const handleUpload = async () => {
-    if (!uploadFile) {
-      setUploadMessage('Please select a file')
-      return
-    }
-
+  const handleFile = async (file: File) => {
     const formData = new FormData()
-    formData.append('file', uploadFile)
+    formData.append('file', file)
 
     try {
+      setUploadMessage('Uploading...')
       const response = await fetch(`${apiBaseUrl}/blueprints/upload`, {
         method: 'POST',
         body: formData,
@@ -35,31 +25,68 @@ export function UploadBlueprint({ apiBaseUrl }: UploadBlueprintProps) {
       
       const data: UploadBlueprintResponse = await response.json()
       setUploadMessage(data.message)
-      setUploadFile(null)
       
-      // Clear file input
-      const fileInput = document.getElementById('file-input') as HTMLInputElement
-      if (fileInput) fileInput.value = ''
+      // Clear message after 3 seconds
+      setTimeout(() => setUploadMessage(''), 3000)
     } catch (err) {
       setUploadMessage(err instanceof Error ? err.message : 'Upload failed')
+      setTimeout(() => setUploadMessage(''), 3000)
+    }
+  }
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const onDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0])
+    }
+  }
+
+  const onClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFile(e.target.files[0])
+      // Reset input so same file can be selected again if needed
+      e.target.value = ''
     }
   }
 
   return (
-    <section className="upload-section">
-      <h2>Upload Blueprint</h2>
-      <div className="upload-controls">
-        <input
-          id="file-input"
-          type="file"
-          accept=".json"
-          onChange={handleFileChange}
+    <div className="upload-compact-wrapper">
+      <div 
+        className={`upload-drop-zone ${isDragging ? 'dragging' : ''}`}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+        onClick={onClick}
+        title="Click or drag file to upload blueprint"
+      >
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          className="hidden-file-input" 
+          onChange={onFileChange} 
+          accept=".json" 
         />
-        <button onClick={handleUpload} disabled={!uploadFile}>
-          Upload
-        </button>
+        <div className="upload-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+        <span className="upload-text">Upload Blueprint</span>
       </div>
-      {uploadMessage && <p className="message">{uploadMessage}</p>}
-    </section>
+      {uploadMessage && <div className={`upload-status-toast ${uploadMessage.includes('failed') ? 'error' : ''}`}>{uploadMessage}</div>}
+    </div>
   )
 }
