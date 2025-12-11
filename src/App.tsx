@@ -11,6 +11,7 @@ const API_BASE_URL = 'http://localhost:5174/api'
 
 function App() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   return (
     <div className="app">
@@ -21,19 +22,31 @@ function App() {
       </div>
       
       <div className="app-layout">
-        <div className="left-pane">
-          <CollapsibleSection title="Blueprints" className="blueprints-section-wrapper">
-            <UploadBlueprint apiBaseUrl={API_BASE_URL} />
-            <BlueprintsList 
-              apiBaseUrl={API_BASE_URL}
-              onSessionStart={setActiveSessionId}
-            />
-          </CollapsibleSection>
+        <div className={`left-pane ${!isSidebarOpen ? 'collapsed' : ''}`}>
+          <div className="left-pane-mask">
+            <div className="left-pane-content">
+              <CollapsibleSection title="Blueprints" className="blueprints-section-wrapper">
+                <UploadBlueprint apiBaseUrl={API_BASE_URL} />
+                <BlueprintsList 
+                  apiBaseUrl={API_BASE_URL}
+                  onSessionStart={setActiveSessionId}
+                />
+              </CollapsibleSection>
 
-          <CollapsibleSection title="Models" className="models-section-wrapper" defaultOpen={false}>
-            <UploadModel apiBaseUrl={API_BASE_URL} />
-            <ModelsList apiBaseUrl={API_BASE_URL} />
-          </CollapsibleSection>
+              <CollapsibleSection title="Models" className="models-section-wrapper" defaultOpen={false}>
+                <UploadModel apiBaseUrl={API_BASE_URL} />
+                <ModelsList apiBaseUrl={API_BASE_URL} />
+              </CollapsibleSection>
+            </div>
+          </div>
+          
+          <button 
+            className="sidebar-toggle"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            title={isSidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
+          >
+            {isSidebarOpen ? '‹' : '›'}
+          </button>
         </div>
 
         {activeSessionId ? (
