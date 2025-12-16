@@ -71,11 +71,24 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
     const transformBlueprintToGraph = (blueprint: any) => {
       const blueprintData = blueprint.data;
       const tasks = blueprintData.tasks;
-      const nodes = tasks.map((taskWrapper: any) => ({
-        id: taskWrapper.data.id,
-        label: taskWrapper.data.id,
-        status: taskWrapper.data.state || 'pending'
-      }))
+      const nodes = tasks.map((taskWrapper: any) => {
+        let details = '';
+        const params = taskWrapper.data.params;
+        if (params && params.blueprint) {
+          if (params.blueprint.dynamic?.element?.element_id) {
+            details = params.blueprint.dynamic.element.element_id;
+          } else if (params.blueprint.static) {
+            details = params.blueprint.static;
+          }
+        }
+
+        return {
+          id: taskWrapper.data.id,
+          label: taskWrapper.data.id,
+          status: taskWrapper.data.state || 'pending',
+          details
+        };
+      })
 
       const edges = tasks.flatMap((taskWrapper: any) => 
         taskWrapper.data.depends_on.map((dep: any) => ({

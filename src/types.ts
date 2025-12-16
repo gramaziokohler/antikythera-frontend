@@ -63,6 +63,7 @@ export interface GraphNode {
   id: string;
   label: string;
   status: string;
+  details?: string;
 }
 
 export interface GraphEdge {

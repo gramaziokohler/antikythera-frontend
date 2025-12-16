@@ -27,7 +27,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
   dagreGraph.setGraph({ rankdir: 'LR' });
 
   nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+    dagreGraph.setNode(node.id, { width: node.measured?.width ?? nodeWidth, height: node.measured?.height ?? (node.style?.height as number) ?? nodeHeight });
   });
 
   edges.forEach((edge) => {
@@ -43,8 +43,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
       targetPosition: Position.Left,
       sourcePosition: Position.Right,
       position: {
-        x: nodeWithPosition.x - nodeWidth / 2,
-        y: nodeWithPosition.y - nodeHeight / 2,
+        x: nodeWithPosition.x - (node.measured?.width ?? nodeWidth) / 2,
+        y: nodeWithPosition.y - (node.measured?.height ?? (node.style?.height as number) ?? nodeHeight) / 2,
       },
     };
   });
@@ -58,21 +58,37 @@ export function SessionGraph({ data }: SessionGraphProps) {
 
   useEffect(() => {
     if (!data) return;
-    const initialNodes: Node[] = data.nodes.map((node) => ({
-      
-      id: node.id,
-      data: { label: node.label },
-      position: { x: 0, y: 0 },
-      style: {
-        background: getNodeColor(node.status),
-        color: '#fff',
-        border: '1px solid #23395B',
-        borderRadius: '8px',
-        padding: '10px',
-        fontSize: '12px',
-        width: nodeWidth,
-      },
-    }));
+    const initialNodes: Node[] = data.nodes.map((node) => {
+      const hasDetails = !!node.details;
+      const estimatedHeight = hasDetails ? 56 : 36;
+
+      return {
+        id: node.id,
+        data: { 
+          label: (
+            <div title={node.details}>
+              <div style={{ fontWeight: 'bold', marginBottom: hasDetails ? '4px' : '0' }}>{node.label}</div>
+              {node.details && (
+                <div style={{ fontSize: '10px', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {node.details}
+                </div>
+              )}
+            </div>
+          )
+        },
+        position: { x: 0, y: 0 },
+        style: {
+          background: getNodeColor(node.status),
+          color: '#fff',
+          border: '1px solid #23395B',
+          borderRadius: '8px',
+          padding: '10px',
+          fontSize: '12px',
+          width: nodeWidth,
+          height: estimatedHeight,
+        },
+      };
+    });
 
     const initialEdges: Edge[] = data.edges.map((edge) => ({
       id: `e${edge.source}-${edge.target}`,
