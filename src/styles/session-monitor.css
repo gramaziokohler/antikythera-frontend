@@ -1,0 +1,235 @@
+/* Session Monitor */
+.session-monitor {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.session-monitor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #23395B, #1a2a47);
+  border-bottom: 2px solid #D81E5B;
+  flex-shrink: 0;
+}
+
+.session-monitor-header h2 {
+  color: #ffffff;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.session-monitor-header h2::before {
+  background: #D81E5B;
+}
+
+.close-button {
+  background: transparent;
+  color: #ffffff;
+  font-size: 2rem;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  box-shadow: none;
+  text-transform: none;
+  transition: all 0.3s;
+  line-height: 1;
+}
+
+.close-button:hover {
+  background: rgba(216, 30, 91, 0.2);
+  transform: rotate(90deg);
+}
+
+.monitor-grid {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+@media (max-width: 1024px) {
+  .monitor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.monitor-section {
+  background: linear-gradient(135deg, #f8f9fb 0%, #ffffff 100%);
+  border-radius: 8px;
+  padding: 1.25rem;
+  border: 1px solid rgba(35, 57, 91, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0; /* Prevent grid item from expanding */
+}
+
+.monitor-section h3 {
+  color: #23395B;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.diagram-info,
+.data-info {
+  margin-bottom: 1rem;
+}
+
+.state-badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #D81E5B, #c91a52);
+  color: white;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(216, 30, 91, 0.3);
+}
+
+.diagram-container {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid rgba(35, 57, 91, 0.1);
+  overflow: auto;
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.diagram-container svg {
+  max-width: 100%;
+  height: auto;
+  min-width: 600px;
+}
+
+.data-container {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  border: 1px solid rgba(35, 57, 91, 0.1);
+  overflow: auto;
+  flex: 1;
+  min-width: 0; /* Prevent flex item from expanding */
+}
+
+.data-content {
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+  color: #23395B;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+.diagram-source {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(35, 57, 91, 0.1);
+  padding-top: 1rem;
+}
+
+.diagram-source summary {
+  cursor: pointer;
+  color: #23395B;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.diagram-source summary:hover {
+  background: rgba(35, 57, 91, 0.05);
+}
+
+.diagram-source pre {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: #f8f9fb;
+  border: 1px solid rgba(35, 57, 91, 0.1);
+  border-radius: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Data Viewer Styles */
+.data-viewer-wrapper {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+  min-width: 100%;
+  width: fit-content;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 4px 0;
+}
+
+.data-table td {
+  padding: 6px 10px;
+  border: 1px solid #e0e0e0;
+  vertical-align: top;
+}
+
+.data-key {
+  font-weight: 600;
+  background-color: #f5f7fa;
+  color: #23395B;
+  width: 1%; /* Shrink to fit content */
+  white-space: nowrap;
+}
+
+.data-value {
+  background-color: #fff;
+}
+
+.data-array {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.data-array-item {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px dashed #eee;
+}
+
+.data-array-item:last-child {
+  border-bottom: none;
+}
+
+.index-label {
+  color: #888;
+  font-size: 0.8rem;
+  min-width: 24px;
+  user-select: none;
+}
+
+.array-value {
+  flex: 1;
+}
+
+.text-gray-500 {
+  color: #888;
+  font-style: italic;
+}

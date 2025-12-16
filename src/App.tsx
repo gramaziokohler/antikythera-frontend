@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import './App.css'
+import './styles/layout.css'
+import './styles/components.css'
+import './styles/session-monitor.css'
 import { UploadBlueprint } from './components/UploadBlueprint'
 import { BlueprintsList } from './components/BlueprintsList'
 import { UploadModel } from './components/UploadModel'
