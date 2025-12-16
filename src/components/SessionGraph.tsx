@@ -27,7 +27,10 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
   dagreGraph.setGraph({ rankdir: 'LR' });
 
   nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: node.measured?.width ?? nodeWidth, height: node.measured?.height ?? (node.style?.height as number) ?? nodeHeight });
+    dagreGraph.setNode(node.id, { 
+      width: node.measured?.width ?? (node.style?.width as number) ?? nodeWidth, 
+      height: node.measured?.height ?? (node.style?.height as number) ?? nodeHeight 
+    });
   });
 
   edges.forEach((edge) => {
@@ -43,7 +46,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
       targetPosition: Position.Left,
       sourcePosition: Position.Right,
       position: {
-        x: nodeWithPosition.x - (node.measured?.width ?? nodeWidth) / 2,
+        x: nodeWithPosition.x - (node.measured?.width ?? (node.style?.width as number) ?? nodeWidth) / 2,
         y: nodeWithPosition.y - (node.measured?.height ?? (node.style?.height as number) ?? nodeHeight) / 2,
       },
     };
@@ -59,14 +62,23 @@ export function SessionGraph({ data }: SessionGraphProps) {
   useEffect(() => {
     if (!data) return;
     const initialNodes: Node[] = data.nodes.map((node) => {
+      const isStartOrEnd = ['start', 'end'].includes(node.id.toLowerCase());
       const hasDetails = !!node.details;
-      const estimatedHeight = hasDetails ? 56 : 36;
+      
+      const width = isStartOrEnd ? 60 : nodeWidth;
+      const height = isStartOrEnd ? 60 : (hasDetails ? 56 : 36);
+      const borderRadius = isStartOrEnd ? '50%' : '8px';
 
       return {
         id: node.id,
         data: { 
           label: (
-            <div title={node.details}>
+            <div title={node.details} style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              justifyContent: 'center', 
+              height: '100%' 
+            }}>
               <div style={{ fontWeight: 'bold', marginBottom: hasDetails ? '4px' : '0' }}>{node.label}</div>
               {node.details && (
                 <div style={{ fontSize: '10px', opacity: 0.8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -81,11 +93,15 @@ export function SessionGraph({ data }: SessionGraphProps) {
           background: getNodeColor(node.status),
           color: '#fff',
           border: '1px solid #23395B',
-          borderRadius: '8px',
+          borderRadius: borderRadius,
           padding: '10px',
           fontSize: '12px',
-          width: nodeWidth,
-          height: estimatedHeight,
+          width: width,
+          height: height,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          textAlign: 'center',
         },
       };
     });
