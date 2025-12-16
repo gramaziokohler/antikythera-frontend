@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
 
@@ -8,11 +8,63 @@ interface SessionMonitorProps {
   onClose: () => void
 }
 
+const DataViewer = ({ data }: { data: any }) => {
+  if (data === null || data === undefined) return <span className="text-gray-500">null</span>
+  
+  if (typeof data !== 'object') {
+    return <span>{String(data)}</span>
+  }
+
+  if (Array.isArray(data)) {
+    if (data.length === 0) return <span className="text-gray-500">[]</span>
+    return (
+      <div className="data-array">
+        {data.map((item, index) => (
+          <div key={index} className="data-array-item">
+            <span className="index-label">[{index}]</span>
+            <div className="array-value">
+              <DataViewer data={item} />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (Object.keys(data).length === 0) return <span className="text-gray-500">{"{}"}</span>
+
+  return (
+    <table className="data-table">
+      <tbody>
+        {Object.entries(data).map(([key, value]) => (
+          <tr key={key}>
+            <td className="data-key">{key}</td>
+            <td className="data-value">
+              <DataViewer data={value} />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonitorProps) {
   const [sessionData, setSessionData] = useState<SessionDataResponse | null>(null)
   const [graphData, setGraphData] = useState<GraphData | null>(null)
   const [sessionState, setSessionState] = useState<string>('pending')
   const [error, setError] = useState<string | null>(null)
+
+  const parsedSessionData = useMemo(() => {
+    if (!sessionData?.data) return null
+    try {
+      // If it's already an object, return it. If it's a string, parse it.
+      return typeof sessionData.data === 'string' ? JSON.parse(sessionData.data) : sessionData.data
+    } catch (e) {
+      console.error('Failed to parse session data', e)
+      return sessionData.data
+    }
+  }, [sessionData])
 
   useEffect(() => {
     // Poll endpoints
@@ -25,7 +77,6 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
 
         if (dataResponse.ok) {
           // used for viewing the data store
-          // TODO: make this prettier than just dump of JSON, make a table or something
           const data: SessionDataResponse = await dataResponse.json()
           setSessionData(data)
         }
@@ -125,7 +176,9 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
           )}
           <div className="data-container">
             {sessionData ? (
-              <pre className="data-content">{sessionData.data}</pre>
+              <div className="data-viewer-wrapper">
+                <DataViewer data={parsedSessionData} />
+              </div>
             ) : (
               <p className="loading">Loading data...</p>
             )}
