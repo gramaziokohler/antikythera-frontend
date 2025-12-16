@@ -1027,4 +1027,32 @@ button:focus-visible {
   font-style: italic;
 }
 
+/* Loading Spinner */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  flex: 1;
+  min-height: 200px;
+  color: #5a6c8a;
+}
+
+.loading-spinner {
+  border: 3px solid rgba(35, 57, 91, 0.1);
+  border-top: 3px solid #23395B;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 

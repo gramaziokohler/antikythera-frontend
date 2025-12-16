@@ -4,9 +4,10 @@ import type { BlueprintInfo, StartBlueprintResponse, DeleteBlueprintResponse } f
 interface BlueprintsListProps {
   apiBaseUrl: string
   onSessionStart: (sessionId: string) => void
+  onBlueprintSelect?: (blueprintId: string) => void
 }
 
-export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListProps) {
+export function BlueprintsList({ apiBaseUrl, onSessionStart, onBlueprintSelect }: BlueprintsListProps) {
   const [blueprints, setBlueprints] = useState<BlueprintInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -149,7 +150,13 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart }: BlueprintsListPro
       <div className="blueprints-list">
         {blueprints.map((blueprint) => (
           <div key={blueprint.id} className="blueprint-card">
-            <h3>{blueprint.name} (v{blueprint.version})</h3>
+            <h3 
+              onClick={() => onBlueprintSelect?.(blueprint.id)}
+              style={{ cursor: 'pointer' }}
+              title="Click to preview blueprint"
+            >
+              {blueprint.name} (v{blueprint.version})
+            </h3>
             <p>{blueprint.description || 'N/A'}</p>
             <p><strong>Task count:</strong> {blueprint.task_count}</p>
             <p><strong>Uploaded:</strong> {new Date(blueprint.uploaded_at).toLocaleString()}</p>

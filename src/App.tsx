@@ -11,6 +11,7 @@ const API_BASE_URL = 'http://localhost:5174/api'
 
 function App() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  const [activeBlueprintId, setActiveBlueprintId] = useState<string | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   return (
@@ -29,7 +30,11 @@ function App() {
                 <UploadBlueprint apiBaseUrl={API_BASE_URL} />
                 <BlueprintsList 
                   apiBaseUrl={API_BASE_URL}
-                  onSessionStart={setActiveSessionId}
+                  onSessionStart={(sessionId) => {
+                    setActiveSessionId(sessionId)
+                    setActiveBlueprintId(null)
+                  }}
+                  onBlueprintSelect={setActiveBlueprintId}
                 />
               </CollapsibleSection>
 
@@ -49,12 +54,17 @@ function App() {
           </button>
         </div>
 
-        {activeSessionId ? (
+        {activeSessionId || activeBlueprintId ? (
           <div className="right-pane">
             <SessionMonitor
+              key={activeSessionId || activeBlueprintId}
               apiBaseUrl={API_BASE_URL}
               sessionId={activeSessionId}
-              onClose={() => setActiveSessionId(null)}
+              blueprintId={activeBlueprintId}
+              onClose={() => {
+                setActiveSessionId(null)
+                setActiveBlueprintId(null)
+              }}
             />
           </div>
         ) : (

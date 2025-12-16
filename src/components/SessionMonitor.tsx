@@ -4,7 +4,8 @@ import { SessionGraph } from './SessionGraph'
 
 interface SessionMonitorProps {
   apiBaseUrl: string
-  sessionId: string
+  sessionId?: string | null
+  blueprintId?: string | null
   onClose: () => void
 }
 
@@ -49,7 +50,7 @@ const DataViewer = ({ data }: { data: any }) => {
   )
 }
 
-export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonitorProps) {
+export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: SessionMonitorProps) {
   const [sessionData, setSessionData] = useState<SessionDataResponse | null>(null)
   const [graphData, setGraphData] = useState<GraphData | null>(null)
   const [sessionState, setSessionState] = useState<string>('pending')
@@ -67,6 +68,45 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
   }, [sessionData])
 
   useEffect(() => {
+    const transformBlueprintToGraph = (blueprint: any) => {
+      const blueprintData = blueprint.data;
+      const tasks = blueprintData.tasks;
+      const nodes = tasks.map((taskWrapper: any) => ({
+        id: taskWrapper.data.id,
+        label: taskWrapper.data.id,
+        status: taskWrapper.data.state || 'pending'
+      }))
+
+      const edges = tasks.flatMap((taskWrapper: any) => 
+        taskWrapper.data.depends_on.map((dep: any) => ({
+          source: dep.data.id,
+          target: taskWrapper.data.id
+        }))
+      )
+
+      setGraphData({ nodes, edges })
+    }
+
+    // If we only have a blueprint ID, fetch just the blueprint structure
+    if (!sessionId && blueprintId) {
+      const fetchBlueprint = async () => {
+        try {
+          const response = await fetch(`${apiBaseUrl}/blueprints/${blueprintId}`)
+          if (response.ok) {
+            const blueprint = await response.json()
+            transformBlueprintToGraph(blueprint)
+            setSessionState('preview')
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to fetch blueprint')
+        }
+      }
+      fetchBlueprint()
+      return
+    }
+
+    if (!sessionId) return
+
     // Poll endpoints
     const fetchData = async () => {
       try {
@@ -90,25 +130,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
           const blueprintResponse = await fetch(`${apiBaseUrl}/sessions/${sessionId}/blueprint`)
           if (blueprintResponse.ok) {
             const blueprint = await blueprintResponse.json()
-            
-            // Transform to GraphData
-            const blueprintData = blueprint.data;
-            const tasks = blueprintData.tasks;
-            console.log(`taskWrapper: ${JSON.stringify(tasks[0])}`);
-            const nodes = tasks.map((taskWrapper: any) => ({
-              id: taskWrapper.data.id,
-              label: taskWrapper.data.id,
-              status: taskWrapper.data.state
-            }))
-
-            const edges = tasks.flatMap((taskWrapper: any) => 
-              taskWrapper.data.depends_on.map((dep: any) => ({
-                source: dep.data.id,
-                target: taskWrapper.data.id
-              }))
-            )
-
-            setGraphData({ nodes, edges })
+            transformBlueprintToGraph(blueprint)
         }
 
         // Stop polling if session has ended
@@ -135,12 +157,12 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
     }, 2000)
 
     return () => clearInterval(interval)
-  }, [apiBaseUrl, sessionId])
+  }, [apiBaseUrl, sessionId, blueprintId])
 
   return (
     <div className="session-monitor">
       <div className="session-monitor-header">
-        <h2>Session Monitor: {sessionId}</h2>
+        <h2>{sessionId ? `Session Monitor: ${sessionId}` : `Blueprint Preview: ${blueprintId}`}</h2>
         <button onClick={onClose} className="close-button">×</button>
       </div>
 
@@ -161,7 +183,10 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
             {graphData ? (
               <SessionGraph data={graphData} />
             ) : (
-              <p className="loading">Loading graph...</p>
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Loading graph...</p>
+              </div>
             )}
           </div>
         </div>
@@ -180,7 +205,10 @@ export function SessionMonitor({ apiBaseUrl, sessionId, onClose }: SessionMonito
                 <DataViewer data={parsedSessionData} />
               </div>
             ) : (
-              <p className="loading">Loading data...</p>
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Loading data...</p>
+              </div>
             )}
           </div>
         </div>
