@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { 
   ReactFlow, 
   Background, 
@@ -7,12 +7,11 @@ import {
   useEdgesState,
   Position,
   MarkerType,
-  Node,
-  Edge
 } from '@xyflow/react';
+import type { Node, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from '@dagrejs/dagre';
-import { GraphData } from '../types';
+import type { GraphData } from '../types';
 
 interface SessionGraphProps {
   data: GraphData;
@@ -54,8 +53,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 };
 
 export function SessionGraph({ data }: SessionGraphProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   useEffect(() => {
     if (!data) return;
