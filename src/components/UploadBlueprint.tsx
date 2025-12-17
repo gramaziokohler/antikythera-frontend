@@ -3,9 +3,10 @@ import type { UploadBlueprintResponse } from '../types'
 
 interface UploadBlueprintProps {
   apiBaseUrl: string
+  onUploadSuccess?: () => void
 }
 
-export function UploadBlueprint({ apiBaseUrl }: UploadBlueprintProps) {
+export function UploadBlueprint({ apiBaseUrl, onUploadSuccess }: UploadBlueprintProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [uploadMessage, setUploadMessage] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -44,11 +45,13 @@ export function UploadBlueprint({ apiBaseUrl }: UploadBlueprintProps) {
     setIsDragging(false)
   }
 
-  const onDrop = (e: React.DragEvent) => {
+  const onDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0])
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files)
+      await Promise.all(files.map(handleFile))
+      onUploadSuccess?.()
     }
   }
 
@@ -56,9 +59,11 @@ export function UploadBlueprint({ apiBaseUrl }: UploadBlueprintProps) {
     fileInputRef.current?.click()
   }
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0])
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files)
+      await Promise.all(files.map(handleFile))
+      onUploadSuccess?.()
       // Reset input so same file can be selected again if needed
       e.target.value = ''
     }
@@ -80,6 +85,7 @@ export function UploadBlueprint({ apiBaseUrl }: UploadBlueprintProps) {
           className="hidden-file-input" 
           onChange={onFileChange} 
           accept=".json" 
+          multiple={true}
         />
         <div className="upload-icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>

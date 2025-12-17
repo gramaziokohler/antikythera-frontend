@@ -5,9 +5,10 @@ interface BlueprintsListProps {
   apiBaseUrl: string
   onSessionStart: (sessionId: string) => void
   onBlueprintSelect?: (blueprintId: string) => void
+  lastUpdate?: number
 }
 
-export function BlueprintsList({ apiBaseUrl, onSessionStart, onBlueprintSelect }: BlueprintsListProps) {
+export function BlueprintsList({ apiBaseUrl, onSessionStart, onBlueprintSelect, lastUpdate }: BlueprintsListProps) {
   const [blueprints, setBlueprints] = useState<BlueprintInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -17,7 +18,7 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart, onBlueprintSelect }
 
   useEffect(() => {
     fetchBlueprints()
-  }, [])
+  }, [lastUpdate])
 
   const fetchBlueprints = async () => {
     setLoading(true)

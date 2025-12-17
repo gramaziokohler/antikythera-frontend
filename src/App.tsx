@@ -15,6 +15,7 @@ function App() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [activeBlueprintId, setActiveBlueprintId] = useState<string | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [blueprintsLastUpdate, setBlueprintsLastUpdate] = useState(0)
 
   return (
     <div className="app">
@@ -29,7 +30,10 @@ function App() {
           <div className="left-pane-mask">
             <div className="left-pane-content">
               <CollapsibleSection title="Blueprints" className="blueprints-section-wrapper">
-                <UploadBlueprint apiBaseUrl={API_BASE_URL} />
+                <UploadBlueprint 
+                  apiBaseUrl={API_BASE_URL} 
+                  onUploadSuccess={() => setBlueprintsLastUpdate(Date.now())}
+                />
                 <BlueprintsList 
                   apiBaseUrl={API_BASE_URL}
                   onSessionStart={(sessionId) => {
@@ -37,6 +41,7 @@ function App() {
                     setActiveBlueprintId(null)
                   }}
                   onBlueprintSelect={setActiveBlueprintId}
+                  lastUpdate={blueprintsLastUpdate}
                 />
               </CollapsibleSection>
 
