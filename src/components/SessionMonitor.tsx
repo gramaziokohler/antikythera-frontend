@@ -9,39 +9,51 @@ interface SessionMonitorProps {
   onClose: () => void
 }
 
-const DataViewer = ({ data }: { data: any }) => {
-  if (data === null || data === undefined) return <span className="text-gray-500">null</span>
-  
-  if (typeof data !== 'object') {
-    return <span>{String(data)}</span>
+const ValueRenderer = ({ value }: { value: any }) => {
+  if (value === null || value === undefined) return <span className="text-gray-500">null</span>
+  if (typeof value !== 'object') return <span>{String(value)}</span>
+  return <pre className="json-value" style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{JSON.stringify(value, null, 2)}</pre>
+}
+
+const DataViewer = ({ data, mainBlueprintId }: { data: any, mainBlueprintId: string }) => {
+  if (!data) return <div className="text-gray-500">No data available</div>
+
+  const rows: { blueprintId: string, key: string, value: any }[] = []
+
+  // Process main blueprint
+  if (data.main_blueprint) {
+    Object.entries(data.main_blueprint).forEach(([key, value]) => {
+      rows.push({ blueprintId: mainBlueprintId, key, value })
+    })
   }
 
-  if (Array.isArray(data)) {
-    if (data.length === 0) return <span className="text-gray-500">[]</span>
-    return (
-      <div className="data-array">
-        {data.map((item, index) => (
-          <div key={index} className="data-array-item">
-            <span className="index-label">[{index}]</span>
-            <div className="array-value">
-              <DataViewer data={item} />
-            </div>
-          </div>
-        ))}
-      </div>
-    )
+  // Process inner blueprints
+  if (data.inner_blueprints) {
+    Object.entries(data.inner_blueprints).forEach(([bpId, bpData]: [string, any]) => {
+      Object.entries(bpData).forEach(([key, value]) => {
+        rows.push({ blueprintId: bpId, key, value })
+      })
+    })
   }
 
-  if (Object.keys(data).length === 0) return <span className="text-gray-500">{"{}"}</span>
+  if (rows.length === 0) return <div className="text-gray-500">No data entries</div>
 
   return (
     <table className="data-table">
+      <thead>
+        <tr>
+          <th style={{ textAlign: 'left', padding: '8px', background: '#f5f7fa', borderBottom: '2px solid #e0e0e0' }}>Blueprint ID</th>
+          <th style={{ textAlign: 'left', padding: '8px', background: '#f5f7fa', borderBottom: '2px solid #e0e0e0' }}>Key</th>
+          <th style={{ textAlign: 'left', padding: '8px', background: '#f5f7fa', borderBottom: '2px solid #e0e0e0' }}>Value</th>
+        </tr>
+      </thead>
       <tbody>
-        {Object.entries(data).map(([key, value]) => (
-          <tr key={key}>
-            <td className="data-key">{key}</td>
+        {rows.map((row, index) => (
+          <tr key={index}>
+            <td className="data-key" style={{ width: 'auto' }}>{row.blueprintId}</td>
+            <td className="data-key" style={{ width: 'auto' }}>{row.key}</td>
             <td className="data-value">
-              <DataViewer data={value} />
+              <ValueRenderer value={row.value} />
             </td>
           </tr>
         ))}
@@ -54,6 +66,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
   const [sessionData, setSessionData] = useState<SessionDataResponse | null>(null)
   const [graphData, setGraphData] = useState<GraphData | null>(null)
   const [sessionState, setSessionState] = useState<string>('pending')
+  const [mainBlueprintId, setMainBlueprintId] = useState<string>('Main Blueprint')
   const [error, setError] = useState<string | null>(null)
 
   const parsedSessionData = useMemo(() => {
@@ -90,7 +103,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
         };
       })
 
-      const edges = tasks.flatMap((taskWrapper: any) => 
+      const edges = tasks.flatMap((taskWrapper: any) =>
         taskWrapper.data.depends_on.map((dep: any) => ({
           source: dep.data.id,
           target: taskWrapper.data.id
@@ -137,23 +150,30 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
         if (sessionResponse.ok) {
           // used to follow the execution state. 
           const sessionDetails: any = await sessionResponse.json()
-          setSessionState(sessionDetails.state)  // overall session state
-          
+
+          // Handle COMPAS Data object structure
+          const state = sessionDetails.data?.state || sessionDetails.state || 'pending'
+          setSessionState(state)
+
+          // Extract main blueprint ID
+          const bpId = sessionDetails.data?.blueprint?.data?.id || sessionDetails.blueprint?.id || 'Main Blueprint'
+          setMainBlueprintId(bpId)
+
           // actual execution graph is updated in the Blueprint associated with the session, it needs to be fetched separately
           const blueprintResponse = await fetch(`${apiBaseUrl}/sessions/${sessionId}/blueprint`)
           if (blueprintResponse.ok) {
             const blueprint = await blueprintResponse.json()
             transformBlueprintToGraph(blueprint)
+          }
+
+          // Stop polling if session has ended
+          if (state && (
+            state.toLowerCase() === 'completed' ||
+            state.toLowerCase() === 'failed')) {
+            return true // Signal to stop polling
+          }
         }
 
-        // Stop polling if session has ended
-        if (sessionDetails.state && (
-            sessionDetails.state.toLowerCase() === 'completed' || 
-            sessionDetails.state.toLowerCase() === 'failed')) {
-          return true // Signal to stop polling
-        }
-      }
-        
         return false // Continue polling
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch session data')
@@ -187,11 +207,11 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3>Blueprint Execution Graph</h3>
           </div>
-          
+
           <div className="diagram-info">
             <span className="state-badge">{sessionState}</span>
           </div>
-          
+
           <div className="diagram-container" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
             {graphData ? (
               <SessionGraph data={graphData} />
@@ -207,15 +227,10 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
         {/* Data Store Section */}
         <div className="monitor-section">
           <h3>Data Store</h3>
-          {sessionData && (
-            <div className="data-info">
-              <span className="state-badge">{sessionData.state}</span>
-            </div>
-          )}
           <div className="data-container">
             {sessionData ? (
               <div className="data-viewer-wrapper">
-                <DataViewer data={parsedSessionData} />
+                <DataViewer data={parsedSessionData} mainBlueprintId={mainBlueprintId} />
               </div>
             ) : (
               <div className="loading-container">
