@@ -28,6 +28,34 @@
   background: #D81E5B;
 }
 
+.session-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: 1rem;
+}
+
+.control-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 0.4rem 0.8rem;
+  font-size: 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: auto;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
 .close-button {
   background: transparent;
   color: #ffffff;
