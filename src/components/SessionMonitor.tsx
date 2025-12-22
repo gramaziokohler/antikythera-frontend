@@ -192,10 +192,42 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
     return () => clearInterval(interval)
   }, [apiBaseUrl, sessionId, blueprintId])
 
+  const handlePause = async () => {
+    if (!sessionId) return
+    try {
+      const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/pause`, {
+        method: 'POST'
+      })
+      if (!response.ok) throw new Error('Failed to pause session')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to pause session')
+    }
+  }
+
+  const handleResume = async () => {
+    if (!sessionId) return
+    try {
+      const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/start`, {
+        method: 'POST'
+      })
+      if (!response.ok) throw new Error('Failed to resume session')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resume session')
+    }
+  }
+
   return (
     <div className="session-monitor">
       <div className="session-monitor-header">
-        <h2>{sessionId ? `Session Monitor: ${sessionId}` : `Blueprint Preview: ${blueprintId}`}</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <h2>{sessionId ? `Session Monitor: ${sessionId}` : `Blueprint Preview: ${blueprintId}`}</h2>
+          {sessionId && (
+            <div className="session-controls">
+              <button onClick={handlePause} className="control-button" title="Pause Session">⏸</button>
+              <button onClick={handleResume} className="control-button" title="Resume Session">▶</button>
+            </div>
+          )}
+        </div>
         <button onClick={onClose} className="close-button">×</button>
       </div>
 

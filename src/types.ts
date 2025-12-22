@@ -39,6 +39,11 @@ export interface DeleteBlueprintResponse {
   message: string;
 }
 
+export interface SessionActionResponse {
+  session_id: string;
+  message: string;
+}
+
 export interface SessionInfo {
   session_id: string;
   blueprint_id: string;
