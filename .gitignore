@@ -18,6 +18,13 @@ dist-ssr
 .idea
 .DS_Store
 *.suo
+
+# Generated Proto files
+src/proto/antikythera.proto
+src/proto/compas_pb/
+src/proto/bundle.js
+src/proto/bundle.d.ts
+
 *.ntvs*
 *.njsproj
 *.sln

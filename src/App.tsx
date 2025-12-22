@@ -8,6 +8,7 @@ import { UploadModel } from './components/UploadModel'
 import { ModelsList } from './components/ModelsList'
 import { SessionMonitor } from './components/SessionMonitor'
 import { CollapsibleSection } from './components/CollapsibleSection'
+import { UserPromptDialog } from './components/UserPromptDialog'
 
 const API_BASE_URL = 'http://localhost:5174/api'
 
@@ -19,22 +20,23 @@ function App() {
 
   return (
     <div className="app">
-      
+      <UserPromptDialog />
+
       <div className="logo-container">
         <img src="/antikythera.png" alt="Antikythera" className="logo" />
         <h1 className="app-title">antikythera</h1>
       </div>
-      
+
       <div className="app-layout">
         <div className={`left-pane ${!isSidebarOpen ? 'collapsed' : ''}`}>
           <div className="left-pane-mask">
             <div className="left-pane-content">
               <CollapsibleSection title="Blueprints" className="blueprints-section-wrapper">
-                <UploadBlueprint 
-                  apiBaseUrl={API_BASE_URL} 
+                <UploadBlueprint
+                  apiBaseUrl={API_BASE_URL}
                   onUploadSuccess={() => setBlueprintsLastUpdate(Date.now())}
                 />
-                <BlueprintsList 
+                <BlueprintsList
                   apiBaseUrl={API_BASE_URL}
                   onSessionStart={(sessionId) => {
                     setActiveSessionId(sessionId)
@@ -51,8 +53,8 @@ function App() {
               </CollapsibleSection>
             </div>
           </div>
-          
-          <button 
+
+          <button
             className="sidebar-toggle"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             title={isSidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
