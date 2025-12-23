@@ -216,6 +216,45 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
     }
   }
 
+  const handleDownloadData = () => {
+    if (!sessionData) return
+
+    const recursivelyParseJson = (obj: any): any => {
+      if (typeof obj === 'string') {
+        try {
+          const parsed = JSON.parse(obj)
+          if (typeof parsed === 'object' && parsed !== null) {
+            return recursivelyParseJson(parsed)
+          }
+        } catch (e) {
+          // Not valid JSON or not an object/array, return original string
+        }
+        return obj
+      } else if (Array.isArray(obj)) {
+        return obj.map(recursivelyParseJson)
+      } else if (typeof obj === 'object' && obj !== null) {
+        const newObj: any = {}
+        for (const key in obj) {
+          newObj[key] = recursivelyParseJson(obj[key])
+        }
+        return newObj
+      }
+      return obj
+    }
+    
+    const processedData = recursivelyParseJson(sessionData)
+    const dataStr = JSON.stringify(processedData, null, 2)
+    const blob = new Blob([dataStr], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `session-${sessionId || 'data'}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="session-monitor">
       <div className="session-monitor-header">
@@ -258,7 +297,16 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
 
         {/* Data Store Section */}
         <div className="monitor-section">
-          <h3>Data Store</h3>
+          <div className="data-store-header">
+            <h3>Data Store</h3>
+            <button className="download-data-btn" onClick={handleDownloadData} title="Download Data Store">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </button>
+          </div>
           <div className="data-container">
             {sessionData ? (
               <div className="data-viewer-wrapper">

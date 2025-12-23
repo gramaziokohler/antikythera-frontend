@@ -200,6 +200,36 @@
   overflow-y: auto;
 }
 
+.download-data-btn {
+  background: transparent;
+  color: #23395B;
+  border: 1px solid rgba(35, 57, 91, 0.2);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.download-data-btn:hover {
+  background: #f8f9fb;
+  border-color: #23395B;
+}
+
+.data-store-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.data-store-header h3 {
+  margin: 0;
+}
+
 /* Data Viewer Styles */
 .data-viewer-wrapper {
   font-family: 'Courier New', Courier, monospace;
