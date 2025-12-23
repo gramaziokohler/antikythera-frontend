@@ -144,7 +144,6 @@ export function SessionGraph({ data }: SessionGraphProps) {
 }
 
 function getNodeColor(status: string): string {
-  console.log('Node status:', status);
   switch (status?.toLowerCase()) {
     case 'succeeded':
       return '#16a34a'; // Green - Success
