@@ -390,6 +390,22 @@ button:focus-visible {
   border-color: #D81E5B;
 }
 
+.param-type-select {
+  padding: 0.5rem;
+  border: 1px solid rgba(35, 57, 91, 0.2);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background-color: white;
+  color: #23395B;
+  cursor: pointer;
+  min-width: 80px;
+}
+
+.param-type-select:focus {
+  outline: none;
+  border-color: #D81E5B;
+}
+
 .remove-param-btn {
   background: transparent;
   color: #94a3b8;

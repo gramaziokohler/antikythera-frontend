@@ -14,12 +14,26 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart, onBlueprintSelect, 
   const [error, setError] = useState<string | null>(null)
   const [startMessage, setStartMessage] = useState<string>('')
   const [deleteMessage, setDeleteMessage] = useState<string>('')
-  const [blueprintParams, setBlueprintParams] = useState<Record<string, Array<{ key: string, value: string }>>>({})
+  const [blueprintParams, setBlueprintParams] = useState<Record<string, Array<{ key: string, value: string, type: 'custom' | 'model' }>>>({})
   const [expandedBlueprintId, setExpandedBlueprintId] = useState<string | null>(null)
+  const [models, setModels] = useState<string[]>([])
 
   useEffect(() => {
     fetchBlueprints()
+    fetchModels()
   }, [lastUpdate])
+
+  const fetchModels = async () => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/models`)
+      if (response.ok) {
+        const data: string[] = await response.json()
+        setModels(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch models', err)
+    }
+  }
 
   const fetchBlueprints = async () => {
     setLoading(true)
@@ -116,14 +130,30 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart, onBlueprintSelect, 
   const addParam = (blueprintId: string) => {
     setBlueprintParams(prev => ({
       ...prev,
-      [blueprintId]: [...(prev[blueprintId] || []), { key: '', value: '' }]
+      [blueprintId]: [...(prev[blueprintId] || []), { key: '', value: '', type: 'custom' }]
     }))
   }
 
-  const updateParam = (blueprintId: string, index: number, field: 'key' | 'value', value: string) => {
+  const updateParam = (blueprintId: string, index: number, field: 'key' | 'value' | 'type', value: string) => {
     setBlueprintParams(prev => {
       const currentParams = [...(prev[blueprintId] || [])]
-      currentParams[index] = { ...currentParams[index], [field]: value }
+      const currentParam = { ...currentParams[index] }
+
+      if (field === 'type') {
+        const newType = value as 'custom' | 'model'
+        currentParam.type = newType
+        if (newType === 'model') {
+          currentParam.key = 'model_id'
+          currentParam.value = models.length > 0 ? models[0] : ''
+        } else {
+          currentParam.key = ''
+          currentParam.value = ''
+        }
+      } else {
+        currentParam[field] = value
+      }
+
+      currentParams[index] = currentParam
       return { ...prev, [blueprintId]: currentParams }
     })
   }
@@ -184,20 +214,53 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart, onBlueprintSelect, 
                       <div className="params-list">
                         {(blueprintParams[blueprint.id] || []).map((param, index) => (
                           <div key={index} className="param-row">
-                            <input
-                              type="text"
-                              placeholder="Key"
-                              value={param.key}
-                              onChange={(e) => updateParam(blueprint.id, index, 'key', e.target.value)}
-                              className="param-input"
-                            />
-                            <input
-                              type="text"
-                              placeholder="Value"
-                              value={param.value}
-                              onChange={(e) => updateParam(blueprint.id, index, 'value', e.target.value)}
-                              className="param-input"
-                            />
+                            <select
+                              value={param.type}
+                              onChange={(e) => updateParam(blueprint.id, index, 'type', e.target.value)}
+                              className="param-type-select"
+                            >
+                              <option value="custom">Custom</option>
+                              <option value="model">Model</option>
+                            </select>
+                            
+                            {param.type === 'model' ? (
+                              <>
+                                <input
+                                  type="text"
+                                  value="model_id"
+                                  disabled
+                                  className="param-input"
+                                  title="Key is fixed to model_id"
+                                />
+                                <select
+                                  value={param.value}
+                                  onChange={(e) => updateParam(blueprint.id, index, 'value', e.target.value)}
+                                  className="param-input"
+                                >
+                                  {models.length === 0 && <option value="">No models available</option>}
+                                  {models.map(modelId => (
+                                    <option key={modelId} value={modelId}>{modelId}</option>
+                                  ))}
+                                </select>
+                              </>
+                            ) : (
+                              <>
+                                <input
+                                  type="text"
+                                  placeholder="Key"
+                                  value={param.key}
+                                  onChange={(e) => updateParam(blueprint.id, index, 'key', e.target.value)}
+                                  className="param-input"
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Value"
+                                  value={param.value}
+                                  onChange={(e) => updateParam(blueprint.id, index, 'value', e.target.value)}
+                                  className="param-input"
+                                />
+                              </>
+                            )}
                             <button
                               onClick={() => removeParam(blueprint.id, index)}
                               className="remove-param-btn"
