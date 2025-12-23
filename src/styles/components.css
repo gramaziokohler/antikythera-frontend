@@ -66,10 +66,19 @@ button:focus-visible {
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fb 100%);
   border: 1px solid rgba(35, 57, 91, 0.15);
   border-radius: 8px;
-  padding: 1rem;
   transition: all 0.3s;
   position: relative;
   overflow: hidden;
+}
+
+.blueprint-card.compact {
+  padding: 0.75rem 1rem;
+}
+
+.blueprint-card.expanded {
+  padding: 1rem;
+  border-color: #D81E5B;
+  box-shadow: 0 8px 24px rgba(35, 57, 91, 0.15);
 }
 
 .blueprint-card::before {
@@ -85,39 +94,74 @@ button:focus-visible {
 }
 
 .blueprint-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(35, 57, 91, 0.15);
-  border-color: #D81E5B;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(35, 57, 91, 0.1);
 }
 
-.blueprint-card:hover::before {
+.blueprint-card.expanded::before {
   transform: scaleX(1);
 }
 
-.blueprint-card h3 {
-  margin-top: 0;
-  margin-bottom: 0;
+.blueprint-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.blueprint-header-row h3 {
+  margin: 0;
   color: #23395B;
   font-size: 1rem;
-  font-weight: 700;
-}
-
-.blueprint-card p {
-  margin: 0.5rem 0;
-  font-size: 0.85rem;
-  color: #5a6c8a;
-  line-height: 1.4;
-}
-
-.blueprint-card strong {
-  color: #23395B;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.version-tag {
+  font-size: 0.8rem;
+  color: #5a6c8a;
+  font-weight: 400;
+  background: rgba(35, 57, 91, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.expand-icon {
+  color: #5a6c8a;
+  font-weight: bold;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.blueprint-details-container {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(35, 57, 91, 0.1);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.description {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  color: #5a6c8a;
+  line-height: 1.5;
+}
+
+.meta-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: #23395B;
 }
 
 .blueprint-actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 1rem;
+  margin-top: 1.5rem;
 }
 
 .start-button {

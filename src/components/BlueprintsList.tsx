@@ -15,6 +15,7 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart, onBlueprintSelect, 
   const [startMessage, setStartMessage] = useState<string>('')
   const [deleteMessage, setDeleteMessage] = useState<string>('')
   const [blueprintParams, setBlueprintParams] = useState<Record<string, Array<{ key: string, value: string }>>>({})
+  const [expandedBlueprintId, setExpandedBlueprintId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchBlueprints()
@@ -149,82 +150,100 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart, onBlueprintSelect, 
       )}
       
       <div className="blueprints-list">
-        {blueprints.map((blueprint) => (
-          <div key={blueprint.id} className="blueprint-card">
-            <h3 
-              onClick={() => onBlueprintSelect?.(blueprint.id)}
-              style={{ cursor: 'pointer' }}
-              title="Click to preview blueprint"
-            >
-              {blueprint.name} (v{blueprint.version})
-            </h3>
-            <p>{blueprint.description || 'N/A'}</p>
-            <p><strong>Task count:</strong> {blueprint.task_count}</p>
-            <p><strong>Uploaded:</strong> {new Date(blueprint.uploaded_at).toLocaleString()}</p>
-            
-            <div className="blueprint-params">
-              <details>
-                <summary>Parameters</summary>
-                <div className="params-list">
-                  {(blueprintParams[blueprint.id] || []).map((param, index) => (
-                    <div key={index} className="param-row">
-                      <input
-                        type="text"
-                        placeholder="Key"
-                        value={param.key}
-                        onChange={(e) => updateParam(blueprint.id, index, 'key', e.target.value)}
-                        className="param-input"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Value"
-                        value={param.value}
-                        onChange={(e) => updateParam(blueprint.id, index, 'value', e.target.value)}
-                        className="param-input"
-                      />
-                      <button
-                        onClick={() => removeParam(blueprint.id, index)}
-                        className="remove-param-btn"
-                        title="Remove parameter"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => addParam(blueprint.id)}
-                    className="add-param-btn"
-                  >
-                    + Add Parameter
-                  </button>
-                </div>
-              </details>
-            </div>
+        {blueprints.map((blueprint) => {
+          const isExpanded = expandedBlueprintId === blueprint.id
+          return (
+            <div key={blueprint.id} className={`blueprint-card ${isExpanded ? 'expanded' : 'compact'}`}>
+              <div 
+                className="blueprint-header-row"
+                onClick={() => {
+                  if (isExpanded) {
+                    setExpandedBlueprintId(null)
+                  } else {
+                    setExpandedBlueprintId(blueprint.id)
+                    onBlueprintSelect?.(blueprint.id)
+                  }
+                }}
+                title={isExpanded ? "Click to collapse" : "Click to expand"}
+              >
+                <h3>{blueprint.name} <span className="version-tag">v{blueprint.version}</span></h3>
+                <span className="expand-icon">{isExpanded ? '−' : '+'}</span>
+              </div>
 
-            <div className="blueprint-actions">
-              <button 
-                className="start-button"
-                onClick={() => handleStart(blueprint.id)}
-              >
-                Start
-              </button>
-              <button 
-                className="download-button"
-                onClick={() => handleDownload(blueprint.id, blueprint.name)}
-                title="Download Blueprint"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              </button>
-              <button 
-                className="delete-button"
-                onClick={() => handleDelete(blueprint.id)}
-                title="Delete Blueprint"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              </button>
+              {isExpanded && (
+                <div className="blueprint-details-container">
+                  <p className="description">{blueprint.description || 'N/A'}</p>
+                  <div className="meta-row">
+                    <span><strong>Tasks:</strong> {blueprint.task_count}</span>
+                    <span><strong>Uploaded:</strong> {new Date(blueprint.uploaded_at).toLocaleDateString()}</span>
+                  </div>
+                  
+                  <div className="blueprint-params">
+                    <details>
+                      <summary>Parameters</summary>
+                      <div className="params-list">
+                        {(blueprintParams[blueprint.id] || []).map((param, index) => (
+                          <div key={index} className="param-row">
+                            <input
+                              type="text"
+                              placeholder="Key"
+                              value={param.key}
+                              onChange={(e) => updateParam(blueprint.id, index, 'key', e.target.value)}
+                              className="param-input"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Value"
+                              value={param.value}
+                              onChange={(e) => updateParam(blueprint.id, index, 'value', e.target.value)}
+                              className="param-input"
+                            />
+                            <button
+                              onClick={() => removeParam(blueprint.id, index)}
+                              className="remove-param-btn"
+                              title="Remove parameter"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => addParam(blueprint.id)}
+                          className="add-param-btn"
+                        >
+                          + Add Parameter
+                        </button>
+                      </div>
+                    </details>
+                  </div>
+
+                  <div className="blueprint-actions">
+                    <button 
+                      className="start-button"
+                      onClick={() => handleStart(blueprint.id)}
+                    >
+                      Start
+                    </button>
+                    <button 
+                      className="download-button"
+                      onClick={() => handleDownload(blueprint.id, blueprint.name)}
+                      title="Download Blueprint"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </button>
+                    <button 
+                      className="delete-button"
+                      onClick={() => handleDelete(blueprint.id)}
+                      title="Delete Blueprint"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
       
       {startMessage && <p className="message">{startMessage}</p>}
