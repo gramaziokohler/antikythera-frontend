@@ -228,7 +228,7 @@ export function BlueprintsList({ apiBaseUrl, onSessionStart, onBlueprintSelect, 
                                 <input
                                   type="text"
                                   value="model_id"
-                                  disabled
+                                  hidden
                                   className="param-input"
                                   title="Key is fixed to model_id"
                                 />
