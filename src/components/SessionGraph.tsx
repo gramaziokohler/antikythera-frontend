@@ -1,12 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
+import type { MouseEvent } from 'react';
 import { 
   ReactFlow, 
   Background, 
   Controls, 
   useNodesState, 
-  useEdgesState,
-  Position,
-  MarkerType,
+  useEdgesState, 
+  Position, 
+  MarkerType, 
 } from '@xyflow/react';
 import type { Node, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -15,6 +16,7 @@ import type { GraphData } from '../types';
 
 interface SessionGraphProps {
   data: GraphData;
+  onNodeSwap?: (sourceId: string, targetId: string) => void;
 }
 
 const nodeWidth = 172;
@@ -55,11 +57,11 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
   return { nodes: layoutedNodes, edges };
 };
 
-export function SessionGraph({ data }: SessionGraphProps) {
+export function SessionGraph({ data, onNodeSwap }: SessionGraphProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  useEffect(() => {
+  const refreshLayout = useCallback(() => {
     if (!data) return;
     const initialNodes: Node[] = data.nodes.map((node) => {
       const isStartOrEnd = ['start', 'end'].includes(node.id.toLowerCase());
@@ -127,6 +129,61 @@ export function SessionGraph({ data }: SessionGraphProps) {
     setEdges(layoutedEdges);
   }, [data, setNodes, setEdges]);
 
+  // Update layout when data changes
+  useEffect(() => {
+    refreshLayout();
+  }, [refreshLayout]);
+
+  const onNodeDragStop = useCallback((_: MouseEvent, node: Node) => {
+    if (!onNodeSwap) {
+        refreshLayout(); // Snap back
+        return;
+    }
+
+    const overlapThreshold = 0;
+
+    const getBox = (n: Node) => ({
+      x: n.position.x,
+      y: n.position.y,
+      width: n.measured?.width ?? (n.style?.width as number) ?? nodeWidth,
+      height: n.measured?.height ?? (n.style?.height as number) ?? nodeHeight,
+    });
+
+    const A = getBox(node);
+    
+    const targetNode = nodes.find((n) => {
+      // Skip self
+      if (n.id === node.id) return false;
+
+      const B = getBox(n);
+
+      const centerAX = A.x + A.width * 0.5;
+      const centerAY = A.y + A.height * 0.5;
+      const centerBX = B.x + B.width * 0.5;
+      const centerBY = B.y + B.height * 0.5;
+
+      const dx = centerAX - centerBX;
+      const dy = centerAY - centerBY;
+
+      const px = (A.width + B.width) * 0.5 - Math.abs(dx);
+      const py = (A.height + B.height) * 0.5 - Math.abs(dy);
+      
+      const overlaps = px > overlapThreshold && py > overlapThreshold;
+
+      return overlaps;
+    });
+
+    if (targetNode) {
+      onNodeSwap(node.id, targetNode.id);
+    }
+    
+    // Always snap back to layout positions (either current or new)
+    // If the swap was valid, data will change eventually and trigger another refresh, which is fine.
+    // If invalid, this snaps it back immediately.
+    refreshLayout();
+
+  }, [nodes, onNodeSwap, refreshLayout]);
+
   return (
     <div style={{ width: '100%', height: '100%', minHeight: '400px' }}>
       <ReactFlow
@@ -134,6 +191,7 @@ export function SessionGraph({ data }: SessionGraphProps) {
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeDragStop={onNodeDragStop}
         fitView
       >
         <Background color="#ccc" gap={16} />
