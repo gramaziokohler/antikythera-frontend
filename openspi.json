@@ -378,7 +378,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/UploadModelResponse"
+                                    "$ref": "#/components/schemas/UploadModelsResponse"
                                 }
                             }
                         }
@@ -779,9 +779,28 @@
                         "title": "Broker Port"
                     },
                     "started_at": {
-                        "type": "string",
-                        "format": "date-time",
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
                         "title": "Started At"
+                    },
+                    "ended_at": {
+                        "anyOf": [
+                            {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Ended At"
                     },
                     "state": {
                         "type": "string",
@@ -795,9 +814,11 @@
                     "broker_host",
                     "broker_port",
                     "started_at",
+                    "ended_at",
                     "state"
                 ],
-                "title": "SessionInfo"
+                "title": "SessionInfo",
+                "description": "Response model for listing sessions."
             },
             "StartBlueprintRequest": {
                 "properties": {
@@ -871,11 +892,15 @@
                 ],
                 "title": "UploadBlueprintResponse"
             },
-            "UploadModelResponse": {
+            "UploadModelsResponse": {
                 "properties": {
-                    "model_id": {
-                        "type": "string",
-                        "title": "Model Id"
+                    "model_ids": {
+                        "items": {
+                            "type": "string"
+                        },
+                        "type": "array",
+                        "title": "Model Ids",
+                        "description": "Model IDs of the uploaded models."
                     },
                     "message": {
                         "type": "string",
@@ -884,10 +909,9 @@
                 },
                 "type": "object",
                 "required": [
-                    "model_id",
                     "message"
                 ],
-                "title": "UploadModelResponse"
+                "title": "UploadModelsResponse"
             },
             "ValidationError": {
                 "properties": {

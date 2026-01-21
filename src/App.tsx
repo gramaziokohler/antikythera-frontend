@@ -6,6 +6,7 @@ import { UploadBlueprint } from './components/UploadBlueprint'
 import { BlueprintsList } from './components/BlueprintsList'
 import { UploadModel } from './components/UploadModel'
 import { ModelsList } from './components/ModelsList'
+import { SessionsList } from './components/SessionsList'
 import { SessionMonitor } from './components/SessionMonitor'
 import { CollapsibleSection } from './components/CollapsibleSection'
 import { UserPromptDialog } from './components/UserPromptDialog'
@@ -31,6 +32,16 @@ function App() {
         <div className={`left-pane ${!isSidebarOpen ? 'collapsed' : ''}`}>
           <div className="left-pane-mask">
             <div className="left-pane-content">
+              <CollapsibleSection title="Sessions" className="sessions-section-wrapper">
+                <SessionsList
+                  apiBaseUrl={API_BASE_URL}
+                  onSessionSelect={(sessionId) => {
+                    setActiveSessionId(sessionId)
+                    setActiveBlueprintId(null)
+                  }}
+                />
+              </CollapsibleSection>
+
               <CollapsibleSection title="Blueprints" className="blueprints-section-wrapper">
                 <UploadBlueprint
                   apiBaseUrl={API_BASE_URL}

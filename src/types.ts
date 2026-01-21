@@ -49,7 +49,9 @@ export interface SessionInfo {
   blueprint_id: string;
   broker_host: string;
   broker_port: number;
-  started_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  state: string;
 }
 
 export interface BlueprintDiagramResponse {
