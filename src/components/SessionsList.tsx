@@ -38,9 +38,12 @@ export function SessionsList({ apiBaseUrl, onSessionSelect }: SessionsListProps)
 
   return (
     <div className="sessions-list-container">
-       <button onClick={fetchSessions} disabled={loading} className="refresh-button">
-        {loading ? 'Refreshing...' : 'Refresh List'}
-      </button>
+      <div className="list-header">
+        <h3>Available Sessions</h3>
+        <button onClick={fetchSessions} disabled={loading} className="refresh-button" title="Refresh list">
+        ↻
+        </button>
+      </div>
 
       {error && <p className="error">{error}</p>}
 
