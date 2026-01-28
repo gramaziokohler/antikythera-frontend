@@ -64,10 +64,10 @@ const DataViewer = ({ data, mainBlueprintId }: { data: any, mainBlueprintId: str
 
 // Command Pattern: Store operations to allow undo/sync
 interface GraphCommand {
-    type: 'SWAP_TASKS';
-    nodeA: string;
-    nodeB: string;
-    timestamp: number;
+  type: 'SWAP_TASKS';
+  nodeA: string;
+  nodeB: string;
+  timestamp: number;
 }
 
 export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: SessionMonitorProps) {
@@ -86,35 +86,55 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
   }, [commandHistory]);
 
   const transformBlueprintToGraph = useCallback((blueprint: any) => {
-      const blueprintData = blueprint.data;
-      const tasks = blueprintData.tasks;
-      const nodes = tasks.map((taskWrapper: any) => {
-        let details = '';
-        const params = taskWrapper.data.params;
-        if (params && params.blueprint) {
-          if (params.blueprint.dynamic?.element?.element_id) {
-            details = params.blueprint.dynamic.element.element_id;
-          } else if (params.blueprint.static) {
-            details = params.blueprint.static;
-          }
+    // Handle potentially unwrapped blueprint
+    const blueprintData = blueprint.data || blueprint;
+    const tasks = blueprintData.tasks || [];
+
+    const nodes = tasks.map((taskWrapper: any) => {
+      let details = '';
+      // Support both COMPAS-wrapped (dtype/data) and plain JSON tasks
+      const taskData = taskWrapper.data || taskWrapper;
+      const params = taskData.params;
+
+      // Handle params which can be a list (strict) or map (legacy)
+      let blueprintParamVal = undefined;
+      if (Array.isArray(params)) {
+        const p = params.find((x: any) => x.name === 'blueprint');
+        if (p) blueprintParamVal = p.value;
+      } else if (params && typeof params === 'object') {
+        blueprintParamVal = params.blueprint;
+      }
+
+      if (blueprintParamVal) {
+        if (blueprintParamVal.dynamic?.element?.element_id) {
+          details = blueprintParamVal.dynamic.element.element_id;
+        } else if (blueprintParamVal.static) {
+          details = blueprintParamVal.static;
         }
+      }
 
+      return {
+        id: taskData.id,
+        label: taskData.id,
+        status: taskData.state || 'pending',
+        details
+      };
+    })
+
+    const edges = tasks.flatMap((taskWrapper: any) => {
+      const taskData = taskWrapper.data || taskWrapper;
+      const dependencies = taskData.depends_on || [];
+
+      return dependencies.map((depWrapper: any) => {
+        const depData = depWrapper.data || depWrapper;
         return {
-          id: taskWrapper.data.id,
-          label: taskWrapper.data.id,
-          status: taskWrapper.data.state || 'pending',
-          details
+          source: depData.id,
+          target: taskData.id
         };
-      })
+      });
+    })
 
-      const edges = tasks.flatMap((taskWrapper: any) =>
-        taskWrapper.data.depends_on.map((dep: any) => ({
-          source: dep.data.id,
-          target: taskWrapper.data.id
-        }))
-      )
-
-      return { nodes, edges };
+    return { nodes, edges };
   }, []);
 
   const parsedSessionData = useMemo(() => {
@@ -132,7 +152,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
     // Only update from localBlueprint in preview mode. 
     // In session mode, graphData is updated directly from the fetch loop to avoid race conditions.
     if (localBlueprint && !sessionId) {
-        setGraphData(transformBlueprintToGraph(localBlueprint));
+      setGraphData(transformBlueprintToGraph(localBlueprint));
     }
   }, [localBlueprint, transformBlueprintToGraph, sessionId]);
 
@@ -150,67 +170,67 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
     // Only allow modification when paused or not yet started (pending/preview)
     const editableStates = ['paused', 'pending', 'preview'];
     if (sessionState && !editableStates.includes(sessionState.toLowerCase())) {
-        console.warn(`Cannot modify blueprint while session is in state: ${sessionState}`);
-        return;
+      console.warn(`Cannot modify blueprint while session is in state: ${sessionState}`);
+      return;
     }
 
     // Rule 1: 'start' and 'end' are immutable
     const startEndIds = ['start', 'end'];
     if (startEndIds.includes(idA.toLowerCase()) || startEndIds.includes(idB.toLowerCase())) {
-        console.warn('Cannot swap start or end nodes');
-        return;
+      console.warn('Cannot swap start or end nodes');
+      return;
     }
 
     // Rule 2: Tasks that are running or finished cannot be swapped
     const immutableStates = ['started', 'running', 'completed', 'succeeded', 'failed', 'finished'];
     const isImmutable = (state: string | undefined) => state && immutableStates.includes(state.toLowerCase());
-    
+
     if (isImmutable(taskA.data.state) || isImmutable(taskB.data.state)) {
-        console.warn('Cannot swap tasks that are already started or finished');
-        return;
+      console.warn('Cannot swap tasks that are already started or finished');
+      return;
     }
 
     setLocalBlueprint((prev: any) => {
-        const newBlueprint = JSON.parse(JSON.stringify(prev)); // Deep copy
-        const tasks = newBlueprint.data.tasks as any[];
-        
-        const indexA = tasks.findIndex(t => t.data.id === idA);
-        const indexB = tasks.findIndex(t => t.data.id === idB);
+      const newBlueprint = JSON.parse(JSON.stringify(prev)); // Deep copy
+      const tasks = newBlueprint.data.tasks as any[];
 
-        if (indexA === -1 || indexB === -1) return prev;
-        
-        const taskA = tasks[indexA];
-        const taskB = tasks[indexB];
+      const indexA = tasks.findIndex(t => t.data.id === idA);
+      const indexB = tasks.findIndex(t => t.data.id === idB);
 
-        // 1. Swap the depends_on lists (Topological swap)
-        const tempDeps = taskA.data.depends_on;
-        taskA.data.depends_on = taskB.data.depends_on;
-        taskB.data.depends_on = tempDeps;
+      if (indexA === -1 || indexB === -1) return prev;
 
-        // 2. Update all references in ALL tasks (including A and B)
-        tasks.forEach(t => {
-            t.data.depends_on.forEach((dep: any) => {
-                if (dep.data.id === idA) {
-                    dep.data.id = idB;
-                } else if (dep.data.id === idB) {
-                    dep.data.id = idA;
-                }
-            });
+      const taskA = tasks[indexA];
+      const taskB = tasks[indexB];
+
+      // 1. Swap the depends_on lists (Topological swap)
+      const tempDeps = taskA.data.depends_on;
+      taskA.data.depends_on = taskB.data.depends_on;
+      taskB.data.depends_on = tempDeps;
+
+      // 2. Update all references in ALL tasks (including A and B)
+      tasks.forEach(t => {
+        t.data.depends_on.forEach((dep: any) => {
+          if (dep.data.id === idA) {
+            dep.data.id = idB;
+          } else if (dep.data.id === idB) {
+            dep.data.id = idA;
+          }
         });
+      });
 
-        // 3. Swap the objects in the array (Physical list order swap)
-        tasks[indexA] = taskB;
-        tasks[indexB] = taskA;
+      // 3. Swap the objects in the array (Physical list order swap)
+      tasks[indexA] = taskB;
+      tasks[indexB] = taskA;
 
-        return newBlueprint;
+      return newBlueprint;
     });
 
     // Valid swap: Store command
     setCommandHistory(prev => [...prev, {
-        type: 'SWAP_TASKS',
-        nodeA: idA,
-        nodeB: idB,
-        timestamp: Date.now()
+      type: 'SWAP_TASKS',
+      nodeA: idA,
+      nodeB: idB,
+      timestamp: Date.now()
     }]);
 
     // TODO: Transmit to backend
@@ -278,7 +298,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
             return true // Signal to stop polling
           }
         }
-        
+
         return false // Continue polling
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch session data')
@@ -354,7 +374,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
       }
       return obj
     }
-    
+
     const processedData = recursivelyParseJson(sessionData)
     const dataStr = JSON.stringify(processedData, null, 2)
     const blob = new Blob([dataStr], { type: "application/json" })
@@ -398,8 +418,8 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
 
           <div className="diagram-container" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
             {graphData ? (
-              <SessionGraph 
-                data={graphData} 
+              <SessionGraph
+                data={graphData}
                 onNodeSwap={localBlueprint ? handleNodeSwap : undefined}
               />
             ) : (

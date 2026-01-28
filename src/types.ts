@@ -92,6 +92,12 @@ export interface AntikytheraDependency {
   guid: string;
 }
 
+export interface TaskProperty {
+  name: string;
+  value: any;
+  type?: string;
+}
+
 export interface AntikytheraTask {
   dtype: string;
   data: {
@@ -100,6 +106,9 @@ export interface AntikytheraTask {
     description: string | null;
     state: string;
     depends_on: AntikytheraDependency[];
+    inputs: TaskProperty[];
+    params: TaskProperty[];
+    outputs: TaskProperty[];
   };
   guid: string;
 }
