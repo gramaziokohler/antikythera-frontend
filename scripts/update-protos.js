@@ -51,15 +51,7 @@ const downloadUrl = (url, destPath) => {
 };
 
 // 2. Download compas_pb files
-const COMPAS_FILES = [
-    'arc.proto', 'bezier.proto', 'box.proto', 'capsule.proto', 'circle.proto',
-    'cone.proto', 'cylinder.proto', 'ellipse.proto', 'frame.proto', 'hyperbola.proto',
-    'line.proto', 'mesh.proto', 'message.proto', 'parabola.proto', 'plane.proto',
-    'point.proto', 'pointcloud.proto', 'polygon.proto', 'polyhedron.proto',
-    'polyline.proto', 'projection.proto', 'quaternion.proto', 'reflection.proto',
-    'rotation.proto', 'scale.proto', 'shear.proto', 'sphere.proto', 'torus.proto',
-    'transformation.proto', 'translation.proto', 'vector.proto'
-];
+const COMPAS_FILES = ['geometry.proto', 'datastructures.proto', 'message.proto'];
 const BASE_URL = 'https://raw.githubusercontent.com/gramaziokohler/compas_pb/main/src/compas_pb/protobuf_defs/compas_pb/generated/';
 
 async function main() {
