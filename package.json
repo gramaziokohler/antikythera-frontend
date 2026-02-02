@@ -12,11 +12,15 @@
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.8",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "@xyflow/react": "^12.9.3",
+    "lucide-react": "^0.563.0",
     "mqtt": "^5.14.1",
     "protobufjs": "^7.5.4",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "three": "^0.182.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

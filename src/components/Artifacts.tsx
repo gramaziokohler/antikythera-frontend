@@ -1,0 +1,27 @@
+import '../styles/Dashboard.css'; // Reusing dashboard styles for consistency
+import { UploadModel } from './UploadModel';
+import { ModelsList } from './ModelsList';
+
+interface ArtifactsProps {
+  apiBaseUrl?: string;
+}
+
+export function Artifacts({ apiBaseUrl = 'http://localhost:5174/api' }: ArtifactsProps) {
+  return (
+    <div className="view-container">
+      <header className="page-header">
+        <h1>Artifacts & Models</h1>
+        <p className="subtitle">Manage uploaded models and data artifacts.</p>
+      </header>
+
+      <div className="content-grid">
+        <div className="panel upload-panel">
+          <UploadModel apiBaseUrl={apiBaseUrl} />
+        </div>
+        <div className="panel list-panel">
+          <ModelsList apiBaseUrl={apiBaseUrl} />
+        </div>
+      </div>
+    </div>
+  );
+}

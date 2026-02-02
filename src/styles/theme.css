@@ -1,0 +1,47 @@
+:root {
+  /* Primary Brand Colors */
+  --color-terracotta-600: #C45A3C;
+  --color-terracotta-500: #D36B4A;
+  --color-terracotta-300: #E8B4A3;
+
+  /* Metallic Accents */
+  --color-copper-600: #B87333;
+  --color-copper-500: #D19A66;
+  --color-gold-muted: #C7A14A;
+
+  /* Neutral Shades */
+  --color-graphite: #1E1E1C;
+  --color-charcoal: #2A2A27;
+  --color-stone-soft: #E7E2DC;
+  --color-off-white: #F9F7F5;
+  /* Corrected from the likely typo in the image */
+  --color-white: #FFFFFF;
+
+  /* System Colors */
+  --color-success: #5F8F7A;
+  --color-warning: #D8A14A;
+  --color-error: #9E3D2C;
+  /* Adjusted slightly to match palette vibe */
+  --color-info: #5E6F7A;
+
+  /* Layout & Spacing */
+  --sidebar-width: 260px;
+  --sidebar-width-collapsed: 64px;
+  --header-height: 64px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  /* Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+
+  /* Added Colors */
+  --color-blue-50: #F0F4F8;
+  /* customized pale blue */
+  --color-blue-100: #D9E2EC;
+}

@@ -1,66 +1,20 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { Play, Pause, Plus, X } from 'lucide-react'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
+import { StartSessionDialog } from './StartSessionDialog'
+import { DataStoreExplorer } from './datastore/DataStoreExplorer'
 
 interface SessionMonitorProps {
   apiBaseUrl: string
   sessionId?: string | null
   blueprintId?: string | null
   onClose: () => void
+  onSessionCreated?: (sessionId: string) => void // New callback
 }
 
-const ValueRenderer = ({ value }: { value: any }) => {
-  if (value === null || value === undefined) return <span className="text-gray-500">null</span>
-  if (typeof value !== 'object') return <span>{String(value)}</span>
-  return <pre className="json-value" style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{JSON.stringify(value, null, 2)}</pre>
-}
 
-const DataViewer = ({ data, mainBlueprintId }: { data: any, mainBlueprintId: string }) => {
-  if (!data) return <div className="text-gray-500">No data available</div>
-
-  const rows: { blueprintId: string, key: string, value: any }[] = []
-
-  // Process main blueprint
-  if (data.main_blueprint) {
-    Object.entries(data.main_blueprint).forEach(([key, value]) => {
-      rows.push({ blueprintId: mainBlueprintId, key, value })
-    })
-  }
-
-  // Process inner blueprints
-  if (data.inner_blueprints) {
-    Object.entries(data.inner_blueprints).forEach(([bpId, bpData]: [string, any]) => {
-      Object.entries(bpData).forEach(([key, value]) => {
-        rows.push({ blueprintId: bpId, key, value })
-      })
-    })
-  }
-
-  if (rows.length === 0) return <div className="text-gray-500">No data entries</div>
-
-  return (
-    <table className="data-table">
-      <thead>
-        <tr>
-          <th style={{ textAlign: 'left', padding: '8px', background: '#f5f7fa', borderBottom: '2px solid #e0e0e0' }}>Blueprint ID</th>
-          <th style={{ textAlign: 'left', padding: '8px', background: '#f5f7fa', borderBottom: '2px solid #e0e0e0' }}>Key</th>
-          <th style={{ textAlign: 'left', padding: '8px', background: '#f5f7fa', borderBottom: '2px solid #e0e0e0' }}>Value</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row, index) => (
-          <tr key={index}>
-            <td className="data-key" style={{ width: 'auto' }}>{row.blueprintId}</td>
-            <td className="data-key" style={{ width: 'auto' }}>{row.key}</td>
-            <td className="data-value">
-              <ValueRenderer value={row.value} />
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
-}
+// Removed old DataViewer and ValueRenderer components as they are replaced by DataStoreExplorer
 
 // Command Pattern: Store operations to allow undo/sync
 interface GraphCommand {
@@ -70,7 +24,7 @@ interface GraphCommand {
   timestamp: number;
 }
 
-export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: SessionMonitorProps) {
+export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, onSessionCreated }: SessionMonitorProps) {
   const [sessionData, setSessionData] = useState<SessionDataResponse | null>(null)
   const [graphData, setGraphData] = useState<GraphData | null>(null)
   const [localBlueprint, setLocalBlueprint] = useState<any>(null)
@@ -78,6 +32,8 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
   const [mainBlueprintId, setMainBlueprintId] = useState<string>('Main Blueprint')
   const [error, setError] = useState<string | null>(null)
   const [commandHistory, setCommandHistory] = useState<GraphCommand[]>([])
+  const [blueprintStack, setBlueprintStack] = useState<any[]>([])
+  const [showStartDialog, setShowStartDialog] = useState(false)
 
   useEffect(() => {
     if (commandHistory.length > 0) {
@@ -96,20 +52,63 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
       const taskData = taskWrapper.data || taskWrapper;
       const params = taskData.params;
 
+      // Helper to extract value from a parameter object (handling COMPAS data wrapper)
+      const getParamValue = (paramObj: any) => {
+        if (!paramObj) return undefined;
+        // Check inside 'data' if present (COMPAS wrapper where value is nested in data)
+        if (paramObj.data && (paramObj.data.value !== undefined || paramObj.data.default !== undefined)) {
+          return paramObj.data.value !== undefined ? paramObj.data.value : paramObj.data.default;
+        }
+        // Check direct properties
+        return paramObj.value !== undefined ? paramObj.value : paramObj.default;
+      };
+
       // Handle params which can be a list (strict) or map (legacy)
       let blueprintParamVal = undefined;
       if (Array.isArray(params)) {
-        const p = params.find((x: any) => x.name === 'blueprint');
-        if (p) blueprintParamVal = p.value;
+        // 1. Try to find explicit 'blueprint' parameter
+        // The name might be on the top object or inside .data
+        const p = params.find((x: any) => (x.name === 'blueprint' || x.data?.name === 'blueprint'));
+        if (p) {
+          blueprintParamVal = getParamValue(p);
+        }
+
+        // 2. Fallback: Search for any parameter containing static/dynamic blueprint definition
+        if (!blueprintParamVal) {
+          const candidate = params.find((x: any) => {
+            const v = getParamValue(x);
+            return v && (v.static || v.dynamic || v.blueprint_id);
+          });
+          if (candidate) {
+            blueprintParamVal = getParamValue(candidate);
+          }
+        }
       } else if (params && typeof params === 'object') {
         blueprintParamVal = params.blueprint;
       }
 
+      // DEBUG: Log for composite tasks to diagnose missing ID
+      if (taskData.type?.toLowerCase().includes('composite')) {
+        console.log(`[DEBUG] Task ${taskData.id} params JSON:`, JSON.stringify(params));
+        console.log(`[DEBUG] Extracted blueprintParamVal:`, blueprintParamVal);
+      }
+
+      let internalBlueprintId = null;
       if (blueprintParamVal) {
-        if (blueprintParamVal.dynamic?.element?.element_id) {
-          details = blueprintParamVal.dynamic.element.element_id;
+        if (typeof blueprintParamVal === 'string') {
+          internalBlueprintId = blueprintParamVal;
+          details = blueprintParamVal;
+        } else if (blueprintParamVal.dynamic) {
+          // Handle various dynamic blueprint formats
+          if (blueprintParamVal.dynamic.element?.element_id) {
+            internalBlueprintId = blueprintParamVal.dynamic.element.element_id;
+          } else if (blueprintParamVal.dynamic.blueprint_id) {
+            internalBlueprintId = blueprintParamVal.dynamic.blueprint_id;
+          }
+          details = internalBlueprintId || 'Dynamic';
         } else if (blueprintParamVal.static) {
           details = blueprintParamVal.static;
+          internalBlueprintId = details;
         }
       }
 
@@ -117,9 +116,18 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
         id: taskData.id,
         label: taskData.id,
         status: taskData.state || 'pending',
-        details
+        details,
+        // Pass additional data for TaskNode
+        type: taskData.type,
+        description: taskData.description, // Extract description
+        inputs: taskData.inputs,
+        outputs: taskData.outputs,
+        internalBlueprintId
       };
     })
+
+    // Create a Set of valid node IDs for filtering edges
+    const validNodeIds = new Set(nodes.map((n: any) => n.id));
 
     const edges = tasks.flatMap((taskWrapper: any) => {
       const taskData = taskWrapper.data || taskWrapper;
@@ -127,11 +135,22 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
 
       return dependencies.map((depWrapper: any) => {
         const depData = depWrapper.data || depWrapper;
+
+        // Skip edges where source or target is missing from our node list
+        if (!validNodeIds.has(depData.id)) {
+          console.warn(`Skipping edge: Source node '${depData.id}' not found in blueprint tasks.`);
+          return null;
+        }
+        if (!validNodeIds.has(taskData.id)) {
+          console.warn(`Skipping edge: Target node '${taskData.id}' not found in blueprint tasks.`);
+          return null;
+        }
+
         return {
           source: depData.id,
           target: taskData.id
         };
-      });
+      }).filter((e: any) => e !== null);
     })
 
     return { nodes, edges };
@@ -349,6 +368,44 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
     }
   }
 
+  const handleNodeDoubleClick = useCallback(async (_: any, node: any) => {
+    const internalId = node.data?.internalBlueprintId;
+    // Check if it's a composite task and has an ID
+    if (!internalId && !node.data?.type?.toLowerCase().includes('composite')) return;
+
+    // Use internalId if available, otherwise try to guess or use node ID if standard convention?
+    // For now rely on internalId extracted from params
+    if (!internalId) {
+      console.warn("Composite node clicked but no blueprint ID found in params");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/blueprints/${internalId}`);
+      if (response.ok) {
+        const newBlueprint = await response.json();
+
+        // Push current blueprint to stack
+        setBlueprintStack(prev => [...prev, localBlueprint]);
+
+        // Set new blueprint
+        setLocalBlueprint(newBlueprint);
+        setGraphData(transformBlueprintToGraph(newBlueprint));
+      }
+    } catch (e) {
+      console.error("Failed to fetch sub-blueprint", e);
+    }
+  }, [apiBaseUrl, localBlueprint, transformBlueprintToGraph]);
+
+  const handleNavigateBack = () => {
+    if (blueprintStack.length === 0) return;
+
+    const previous = blueprintStack[blueprintStack.length - 1];
+    setBlueprintStack(prev => prev.slice(0, -1));
+    setLocalBlueprint(previous);
+    setGraphData(transformBlueprintToGraph(previous));
+  };
+
   const handleDownloadData = () => {
     if (!sessionData) return
 
@@ -388,19 +445,84 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
     URL.revokeObjectURL(url)
   }
 
+  const handleStartSession = () => {
+    if (!blueprintId) return;
+    setShowStartDialog(true);
+  };
+
+  const onDialogSessionStarted = (newSessionId: string) => {
+    setShowStartDialog(false);
+    if (onSessionCreated) {
+      onSessionCreated(newSessionId);
+    } else {
+      alert(`Session started: ${newSessionId}. Please open it from the Sessions list.`);
+      onClose();
+    }
+  }
+
+  const isRunning = sessionState?.toLowerCase() === 'running';
+  const isFinished = ['completed', 'failed', 'cancelled'].includes(sessionState?.toLowerCase() || '');
+  const isPendingOrCreated = ['pending', 'created', 'ready', 'paused'].includes(sessionState?.toLowerCase() || '');
+
   return (
     <div className="session-monitor">
-      <div className="session-monitor-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <h2>{sessionId ? `Session Monitor: ${sessionId}` : `Blueprint Preview: ${blueprintId}`}</h2>
-          {sessionId && (
-            <div className="session-controls">
-              <button onClick={handlePause} className="control-button" title="Pause Session">⏸</button>
-              <button onClick={handleResume} className="control-button" title="Resume Session">▶</button>
-            </div>
-          )}
+      <div className="monitor-section-header main-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              BLUEPRINT: <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{blueprintId || localBlueprint?.id || localBlueprint?.data?.id || mainBlueprintId}</span>
+            </h3>
+            <span className={`state-badge ${sessionState?.toLowerCase() || 'preview'}`}>
+              {sessionState || 'PREVIEW'}
+            </span>
+          </div>
+
+          <div className="session-controls" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {blueprintStack.length > 0 && (
+              <button onClick={handleNavigateBack} className="control-button back-btn" style={{ marginRight: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>← Back</span>
+              </button>
+            )}
+
+            {sessionId ? (
+              <>
+                {isRunning ? (
+                  <button onClick={handlePause} className="control-button start-preview-btn" title="Pause Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Pause size={16} /> <span>Pause</span>
+                  </button>
+                ) : !isFinished ? (
+                  <button onClick={handleResume} className="control-button start-preview-btn" title="Resume/Start Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Play size={16} /> <span>{['paused', 'stopped'].includes(sessionState?.toLowerCase() || '') ? 'Resume session' : 'Start Session'}</span>
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <button onClick={handleStartSession} className="control-button start-preview-btn" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Plus size={16} /> <span>New Session</span>
+              </button>
+            )}
+          </div>
         </div>
-        <button onClick={onClose} className="close-button">×</button>
+
+        {(sessionId || localBlueprint?.name || localBlueprint?.description) && (
+          <div style={{ fontSize: '0.9rem', color: '#666', borderTop: '1px solid #eee', paddingTop: '0.5rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            {sessionId && (
+              <span>
+                Session: <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#444' }}>{sessionId}</span>
+              </span>
+            )}
+
+            {(localBlueprint?.name || localBlueprint?.description) && (
+              <>
+                {sessionId && <span style={{ color: '#ddd' }}>|</span>}
+                <span>
+                  {localBlueprint?.name && <span style={{ fontWeight: 600, marginRight: '0.5rem' }}>{localBlueprint.name}</span>}
+                  {localBlueprint?.description && <span>{localBlueprint.description}</span>}
+                </span>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -408,19 +530,13 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
       <div className="monitor-grid">
         {/* Diagram Section */}
         <div className="monitor-section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3>Blueprint Execution Graph</h3>
-          </div>
 
-          <div className="diagram-info">
-            <span className="state-badge">{sessionState}</span>
-          </div>
-
-          <div className="diagram-container" style={{ minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
+          <div className="diagram-container">
             {graphData ? (
               <SessionGraph
                 data={graphData}
                 onNodeSwap={localBlueprint ? handleNodeSwap : undefined}
+                onNodeDoubleClick={handleNodeDoubleClick}
               />
             ) : (
               <div className="loading-container">
@@ -433,7 +549,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
 
         {/* Data Store Section */}
         <div className="monitor-section">
-          <div className="data-store-header">
+          <div className="monitor-section-header">
             <h3>Data Store</h3>
             <button className="download-data-btn" onClick={handleDownloadData} title="Download Data Store">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -445,8 +561,8 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
           </div>
           <div className="data-container">
             {sessionData ? (
-              <div className="data-viewer-wrapper">
-                <DataViewer data={parsedSessionData} mainBlueprintId={mainBlueprintId} />
+              <div className="data-viewer-wrapper" style={{ height: '100%' }}>
+                <DataStoreExplorer data={parsedSessionData} mainBlueprintId={mainBlueprintId} />
               </div>
             ) : (
               <div className="loading-container">
@@ -457,6 +573,16 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose }: 
           </div>
         </div>
       </div>
+
+      {showStartDialog && blueprintId && (
+        <StartSessionDialog
+          apiBaseUrl={apiBaseUrl}
+          blueprintId={blueprintId}
+          blueprintName={localBlueprint?.name || blueprintId}
+          onSessionStarted={onDialogSessionStarted}
+          onCancel={() => setShowStartDialog(false)}
+        />
+      )}
     </div>
   )
 }

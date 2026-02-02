@@ -44,13 +44,13 @@ button:focus-visible {
   border-left: 4px solid #23395B;
 }
 
-.blueprints-section > button {
+.blueprints-section>button {
   margin-bottom: 1.5rem;
   background: #23395B;
   box-shadow: 0 2px 8px rgba(35, 57, 91, 0.3);
 }
 
-.blueprints-section > button:hover {
+.blueprints-section>button:hover {
   background: #1a2a47;
   box-shadow: 0 4px 12px rgba(35, 57, 91, 0.4);
 }
@@ -348,7 +348,8 @@ button:focus-visible {
   resize: vertical;
   margin-top: 0.5rem;
   background: #fff;
-  box-sizing: border-box; /* Ensure padding doesn't overflow width */
+  box-sizing: border-box;
+  /* Ensure padding doesn't overflow width */
 }
 
 .params-input:focus {
@@ -382,7 +383,8 @@ button:focus-visible {
   border-radius: 4px;
   font-family: 'Courier New', monospace;
   font-size: 0.85rem;
-  min-width: 0; /* Allow shrinking */
+  min-width: 0;
+  /* Allow shrinking */
 }
 
 .param-input:focus {
@@ -464,7 +466,8 @@ button:focus-visible {
   color: #5a6c8a;
 }
 
-.upload-drop-zone:hover, .upload-drop-zone.dragging {
+.upload-drop-zone:hover,
+.upload-drop-zone.dragging {
   border-color: #23395B;
   background: #fff;
   color: #23395B;
@@ -508,8 +511,15 @@ button:focus-visible {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-5px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* User Prompt Dialog */
@@ -608,7 +618,8 @@ button:focus-visible {
   text-transform: uppercase;
 }
 
-.status-tag.completed, .status-tag.succeeded {
+.status-tag.completed,
+.status-tag.succeeded {
   background: rgba(22, 163, 74, 0.1);
   color: #16a34a;
 }
@@ -618,7 +629,8 @@ button:focus-visible {
   color: #dc2626;
 }
 
-.status-tag.running, .status-tag.started {
+.status-tag.running,
+.status-tag.started {
   background: rgba(216, 30, 91, 0.1);
   color: #D81E5B;
 }
@@ -662,8 +674,76 @@ button:focus-visible {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Sessions List */
+.sessions-list-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-bottom: 2rem;
+}
+
+.session-card {
+  background: var(--color-white);
+  border: 1px solid var(--color-stone-soft);
+  border-radius: 8px;
+  /* Assuming var was 8px */
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  /* Ensure it has layout */
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.session-card:hover {
+  border-color: #D81E5B;
+  /* Fallback or var */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+}
+
+.session-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: #555;
+  /* Fallback */
+}
+
+.session-detail-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.detail-label {
+  color: #888;
+  /* Fallback */
+}
+
+.loading-state {
+  font-style: italic;
+  color: var(--color-stone-medium);
 }
