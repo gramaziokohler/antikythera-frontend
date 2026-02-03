@@ -275,5 +275,11 @@
     transform: scale(1.2);
 }
 
-.task-handle.input-handle { left: -5px !important; }
-.task-handle.output-handle { right: -5px !important; }
+.task-handle.input-handle { 
+  left: -5px !important; 
+  top: 20px !important;
+}
+.task-handle.output-handle { 
+  right: -5px !important; 
+  top: 20px !important;
+}
