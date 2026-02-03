@@ -1,7 +1,7 @@
 .sidebar {
     width: var(--sidebar-width);
     height: 100vh;
-    background-color: #f9f9f9;
+    background-color: var(--color-bg-subtle);
     border-right: 1px solid var(--color-stone-soft);
     box-shadow: 1px 0 3px rgba(0, 0, 0, 0.03);
     /* Tiny shadow drop */
@@ -12,7 +12,7 @@
     left: 0;
     top: 0;
     z-index: 50;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-sans);
     font-weight: 300;
 }
 
@@ -50,6 +50,14 @@
     font-size: 0.95rem;
     color: var(--color-graphite);
     letter-spacing: -0.01em;
+}
+
+.logo-serif {
+    font-family: var(--font-logo);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.1rem;
+    color: var(--color-terracotta-700);
 }
 
 .collapse-btn {
@@ -93,7 +101,7 @@
 .section-title {
     font-size: 0.75rem;
     text-transform: uppercase;
-    color: #888;
+    color: var(--color-text-muted);
     font-weight: 400;
     /* Lighter weight for title */
     margin-bottom: 0.5rem;
@@ -103,7 +111,7 @@
     cursor: default;
     height: 24px;
     letter-spacing: 0.05em;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-sans);
 }
 
 .section-title span {
@@ -111,7 +119,7 @@
 }
 
 .section-title span:hover {
-    color: #555;
+    color: var(--color-text-secondary);
 }
 
 .section-actions {
@@ -129,7 +137,7 @@
     background: transparent;
     border: none;
     padding: 2px;
-    color: #888;
+    color: var(--color-text-muted);
     cursor: pointer;
     border-radius: 4px;
     display: flex;
@@ -139,8 +147,8 @@
 }
 
 .icon-btn:hover {
-    background: #eee;
-    color: #333;
+    background: var(--color-gray-200);
+    color: var(--color-text-primary);
     box-shadow: none;
 }
 
@@ -165,7 +173,7 @@
     white-space: nowrap;
     position: relative;
     gap: 8px;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-sans);
 }
 
 .list-item:hover {
@@ -180,13 +188,13 @@
 
 .item-meta {
     font-size: 0.7rem;
-    color: #999;
+    color: var(--color-text-muted);
     font-weight: 400;
 }
 
 .empty-state {
     font-size: 0.8rem;
-    color: #aaa;
+    color: var(--color-text-muted);
     font-style: italic;
     padding: 4px 8px;
 }
@@ -213,7 +221,7 @@
 }
 
 .status-dot.pending {
-    background-color: #ccc;
+    background-color: var(--color-gray-300);
 }
 
 .spin {
@@ -261,7 +269,7 @@
 
 .list-item.active,
 .list-item.new-item.active {
-    background-color: #ebf5ff;
+    background-color: var(--color-status-ready-bg);
     /* Stronger blue highlight */
     color: var(--color-primary);
     font-weight: 600;

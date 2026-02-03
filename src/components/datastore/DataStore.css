@@ -3,9 +3,9 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
-    background: white;
+    background: var(--color-bg-card);
     overflow: hidden;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-sans);
 }
 
 .data-store-header {
@@ -13,8 +13,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.5rem 1rem;
-    background: #fafafa;
-    border-bottom: 1px solid var(--color-stone-soft);
+    background: var(--color-bg-subtle);
+    border-bottom: 1px solid var(--color-border-default);
     height: 40px;
     flex-shrink: 0;
 }
@@ -24,7 +24,7 @@
     font-size: 0.85rem;
     font-weight: 600;
     text-transform: uppercase;
-    color: var(--color-graphite);
+    color: var(--color-text-primary);
     letter-spacing: 0.05em;
 }
 
@@ -36,9 +36,9 @@
 
 .data-sidebar {
     width: 300px;
-    border-right: 1px solid var(--color-stone-soft);
+    border-right: 1px solid var(--color-border-default);
     overflow-y: auto;
-    background: #fdfdfd;
+    background: var(--color-bg-subtle);
     display: flex;
     flex-direction: column;
 }
@@ -49,7 +49,7 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    background: #f8fafc;
+    background: var(--color-bg-page);
 }
 
 /* Key List Styles */
@@ -59,13 +59,13 @@
 
 .blueprint-header {
     padding: 8px 12px;
-    background: #f1f5f9;
+    background: var(--color-gray-100);
     font-size: 0.75rem;
     font-weight: 600;
-    color: #64748b;
+    color: var(--color-text-muted);
     text-transform: uppercase;
-    border-bottom: 1px solid #e2e8f0;
-    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--color-border-strong);
+    border-top: 1px solid var(--color-border-strong);
 }
 
 .blueprint-group:first-child .blueprint-header {
@@ -75,9 +75,9 @@
 .data-key-item {
     padding: 8px 12px 8px 16px;
     cursor: pointer;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--color-border-default);
     font-size: 0.85rem;
-    color: var(--color-graphite);
+    color: var(--color-text-primary);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -85,42 +85,40 @@
 }
 
 .data-key-item:hover {
-    background: #f8fafc;
-    color: var(--color-terracotta-600);
+    background: var(--color-bg-page);
+    color: var(--color-primary);
 }
 
 .data-key-item.selected {
-    background: #ebf5ff;
-    /* Matches Sidebar active */
-    color: #1e40af;
+    background: var(--color-status-ready-bg);
+    color: var(--color-status-ready);
     font-weight: 500;
-    border-left: 3px solid #3b82f6;
+    border-left: 3px solid var(--color-status-ready);
     padding-left: 13px;
-    /* Compensate for border */
 }
 
 .type-indicator {
     font-size: 0.65rem;
     padding: 2px 6px;
     border-radius: 4px;
-    background: #eee;
-    color: #888;
+    background: var(--color-gray-200);
+    color: var(--color-text-muted);
     text-transform: uppercase;
 }
 
 .type-indicator.geometry {
-    background: #fff1f2;
-    color: #e11d48;
+    background: var(--color-type-geometry-bg);
+    color: var(--color-type-geometry);
 }
 
 .type-indicator.number {
-    background: #f0f9ff;
-    color: #0284c7;
+    background: var(--color-type-number-bg);
+    color: var(--color-type-number);
 }
 
 .type-indicator.text {
-    background: #f0fdf4;
-    color: #166534;
+    background: var(--color-type-text-bg);
+    color: var(--color-type-text);
 }
 
 /* Viewers */
@@ -130,7 +128,7 @@
     justify-content: center;
     align-items: center;
     height: 100%;
-    color: #94a3b8;
+    color: var(--color-text-muted);
     font-size: 0.9rem;
 }
 
@@ -138,9 +136,9 @@
     padding: 1rem;
     overflow: auto;
     height: 100%;
-    font-family: 'Geist Mono', 'Fira Code', monospace;
+    font-family: var(--font-mono);
     font-size: 0.85rem;
-    color: #334155;
+    color: var(--color-text-secondary);
     white-space: pre-wrap;
 }
 
@@ -153,8 +151,7 @@
 .geometry-viewer-container {
     width: 100%;
     height: 100%;
-    background: #111;
-    /* Dark background for 3D */
+    background: var(--color-graphite);
     position: relative;
 }
 
@@ -162,17 +159,17 @@
     position: absolute;
     top: 10px;
     right: 10px;
-    z-index: 100;
+    z-index: var(--z-dropdown);
     display: flex;
     gap: 8px;
 }
 
 .viewer-toggle {
-    background: white;
+    background: var(--color-bg-card);
     padding: 0.4rem 0.8rem;
     border-radius: 4px;
     font-size: 0.8rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
     cursor: pointer;
-    border: 1px solid #eee;
+    border: 1px solid var(--color-border-default);
 }

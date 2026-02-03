@@ -109,11 +109,11 @@ export function StartSessionDialog({ apiBaseUrl, blueprintId, blueprintName, onS
                 <h3>Start Session: {blueprintName}</h3>
                 <p className="description" style={{ marginBottom: '1rem' }}>Configure parameters for this session.</p>
 
-                {error && <p className="error" style={{ color: 'red', marginBottom: '10px' }}>{error}</p>}
+                {error && <p className="error" style={{ color: 'var(--color-error)', marginBottom: '10px' }}>{error}</p>}
 
-                <div className="params-list" style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '1rem', border: '1px solid #eee', padding: '10px', borderRadius: '6px' }}>
+                <div className="params-list" style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '1rem', border: '1px solid var(--color-border-default)', padding: '10px', borderRadius: '6px' }}>
                     {blueprintParams.length === 0 && (
-                        <p style={{ fontStyle: 'italic', color: '#999', textAlign: 'center', padding: '10px' }}>No parameters added.</p>
+                        <p style={{ fontStyle: 'italic', color: 'var(--color-text-muted)', textAlign: 'center', padding: '10px' }}>No parameters added.</p>
                     )}
                     {blueprintParams.map((param, index) => (
                         <div key={index} className="param-row" style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
@@ -172,7 +172,7 @@ export function StartSessionDialog({ apiBaseUrl, blueprintId, blueprintName, onS
                                 onClick={() => removeParam(index)}
                                 className="remove-param-btn"
                                 title="Remove parameter"
-                                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#666' }}
+                                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--color-text-secondary)' }}
                             >
                                 ×
                             </button>
@@ -184,14 +184,14 @@ export function StartSessionDialog({ apiBaseUrl, blueprintId, blueprintName, onS
                     <button
                         onClick={addParam}
                         className="add-param-btn"
-                        style={{ background: 'none', border: '1px dashed #ccc', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem' }}
+                        style={{ background: 'none', border: '1px dashed var(--color-border-strong)', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.9rem' }}
                     >
                         + Add Parameter
                     </button>
                 </div>
 
                 <div className="user-prompt-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                    <button onClick={onCancel} disabled={loading} style={{ padding: '8px 16px', background: 'white', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', color: '#333' }}>
+                    <button onClick={onCancel} disabled={loading} style={{ padding: '8px 16px', background: 'var(--color-bg-card)', border: '1px solid var(--color-border-strong)', borderRadius: '4px', cursor: 'pointer', color: 'var(--color-text-primary)' }}>
                         Cancel
                     </button>
                     <button
