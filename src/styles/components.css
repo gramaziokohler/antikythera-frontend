@@ -464,7 +464,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--shadow-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -485,9 +485,24 @@
 
 .user-prompt-dialog h3 {
   margin-top: 0;
-  color: var(--color-text-primary);
-  font-size: 1.5rem;
-  margin-bottom: var(--space-md);
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-style: italic;
+  margin-bottom: var(--space-sm);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+}
+
+.user-prompt-dialog h3 .dialog-title-first {
+  color: var(--color-graphite);
+}
+
+.user-prompt-dialog h3 .dialog-title-rest {
+  color: var(--color-terracotta-600);
 }
 
 .user-prompt-dialog p {
@@ -505,6 +520,68 @@
 
 .user-prompt-actions button {
   min-width: 100px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.user-prompt-actions button:first-child {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.user-prompt-actions .start-preview-btn {
+  border: none;
+}
+
+.user-prompt-dialog .dialog-description {
+  margin-bottom: var(--space-md);
+}
+
+.user-prompt-dialog .dialog-error {
+  color: var(--color-error);
+  margin-bottom: 10px;
+}
+
+.user-prompt-dialog .params-container {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: var(--space-md);
+  border: 1px solid var(--color-border-default);
+  padding: 10px;
+  border-radius: var(--radius-md);
+}
+
+.user-prompt-dialog .params-empty {
+  font-style: italic;
+  color: var(--color-text-muted);
+  text-align: center;
+  padding: 10px;
+}
+
+.user-prompt-dialog .param-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.user-prompt-dialog .param-row:last-child {
+  margin-bottom: 0;
+}
+
+.user-prompt-dialog .param-type-select {
+  width: 90px;
+}
+
+.user-prompt-dialog .param-input {
+  flex: 1;
+}
+
+.user-prompt-dialog .dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
 }
 
 /* ========================================

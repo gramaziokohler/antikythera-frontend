@@ -82,7 +82,7 @@ export function Dashboard() {
           </h1>
           <p className="hero-subtitle">
             Manage distributed fabrication blueprints, monitor execution sessions,
-            and track your pipelines in real-time.
+            and track progress in real-time.
           </p>
           <div className="hero-actions">
             <button className="hero-btn primary">

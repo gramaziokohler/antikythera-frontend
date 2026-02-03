@@ -16,7 +16,7 @@ interface SidebarProps {
   onSelectionChange: (selection: { type: 'dashboard' | 'blueprint' | 'session' | 'upload-blueprint' | 'upload-model' | 'artifacts', id?: string }) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
-  refreshTrigger: number;
+  refreshTrigger?: number;
   activeSelection?: { type: string, id?: string };
 }
 
@@ -137,6 +137,14 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
               <div className="icon-wrapper"><Plus size={16} /></div>
               {!collapsed && <span className="item-label">New Blueprint</span>}
             </div>
+            <div
+              className={`list-item new-item ${activeSelection?.type === 'artifacts' ? 'active' : ''}`}
+              onClick={() => onSelectionChange({ type: 'artifacts' })}
+              title="Artifacts"
+            >
+              <div className="icon-wrapper"><Box size={16} /></div>
+              {!collapsed && <span className="item-label">Artifacts</span>}
+            </div>
           </div>
         </div>
 
@@ -225,19 +233,6 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
           )}
         </div>
 
-        {/* Artifacts/Footer Links */}
-        <div className="sidebar-section">
-          <div className="section-list">
-            <div
-              className={`list-item ${activeSelection?.type === 'artifacts' ? 'active' : ''}`}
-              onClick={() => onSelectionChange({ type: 'artifacts' })}
-              title="Artifacts"
-            >
-              <div className="icon-wrapper"><Box size={16} /></div>
-              {!collapsed && <span className="item-label">Artifacts</span>}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Footer / Compas Badge */}

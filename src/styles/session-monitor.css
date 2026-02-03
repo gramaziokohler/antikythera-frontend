@@ -39,7 +39,7 @@
   font-size: 0.9rem;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
   min-width: auto;
   box-shadow: none;
   display: flex;
@@ -59,14 +59,14 @@
   border: 1px solid transparent;
   font-weight: 500;
   padding: 0.4rem 1rem;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .start-preview-btn:hover {
   background: var(--color-terracotta-600);
   color: var(--color-text-inverse);
   transform: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .close-button {
@@ -79,7 +79,7 @@
   border-radius: 4px;
   box-shadow: none;
   text-transform: none;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
   line-height: 1;
   display: flex;
   align-items: center;
@@ -232,7 +232,7 @@
   padding: 4px;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
   display: flex;
   align-items: center;
 }

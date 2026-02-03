@@ -3,15 +3,15 @@
     height: 100vh;
     background-color: var(--color-bg-subtle);
     border-right: 1px solid var(--color-stone-soft);
-    box-shadow: 1px 0 3px rgba(0, 0, 0, 0.03);
+    box-shadow: var(--shadow-xs);
     /* Tiny shadow drop */
     display: flex;
     flex-direction: column;
-    transition: width 0.3s ease;
+    transition: width var(--transition-slow);
     position: fixed;
     left: 0;
     top: 0;
-    z-index: 50;
+    z-index: var(--z-sidebar);
     font-family: var(--font-sans);
     font-weight: 300;
 }
@@ -35,7 +35,7 @@
     overflow: hidden;
     white-space: nowrap;
     opacity: 0.8;
-    transition: opacity 0.2s;
+    transition: opacity var(--transition-base);
 }
 
 .logo-icon {
@@ -70,7 +70,7 @@
     align-items: center;
     justify-content: center;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity var(--transition-base);
 }
 
 .sidebar:hover .collapse-btn {
@@ -78,7 +78,7 @@
 }
 
 .collapse-btn:hover {
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--color-gray-200);
     box-shadow: none;
     color: var(--color-graphite);
 }
@@ -126,7 +126,7 @@
     display: flex;
     gap: 4px;
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity var(--transition-base);
 }
 
 .sidebar-section:hover .section-actions {
@@ -164,7 +164,7 @@
     padding: 6px 8px;
     border-radius: 6px;
     cursor: pointer;
-    transition: background-color 0.15s;
+    transition: background-color var(--transition-fast);
     font-size: 0.9rem;
     color: var(--color-graphite);
     font-weight: 500;
@@ -226,13 +226,6 @@
 
 .spin {
     animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    100% {
-        -webkit-transform: rotate(360deg);
-        transform: rotate(360deg);
-    }
 }
 
 .new-actions-list {

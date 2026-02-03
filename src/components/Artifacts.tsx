@@ -10,7 +10,7 @@ export function Artifacts({ apiBaseUrl = 'http://localhost:5174/api' }: Artifact
   return (
     <div className="view-container">
       <header className="page-header">
-        <h1>Artifacts & Models</h1>
+        <h1><span className="title-first">Artifacts</span> <span className="title-rest">& Models</span></h1>
         <p className="subtitle">Manage uploaded models and data artifacts.</p>
       </header>
 
