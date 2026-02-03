@@ -164,7 +164,9 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
               {blueprints.length === 0 ? (
                 <div className="empty-state">No blueprints</div>
               ) : (
-                blueprints.map(bp => (
+                [...blueprints]
+                  .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())
+                  .map(bp => (
                   <div
                     key={bp.id}
                     className={`list-item ${activeSelection?.type === 'blueprints' && activeSelection?.id === bp.id ? 'active' : ''}`}
