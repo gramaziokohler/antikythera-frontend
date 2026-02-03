@@ -44,7 +44,7 @@ const getStatusIcon = (status: string) => {
 };
 
 export const TaskNode = memo(({ data, selected }: NodeProps) => {
-  const { label, status, type, description, details, inputs = [], outputs = [], onExpand } = data as any;
+  const { label, status, type, description, details, inputs = [], outputs = [], condition, onExpand } = data as any;
   const isComposite = (type || '').toLowerCase().includes('composite');
 
   return (
@@ -66,6 +66,12 @@ export const TaskNode = memo(({ data, selected }: NodeProps) => {
 
         <div className="node-content">
             {description && <div className="node-description">{description}</div>}
+            {condition && (
+                <div className="node-condition">
+                    <span className="condition-label">Condition:</span>
+                    <span className="condition-value" title={condition}>{condition}</span>
+                </div>
+            )}
             
             {(inputs.length > 0 || outputs.length > 0) && (
                 <div className="node-io-container">
@@ -73,11 +79,24 @@ export const TaskNode = memo(({ data, selected }: NodeProps) => {
                         <div className="io-section inputs">
                             <span className="io-header">Inputs</span>
                             <div className="io-list">
-                                {inputs.map((inp: any, i: number) => (
-                                    <div key={i} className="io-pill" title={inp.name || inp.type}>
-                                        {inp.name}
-                                    </div>
-                                ))}
+                                {inputs.map((inp: any, i: number) => {
+                                    // Handle COMPAS wrapper or direct data
+                                    const inputData = inp.data || inp;
+                                    if (inputData.get_from) {
+                                        return (
+                                            <div key={i} className="io-pill remapped">
+                                                <span className="io-real">{inputData.get_from}</span>
+                                                <span className="io-arrow">→</span>
+                                                <span className="io-alias">{inputData.name}</span>
+                                            </div>
+                                        );
+                                    }
+                                    return (
+                                        <div key={i} className="io-pill">
+                                            {inputData.name}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -85,11 +104,24 @@ export const TaskNode = memo(({ data, selected }: NodeProps) => {
                         <div className="io-section outputs">
                             <span className="io-header">Outputs</span>
                             <div className="io-list">
-                                {outputs.map((out: any, i: number) => (
-                                    <div key={i} className="io-pill" title={out.name || out.type}>
-                                        {out.name}
-                                    </div>
-                                ))}
+                                {outputs.map((out: any, i: number) => {
+                                    // Handle COMPAS wrapper or direct data
+                                    const outputData = out.data || out;
+                                    if (outputData.set_to) {
+                                        return (
+                                            <div key={i} className="io-pill remapped">
+                                                <span className="io-alias">{outputData.name}</span>
+                                                <span className="io-arrow">→</span>
+                                                <span className="io-real">{outputData.set_to}</span>
+                                            </div>
+                                        );
+                                    }
+                                    return (
+                                        <div key={i} className="io-pill">
+                                            {outputData.name}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}

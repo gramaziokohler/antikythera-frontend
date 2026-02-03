@@ -114,6 +114,33 @@
     overflow: hidden;
 }
 
+.node-condition {
+    font-size: 0.7rem;
+    padding: 4px 8px;
+    background: var(--color-status-pending-bg);
+    border-left: 3px solid var(--color-status-pending);
+    border-radius: 0 4px 4px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.condition-label {
+    font-weight: 600;
+    color: var(--color-info);
+    text-transform: uppercase;
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+}
+
+.condition-value {
+    color: var(--color-text-secondary);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .node-io-container {
     display: flex;
     gap: 1rem;
@@ -161,6 +188,35 @@
 .io-section.inputs .io-pill {
     background: var(--color-type-number-bg);
     color: var(--color-type-number);
+}
+
+.io-pill.remapped {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-weight: 400;
+}
+
+.io-arrow {
+    color: var(--color-terracotta-500);
+    font-weight: 500;
+}
+
+.io-real {
+    color: inherit;
+}
+
+.io-alias {
+    color: var(--color-text-muted);
+    opacity: 0.8;
+}
+
+.io-section.inputs .io-pill.remapped {
+    background: var(--color-type-number-bg);
+}
+
+.io-section.outputs .io-pill.remapped {
+    background: var(--color-type-text-bg);
 }
 
 .node-footer {

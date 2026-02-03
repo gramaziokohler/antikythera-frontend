@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useState } from 'react';
 import type { MouseEvent } from 'react';
 import {
   ReactFlow,
@@ -90,6 +90,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick }: SessionGraphProps & { onNodeDoubleClick?: (event: MouseEvent, node: Node) => void }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const [isInteractive, setIsInteractive] = useState(false); // Start locked
 
   const nodeTypes = useMemo(() => ({
     task: TaskNode
@@ -110,6 +111,7 @@ export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick }: SessionGra
           // We expect these to be in the node object now
           type: node.type,
           description: node.description, // Pass description
+          condition: node.condition, // Pass condition
           inputs: node.inputs,
           outputs: node.outputs,
           internalBlueprintId: node.internalBlueprintId,
@@ -172,11 +174,14 @@ export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick }: SessionGra
         minZoom={0.1}
         maxZoom={1.5}
         nodeExtent={undefined}
-        nodesDraggable={false}
-        nodesConnectable={false}
+        nodesDraggable={isInteractive}
+        nodesConnectable={isInteractive}
+        elementsSelectable={isInteractive}
       >
         <Background color="#ccc" gap={20} />
-        <Controls />
+        <Controls
+          onInteractiveChange={setIsInteractive}
+        />
       </ReactFlow>
     </div>
   );
