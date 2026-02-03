@@ -19,8 +19,6 @@ export function convertCompasDataToThree(item: CompasData): THREE.Object3D | nul
         } else if (item.dtype.includes('Point')) {
             return createPoint(item.data);
         } else if (item.dtype.includes('Vector')) {
-            // Visualize vector from origin? or just text? 
-            // Let's create an arrow from origin
             return createArrow(item.data);
         }
     } catch (e) {
@@ -33,8 +31,7 @@ export function convertCompasDataToThree(item: CompasData): THREE.Object3D | nul
 function createFrame(data: any): THREE.Object3D {
     const group = new THREE.Group();
 
-    // Parse point and vectors
-    const pt = data.point; // [x, y, z]
+    const pt = data.point;
     const xaxis = data.xaxis;
     const yaxis = data.yaxis;
     const zaxis = new THREE.Vector3(xaxis[0], xaxis[1], xaxis[2])
@@ -43,14 +40,11 @@ function createFrame(data: any): THREE.Object3D {
 
     const origin = new THREE.Vector3(pt[0], pt[1], pt[2]);
 
-    // Axes Helper
-    // But standard axes helper is X=R, Y=G, Z=B. 
-    // Custom arrow helpers
     const xDir = new THREE.Vector3(xaxis[0], xaxis[1], xaxis[2]).normalize();
     const yDir = new THREE.Vector3(yaxis[0], yaxis[1], yaxis[2]).normalize();
     const zDir = zaxis;
 
-    const length = 1.0; // Default size, maybe scale based on scene?
+    const length = 1.0;
 
     const xArrow = new THREE.ArrowHelper(xDir, origin, length, 0xFF0000);
     const yArrow = new THREE.ArrowHelper(yDir, origin, length, 0x00FF00);
@@ -64,7 +58,7 @@ function createFrame(data: any): THREE.Object3D {
 }
 
 function createBox(data: any): THREE.Object3D {
-    const frame = data.frame; // Box usually has a frame
+    const frame = data.frame;
     const xsize = data.xsize || 1;
     const ysize = data.ysize || 1;
     const zsize = data.zsize || 1;
@@ -74,8 +68,6 @@ function createBox(data: any): THREE.Object3D {
     const mesh = new THREE.Mesh(geometry, material);
 
     if (frame) {
-        // Transform mesh to frame
-        // COMPAS Box centered at frame?
         const pt = frame.point;
         const xaxis = frame.xaxis;
         const yaxis = frame.yaxis;
@@ -94,7 +86,6 @@ function createBox(data: any): THREE.Object3D {
         mesh.applyMatrix4(matrix);
     }
 
-    // Add wireframe for better visibility
     const edges = new THREE.EdgesGeometry(geometry);
     const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
     if (frame) line.applyMatrix4(mesh.matrix);
@@ -106,26 +97,57 @@ function createBox(data: any): THREE.Object3D {
     return group;
 }
 
-function createMesh(data: any): THREE.Object3D {
-    // data.vertices: { "key": [x,y,z] } or [[x,y,z]]? 
-    // COMPAS serialized Mesh usually has vertices as dictionary key->coords 
-    // and faces as list of vertex keys
-
-    const verticesMap = data.vertices;
-    const faces = data.faces; // List of lists of keys
+function createMesh(data: any): THREE.Object3D | null {
+    // COMPAS mesh can be nested - try different paths
+    let meshData = data;
+    
+    if (data.data && (data.data.vertices || data.data.faces || data.data.vertex || data.data.face)) {
+        meshData = data.data;
+    } else if (data.value && (data.value.vertices || data.value.faces || data.value.vertex || data.value.face)) {
+        meshData = data.value;
+    }
+    
+    let verticesMap = meshData.vertices || meshData.vertex || {};
+    let faces = meshData.faces || meshData.face || [];
+    
+    // Handle vertices as objects with {x, y, z} format
+    const processedVerticesMap: { [key: string]: number[] } = {};
+    for (const key in verticesMap) {
+        const v = verticesMap[key];
+        if (Array.isArray(v)) {
+            processedVerticesMap[key] = v;
+        } else if (v && typeof v === 'object' && 'x' in v && 'y' in v && 'z' in v) {
+            processedVerticesMap[key] = [v.x, v.y, v.z];
+        }
+    }
+    
+    // Handle faces as objects with numbered keys
+    let processedFaces: any[];
+    if (Array.isArray(faces)) {
+        processedFaces = faces;
+    } else if (faces && typeof faces === 'object') {
+        const sortedKeys = Object.keys(faces).sort((a, b) => parseInt(a) - parseInt(b));
+        processedFaces = sortedKeys.map(key => faces[key]);
+    } else {
+        processedFaces = [];
+    }
+    
+    if (Object.keys(processedVerticesMap).length === 0 || processedFaces.length === 0) {
+        return null;
+    }
 
     const geometry = new THREE.BufferGeometry();
     const positionBytes: number[] = [];
 
-    // Triangulate faces roughly
-    faces.forEach((face: any[]) => {
-        // Simple fan triangulation for n-gons (assuming convex/planar)
+    processedFaces.forEach((face: any[]) => {
         if (face.length >= 3) {
-            const v0 = verticesMap[face[0]]; // [x, y, z] or {x, y, z}? COMPAS JSON is [x, y, z]
+            const v0 = processedVerticesMap[face[0]];
             for (let i = 1; i < face.length - 1; i++) {
-                const v1 = verticesMap[face[i]];
-                const v2 = verticesMap[face[i + 1]];
-                positionBytes.push(...v0, ...v1, ...v2);
+                const v1 = processedVerticesMap[face[i]];
+                const v2 = processedVerticesMap[face[i + 1]];
+                if (v0 && v1 && v2) {
+                    positionBytes.push(...v0, ...v1, ...v2);
+                }
             }
         }
     });
@@ -137,7 +159,6 @@ function createMesh(data: any): THREE.Object3D {
     const material = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(geometry, material);
 
-    // Wireframe
     const edges = new THREE.EdgesGeometry(geometry);
     const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x333333 }));
 
@@ -148,7 +169,6 @@ function createMesh(data: any): THREE.Object3D {
 }
 
 function createPoint(data: any): THREE.Object3D {
-    // data is [x, y, z] or {x, y, z}?
     let x = 0, y = 0, z = 0;
     if (Array.isArray(data)) {
         [x, y, z] = data;

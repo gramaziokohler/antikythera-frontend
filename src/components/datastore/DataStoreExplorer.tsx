@@ -14,6 +14,56 @@ interface DataStoreExplorerProps {
     mainBlueprintId: string;
 }
 
+const GEOMETRY_KEYWORDS = [
+    'geometry', 'Mesh', 'Point', 'Line', 'Frame', 'Polygon', 'Polyline',
+    'Box', 'Sphere', 'Cylinder', 'Cone', 'Capsule', 'Torus', 'Tubular',
+    'Pointcloud', 'Brep'
+];
+
+function isGeometry(value: any): boolean {
+    if (!value || typeof value !== 'object') return false;
+
+    // Check dtype field for geometry keywords
+    if (value.dtype && GEOMETRY_KEYWORDS.some(kw => value.dtype.includes(kw))) {
+        return true;
+    }
+
+    // Check nested data structure
+    if (value.data?.dtype && GEOMETRY_KEYWORDS.some(kw => value.data.dtype.includes(kw))) {
+        return true;
+    }
+
+    // Check for vertices/faces structure (typical of meshes)
+    if ((value.vertices || value.points) && (value.faces || value.edges)) {
+        return true;
+    }
+
+    return false;
+}
+
+function detectType(val: any): 'text' | 'number' | 'geometry' | 'json' {
+    // Extract wrapped data (backend returns { value: ..., type: ... })
+    const isWrapped = val && typeof val === 'object' && val.type && val.value !== undefined;
+    const value = isWrapped ? val.value : val;
+    const declaredType = isWrapped ? val.type : null;
+
+    // If backend declared a specific type, use it (unless it's json which we might override)
+    if (declaredType && declaredType !== 'json') {
+        return declaredType;
+    }
+
+    // Check for geometry indicators
+    if (isGeometry(value)) {
+        return 'geometry';
+    }
+
+    // Basic type detection for primitives
+    if (typeof value === 'number') return 'number';
+    if (typeof value === 'string') return 'text';
+
+    return 'json';
+}
+
 export function DataStoreExplorer({ data, mainBlueprintId }: DataStoreExplorerProps) {
     const [selectedKey, setSelectedKey] = useState<string | null>(null);
     const [selectedBlueprintId, setSelectedBlueprintId] = useState<string | null>(null);
@@ -25,20 +75,9 @@ export function DataStoreExplorer({ data, mainBlueprintId }: DataStoreExplorerPr
         // Helper to process a dict of keys
         const processDict = (dict: any, bpId: string) => {
             Object.entries(dict).forEach(([key, val]: [string, any]) => {
-                // Backend now returns { value: ..., type: ... } wrapper
-                // gracefully handle if it's not wrapped (legacy)
-                let value = val;
-                let type: 'text' | 'number' | 'geometry' | 'json' = 'json';
-
-                if (val && typeof val === 'object' && val.type && val.value !== undefined) {
-                    value = val.value;
-                    type = val.type;
-                } else {
-                    // Infer basic legacy types
-                    if (typeof val === 'number') type = 'number';
-                    else if (typeof val === 'string') type = 'text';
-                    else if (val && val.dtype) type = 'geometry'; // simple guess
-                }
+                const isWrapped = val && typeof val === 'object' && val.type && val.value !== undefined;
+                const value = isWrapped ? val.value : val;
+                const type = detectType(val);
 
                 items.push({
                     key,

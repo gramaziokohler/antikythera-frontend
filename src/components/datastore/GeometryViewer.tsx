@@ -9,18 +9,37 @@ interface GeometryViewerProps {
 }
 
 function SceneContent({ object }: { object: THREE.Object3D | null }) {
-    const { camera } = useThree();
+    const { camera, controls } = useThree();
 
     useEffect(() => {
         if (object) {
-            // Auto-fit logic could go here
-            // const box = new THREE.Box3().setFromObject(object);
-            // const size = box.getSize(new THREE.Vector3());
-            // const center = box.getCenter(new THREE.Vector3());
-            // camera.position.set(center.x + size.x * 2, center.y + size.y * 2, center.z + size.z * 2);
-            // camera.lookAt(center);
+            // Calculate bounding box
+            const box = new THREE.Box3().setFromObject(object);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            
+            // Calculate distance to fit object in view
+            // Use the largest dimension to determine camera distance
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const fov = 50; // Camera FOV
+            const distance = (maxDim / 2) / Math.tan((fov / 2) * (Math.PI / 180)) * 1.5; // 1.5x for padding
+            
+            // Position camera at isometric angle
+            camera.position.set(
+                center.x + distance,
+                center.y + distance,
+                center.z + distance
+            );
+            
+            camera.lookAt(center);
+            
+            // Update orbit controls target to center
+            if (controls && 'target' in controls) {
+                (controls as any).target.copy(center);
+                (controls as any).update();
+            }
         }
-    }, [object, camera]);
+    }, [object, camera, controls]);
 
     if (!object) return null;
 
