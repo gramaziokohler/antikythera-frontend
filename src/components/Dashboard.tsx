@@ -5,7 +5,6 @@ import {
   AlertCircle,
   Clock,
   Zap,
-  TrendingUp,
   FileText,
   Box,
   ArrowRight,
@@ -13,6 +12,7 @@ import {
   Upload
 } from 'lucide-react';
 import '../styles/Dashboard.css';
+import heroImage from '../assets/antikythera-frontend.png';
 
 interface DashboardStats {
   totalBlueprints: number;
@@ -95,17 +95,7 @@ export function Dashboard() {
             </button>
           </div>
         </div>
-        <div className="hero-visual">
-          <div className="hero-stat-card">
-            <div className="hero-stat-header">
-              <TrendingUp size={20} />
-              <span>Performance</span>
-            </div>
-            <div className="hero-stat-value">{stats.successRate}%</div>
-            <div className="hero-stat-label">Success Rate</div>
-            <div className="hero-stat-trend positive">+3.2% this week</div>
-          </div>
-        </div>
+        <img src={heroImage} alt="" className="hero-visual-image" />
       </section>
 
       {/* Quick Stats Grid */}

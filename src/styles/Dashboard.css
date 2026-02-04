@@ -20,8 +20,9 @@
 /* Hero Section */
 .hero-section {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 3rem;
+  grid-template-columns: 1fr;
+  position: relative;
+  overflow: hidden;
   align-items: center;
   margin-bottom: 3rem;
   padding: 2.5rem;
@@ -115,6 +116,27 @@
 .hero-btn.secondary:hover {
   background: var(--color-off-white);
   border-color: var(--color-copper-500);
+}
+
+.hero-visual-image {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: auto;
+  object-fit: cover;
+  border-top-right-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+  z-index: 0;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 25%);
+  mask-image: linear-gradient(to right, transparent, black 25%);
+}
+
+/* Ensure content stays on top */
+.hero-content {
+  max-width: 600px;
+  position: relative;
+  z-index: 1;
 }
 
 /* Hero Visual/Card */
