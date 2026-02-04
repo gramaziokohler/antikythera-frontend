@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Activity,
   CheckCircle2,
@@ -9,10 +9,16 @@ import {
   Box,
   ArrowRight,
   Play,
-  Upload
+  Plus
 } from 'lucide-react';
 import '../styles/Dashboard.css';
 import heroImage from '../assets/antikythera-frontend.png';
+import type { SessionInfo } from '../types';
+
+interface DashboardProps {
+  onNavigate?: (selection: { type: 'dashboard' | 'blueprint' | 'session' | 'upload-blueprint' | 'upload-model' | 'artifacts', id?: string }) => void;
+  apiBaseUrl?: string;
+}
 
 interface DashboardStats {
   totalBlueprints: number;
@@ -37,7 +43,27 @@ interface DashboardStats {
   }>;
 }
 
-export function Dashboard() {
+export function Dashboard({ onNavigate, apiBaseUrl }: DashboardProps) {
+  const [lastSession, setLastSession] = useState<SessionInfo | null>(null);
+
+  useEffect(() => {
+    if (!apiBaseUrl) return;
+    fetch(`${apiBaseUrl}/sessions`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          // Sort by started_at descending to get the latest
+          const sorted = data.sort((a: any, b: any) => {
+            const timeA = a.started_at ? new Date(a.started_at).getTime() : 0;
+            const timeB = b.started_at ? new Date(b.started_at).getTime() : 0;
+            return timeB - timeA;
+          });
+          setLastSession(sorted[0]);
+        }
+      })
+      .catch(err => console.error("Failed to fetch sessions for dashboard", err));
+  }, [apiBaseUrl]);
+
   const [stats] = useState<DashboardStats>({
     totalBlueprints: 24,
     activeSessions: 3,
@@ -85,14 +111,25 @@ export function Dashboard() {
             and track progress in real-time.
           </p>
           <div className="hero-actions">
-            <button className="hero-btn primary">
-              <Play size={18} />
-              Start Session
+            <button
+              className="hero-btn primary"
+              onClick={() => onNavigate?.({ type: 'upload-blueprint' })}
+            >
+              <Plus size={18} />
+              New Blueprint
             </button>
-            <button className="hero-btn secondary">
-              <Upload size={18} />
-              Upload Blueprint
-            </button>
+            {lastSession && (
+              <button
+                className="hero-link-action"
+                onClick={() => onNavigate?.({ type: 'session', id: lastSession.session_id })}
+                title={`Open session ${lastSession.session_id}`}
+              >
+                <span className="link-text">
+                  Open recent session: {lastSession.blueprint_id}, {lastSession.session_id.substring(0, 8)}...
+                </span>
+                <ArrowRight size={14} className="link-icon" />
+              </button>
+            )}
           </div>
         </div>
         <img src={heroImage} alt="" className="hero-visual-image" />

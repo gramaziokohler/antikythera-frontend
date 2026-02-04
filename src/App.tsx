@@ -84,7 +84,10 @@ function App() {
       case 'dashboard':
         return (
           <div className="view-container">
-            <Dashboard />
+            <Dashboard
+              onNavigate={handleSelectionChange}
+              apiBaseUrl={API_BASE_URL}
+            />
           </div>
         )
       case 'upload-blueprint':

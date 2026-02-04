@@ -45,7 +45,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   }, [commandHistory]);
 
   const startResizing = useCallback((e: React.MouseEvent) => {
-    e.preventDefault(); 
+    e.preventDefault();
     isResizingRef.current = true;
     document.body.style.cursor = 'row-resize';
     document.body.style.userSelect = 'none';
@@ -59,12 +59,12 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
   const resize = useCallback((e: MouseEvent) => {
     if (isResizingRef.current) {
-       // Docked at bottom, so dragging the top edge changes height based on distance from bottom
-       const newHeight = window.innerHeight - e.clientY;
-       // Min height 100px, max height 80% of window
-       if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
-           setDatastoreHeight(newHeight);
-       }
+      // Docked at bottom, so dragging the top edge changes height based on distance from bottom
+      const newHeight = window.innerHeight - e.clientY;
+      // Min height 100px, max height 80% of window
+      if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
+        setDatastoreHeight(newHeight);
+      }
     }
   }, []);
 
