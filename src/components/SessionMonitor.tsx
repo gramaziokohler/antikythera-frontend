@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Play, Pause, Plus, X } from 'lucide-react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { Play, Pause, Plus, X, ChevronUp, ChevronDown } from 'lucide-react'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
 import { StartSessionDialog } from './StartSessionDialog'
@@ -34,12 +34,48 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   const [commandHistory, setCommandHistory] = useState<GraphCommand[]>([])
   const [blueprintStack, setBlueprintStack] = useState<any[]>([])
   const [showStartDialog, setShowStartDialog] = useState(false)
+  const [datastoreHeight, setDatastoreHeight] = useState(300)
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const isResizingRef = useRef(false)
 
   useEffect(() => {
     if (commandHistory.length > 0) {
       console.log('Command History Updated:', commandHistory);
     }
   }, [commandHistory]);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizingRef.current = true;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    isResizingRef.current = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, []);
+
+  const resize = useCallback((e: MouseEvent) => {
+    if (isResizingRef.current) {
+      // Docked at bottom, so dragging the top edge changes height based on distance from bottom
+      const newHeight = window.innerHeight - e.clientY;
+      // Min height 100px, max height 80% of window
+      if (newHeight > 100 && newHeight < window.innerHeight * 0.8) {
+        setDatastoreHeight(newHeight);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resize);
+    window.addEventListener('mouseup', stopResizing);
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [resize, stopResizing]);
 
   const transformBlueprintToGraph = useCallback((blueprint: any) => {
     // Handle potentially unwrapped blueprint
@@ -527,9 +563,9 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
       {error && <p className="error">{error}</p>}
 
-      <div className="monitor-grid">
+      <div className="monitor-grid" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Diagram Section */}
-        <div className="monitor-section">
+        <div className="monitor-section" style={{ flex: 1, minHeight: 0, overflow: 'hidden', borderBottom: 'none' }}>
 
           <div className="diagram-container">
             {graphData ? (
@@ -547,10 +583,45 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           </div>
         </div>
 
+        {/* Resize Handle */}
+        {!isCollapsed && (
+          <div
+            onMouseDown={startResizing}
+            style={{
+              height: '4px',
+              width: '100%',
+              cursor: 'row-resize',
+              background: 'var(--color-stone-soft)',
+              zIndex: 10,
+              flexShrink: 0,
+              transition: 'background 0.2s',
+            }}
+            className="resize-handle"
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-terracotta-300)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'var(--color-stone-soft)'}
+          />
+        )}
+
         {/* Data Store Section */}
-        <div className="monitor-section">
+        <div className="monitor-section" style={{ height: isCollapsed ? 'auto' : datastoreHeight, flexShrink: 0, borderTop: isCollapsed ? '1px solid var(--color-stone-soft)' : 'none', width: '100%' }}>
           <div className="monitor-section-header">
-            <h3>Data Store</h3>
+            <h3>
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'inherit'
+                }}
+              >
+                {isCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+              Data Store
+            </h3>
             <button className="download-data-btn" onClick={handleDownloadData} title="Download Data Store">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -559,18 +630,20 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
               </svg>
             </button>
           </div>
-          <div className="data-container">
-            {sessionData ? (
-              <div className="data-viewer-wrapper" style={{ height: '100%' }}>
-                <DataStoreExplorer data={parsedSessionData} mainBlueprintId={mainBlueprintId} />
-              </div>
-            ) : (
-              <div className="loading-container">
-                <div className="loading-spinner"></div>
-                <p>Loading data...</p>
-              </div>
-            )}
-          </div>
+          {!isCollapsed && (
+            <div className="data-container">
+              {sessionData ? (
+                <div className="data-viewer-wrapper" style={{ height: '100%' }}>
+                  <DataStoreExplorer data={parsedSessionData} mainBlueprintId={mainBlueprintId} />
+                </div>
+              ) : (
+                <div className="loading-container">
+                  <div className="loading-spinner"></div>
+                  <p>Loading data...</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

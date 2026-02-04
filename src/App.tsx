@@ -26,6 +26,16 @@ function App() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [activeBlueprintId, setActiveBlueprintId] = useState<string | null>(null)
 
+  // Theme state
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(newTheme)
+    document.documentElement.setAttribute('data-theme', newTheme)
+  }
+
+
 
 
   const handleSelectionChange = (selection: Selection) => {
@@ -84,7 +94,10 @@ function App() {
       case 'dashboard':
         return (
           <div className="view-container">
-            <Dashboard />
+            <Dashboard
+              onNavigate={handleSelectionChange}
+              apiBaseUrl={API_BASE_URL}
+            />
           </div>
         )
       case 'upload-blueprint':
@@ -137,6 +150,8 @@ function App() {
           type: activeView as any,
           id: activeView === 'sessions' ? activeSessionId || undefined : undefined
         }}
+        theme={theme}
+        toggleTheme={toggleTheme}
       />
 
       <main className={`main-content ${isSidebarCollapsed ? 'expanded' : ''}`}>

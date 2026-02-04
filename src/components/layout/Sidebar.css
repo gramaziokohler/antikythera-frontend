@@ -267,3 +267,15 @@
     color: var(--color-primary);
     font-weight: 600;
 }
+/* Dark Mode Sidebar Overrides */
+[data-theme='dark'] .list-item:hover,
+[data-theme='dark'] .list-item.new-item:hover {
+    background-color: var(--color-bg-active);
+    color: var(--color-text-primary);
+}
+
+[data-theme='dark'] .list-item.active,
+[data-theme='dark'] .list-item.new-item.active {
+    background-color: rgba(211, 107, 74, 0.2);
+    color: var(--color-terracotta-500);
+}
