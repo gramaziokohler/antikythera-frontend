@@ -119,7 +119,8 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
         details,
         // Pass additional data for TaskNode
         type: taskData.type,
-        description: taskData.description, // Extract description
+        description: taskData.description,
+        condition: taskData.condition,
         inputs: taskData.inputs,
         outputs: taskData.outputs,
         internalBlueprintId
@@ -462,7 +463,6 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
   const isRunning = sessionState?.toLowerCase() === 'running';
   const isFinished = ['completed', 'failed', 'cancelled'].includes(sessionState?.toLowerCase() || '');
-  const isPendingOrCreated = ['pending', 'created', 'ready', 'paused'].includes(sessionState?.toLowerCase() || '');
 
   return (
     <div className="session-monitor">

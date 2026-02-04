@@ -10,7 +10,7 @@
   flex: 1;
   margin-left: var(--sidebar-width);
   padding: 0;
-  transition: margin-left 0.3s ease;
+  transition: margin-left var(--transition-slow);
   height: 100%; /* Fill parent */
   position: relative;
   display: flex; /* Make it a flex container */
@@ -36,11 +36,28 @@
   margin-bottom: 2rem;
 }
 
+/* Elegant page title style matching Dashboard hero */
 .page-header h1 {
-  font-size: 2rem;
-  font-weight: 600;
+  font-family: var(--font-serif);
+  font-size: 2.5rem;
+  font-weight: 500;
+  line-height: 1.2;
+  margin: 0 0 0.75rem 0;
+  letter-spacing: -0.02em;
+  font-style: italic;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+}
+
+/* Style the first word (wrapped in span) differently */
+.page-header h1 .title-first {
   color: var(--color-graphite);
-  margin: 0 0 0.5rem 0;
+}
+
+/* Style the remaining words in terracotta */
+.page-header h1 .title-rest {
+  color: var(--color-terracotta-600);
 }
 
 .page-header .subtitle {
@@ -93,12 +110,12 @@
   width: 100%;
   flex: 1;
   min-height: 200px;
-  color: #5a6c8a;
+  color: var(--color-text-muted);
 }
 
 .loading-spinner {
-  border: 3px solid rgba(35, 57, 91, 0.1);
-  border-top: 3px solid #23395B;
+  border: 3px solid var(--color-border-default);
+  border-top: 3px solid var(--color-primary);
   border-radius: 50%;
   width: 24px;
   height: 24px;

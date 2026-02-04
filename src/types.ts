@@ -76,6 +76,7 @@ export interface GraphNode {
   inputs?: any[];
   outputs?: any[];
   internalBlueprintId?: string | null;
+  condition?: string;
 }
 
 export interface GraphEdge {

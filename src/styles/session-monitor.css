@@ -3,7 +3,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: var(--color-bg-card);
   overflow: hidden;
 }
 
@@ -22,7 +22,7 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-sans);
 }
 
 .session-controls {
@@ -39,34 +39,34 @@
   font-size: 0.9rem;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
   min-width: auto;
   box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-sans);
 }
 
 .control-button:hover {
-  background: #dbe0e6;
+  background: var(--color-gray-200);
   color: var(--color-terracotta-500);
 }
 
 .start-preview-btn {
   background: var(--color-terracotta-500);
-  color: white;
+  color: var(--color-text-inverse);
   border: 1px solid transparent;
   font-weight: 500;
   padding: 0.4rem 1rem;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .start-preview-btn:hover {
   background: var(--color-terracotta-600);
-  color: white;
+  color: var(--color-text-inverse);
   transform: none;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .close-button {
@@ -79,7 +79,7 @@
   border-radius: 4px;
   box-shadow: none;
   text-transform: none;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
   line-height: 1;
   display: flex;
   align-items: center;
@@ -130,7 +130,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 1rem;
-  background: #fafafa;
+  background: var(--color-bg-subtle);
   border-bottom: 1px solid var(--color-stone-soft);
   min-height: 40px;
 }
@@ -162,7 +162,7 @@
 }
 
 .diagram-container {
-  background: #f8fafc;
+  background: var(--color-bg-page);
   /* Subtle grid bg */
   overflow: hidden;
   flex: 1;
@@ -172,7 +172,7 @@
 }
 
 .data-container {
-  background: white;
+  background: var(--color-bg-card);
   padding: 0;
   overflow: auto;
   flex: 1;
@@ -181,7 +181,7 @@
 
 /* Data Viewer Styles */
 .data-viewer-wrapper {
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--font-mono);
   font-size: 0.85rem;
   min-width: 100%;
 }
@@ -195,7 +195,7 @@
 .data-table th {
   text-align: left;
   padding: 6px 12px;
-  background: #fafafa;
+  background: var(--color-bg-subtle);
   border-bottom: 1px solid var(--color-stone-soft);
   font-size: 0.75rem;
   font-weight: 600;
@@ -207,21 +207,21 @@
 
 .data-table td {
   padding: 6px 12px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--color-border-default);
   vertical-align: top;
   color: var(--color-charcoal);
 }
 
 .data-key {
   font-weight: 500;
-  background-color: #ffffff;
+  background-color: var(--color-bg-card);
   color: var(--color-terracotta-600);
   width: 1%;
   white-space: nowrap;
 }
 
 .data-value {
-  background-color: #ffffff;
+  background-color: var(--color-bg-card);
 }
 
 .download-data-btn {
@@ -232,7 +232,7 @@
   padding: 4px;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
   display: flex;
   align-items: center;
 }
@@ -245,10 +245,10 @@
 
 /* Fix for React Flow controls inheriting global button styles */
 .react-flow__controls-button {
-  background: #fefefe !important;
-  border-bottom: 1px solid #eee !important;
+  background: var(--color-bg-card) !important;
+  border-bottom: 1px solid var(--color-border-default) !important;
   box-shadow: none !important;
-  color: #555 !important;
+  color: var(--color-text-secondary) !important;
   border-radius: 0 !important;
   padding: 0 !important;
   width: 26px !important;
@@ -256,7 +256,7 @@
 }
 
 .react-flow__controls-button:hover {
-  background: #f4f4f4 !important;
+  background: var(--color-bg-subtle) !important;
   transform: none !important;
   box-shadow: none !important;
 }

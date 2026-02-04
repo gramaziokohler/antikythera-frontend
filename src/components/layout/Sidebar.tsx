@@ -16,7 +16,7 @@ interface SidebarProps {
   onSelectionChange: (selection: { type: 'dashboard' | 'blueprint' | 'session' | 'upload-blueprint' | 'upload-model' | 'artifacts', id?: string }) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
-  refreshTrigger: number;
+  refreshTrigger?: number;
   activeSelection?: { type: string, id?: string };
 }
 
@@ -114,7 +114,7 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
       <div className="sidebar-header">
         <div className="logo-area" onClick={() => onSelectionChange({ type: 'dashboard' })} style={{ cursor: 'pointer' }}>
           <img src="/antikythera.png" alt="Antikythera" className="logo-icon" />
-          {!collapsed && <span className="logo-text">Antikythera</span>}
+          {!collapsed && <span className="logo-text logo-serif">Antikythera</span>}
         </div>
         <button
           className="collapse-btn"
@@ -137,6 +137,14 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
               <div className="icon-wrapper"><Plus size={16} /></div>
               {!collapsed && <span className="item-label">New Blueprint</span>}
             </div>
+            <div
+              className={`list-item new-item ${activeSelection?.type === 'artifacts' ? 'active' : ''}`}
+              onClick={() => onSelectionChange({ type: 'artifacts' })}
+              title="Artifacts"
+            >
+              <div className="icon-wrapper"><Box size={16} /></div>
+              {!collapsed && <span className="item-label">Artifacts</span>}
+            </div>
           </div>
         </div>
 
@@ -156,7 +164,9 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
               {blueprints.length === 0 ? (
                 <div className="empty-state">No blueprints</div>
               ) : (
-                blueprints.map(bp => (
+                [...blueprints]
+                  .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())
+                  .map(bp => (
                   <div
                     key={bp.id}
                     className={`list-item ${activeSelection?.type === 'blueprints' && activeSelection?.id === bp.id ? 'active' : ''}`}
@@ -205,7 +215,7 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
                       <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', lineHeight: '1.2', gap: '3px', width: '100%' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                           <span className="item-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>{sess.blueprint_id}</span>
-                          <span className="item-meta" style={{ fontSize: '0.65rem', background: '#eee', padding: '1px 4px', borderRadius: '4px' }}>
+                          <span className="item-meta" style={{ fontSize: '0.65rem', background: 'var(--color-gray-200)', padding: '1px 4px', borderRadius: '4px' }}>
                             {timeAgo(sess.started_at)}
                           </span>
                         </div>
@@ -225,23 +235,10 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
           )}
         </div>
 
-        {/* Artifacts/Footer Links */}
-        <div className="sidebar-section">
-          <div className="section-list">
-            <div
-              className={`list-item ${activeSelection?.type === 'artifacts' ? 'active' : ''}`}
-              onClick={() => onSelectionChange({ type: 'artifacts' })}
-              title="Artifacts"
-            >
-              <div className="icon-wrapper"><Box size={16} /></div>
-              {!collapsed && <span className="item-label">Artifacts</span>}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Footer / Compas Badge */}
-      <div style={{ padding: '1rem', display: 'flex', justifyContent: 'center', borderTop: '1px solid var(--color-stone-soft)', backgroundColor: '#f9f9f9' }}>
+      <div style={{ padding: '1rem', display: 'flex', justifyContent: 'center', borderTop: '1px solid var(--color-stone-soft)', backgroundColor: 'var(--color-bg-subtle)' }}>
         <a href="https://compas.dev" target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
           <img src="https://compas.dev/badge-flat.svg" alt="COMPAS" style={{ maxWidth: collapsed ? '30px' : '120px', transition: 'all 0.3s', display: 'block' }} />
         </a>

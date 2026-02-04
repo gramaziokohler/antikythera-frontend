@@ -74,7 +74,7 @@ export function SessionsList({ apiBaseUrl, onSessionSelect }: SessionsListProps)
             <div className="session-header">
               <span className="session-id-preview" title={session.blueprint_id} style={{ display: 'flex', flexDirection: 'column' }}>
                 <span>{session.blueprint_id}</span>
-                <span style={{ fontSize: '0.8em', color: '#999', fontWeight: 300 }}>
+                <span style={{ fontSize: '0.8em', color: 'var(--color-text-muted)', fontWeight: 300 }}>
                   {session.session_id.substring(0, 8)}...
                 </span>
               </span>
@@ -90,10 +90,10 @@ export function SessionsList({ apiBaseUrl, onSessionSelect }: SessionsListProps)
         ))}
 
         {/* Loading Indicator / Sentinel */}
-        {loading && <div className="loading-state" style={{ textAlign: 'center', padding: '20px', color: '#666' }}>Loading...</div>}
+        {loading && <div className="loading-state" style={{ textAlign: 'center', padding: '20px', color: 'var(--color-text-secondary)' }}>Loading...</div>}
 
         {!loading && hasMore && (
-          <div ref={sentinelRef} style={{ height: '40px', width: '100%', backgroundColor: 'rgba(255,0,0,0.1)' }}>
+          <div ref={sentinelRef} style={{ height: '40px', width: '100%' }}>
             {/* Debug element to visualize sentinel if needed, usually transparent */}
           </div>
         )}
