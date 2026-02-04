@@ -5,7 +5,9 @@ import {
   Plus,
   RefreshCw,
   FileText,
-  Box
+  Box,
+  Moon,
+  Sun
 } from 'lucide-react';
 import './Sidebar.css';
 import type { BlueprintInfo, SessionInfo } from '../../types';
@@ -18,9 +20,11 @@ interface SidebarProps {
   onToggleCollapse: () => void;
   refreshTrigger?: number;
   activeSelection?: { type: string, id?: string };
+  theme?: 'light' | 'dark';
+  toggleTheme?: () => void;
 }
 
-export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleCollapse, refreshTrigger, activeSelection }: SidebarProps) {
+export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleCollapse, refreshTrigger, activeSelection, theme, toggleTheme }: SidebarProps) {
   const [blueprints, setBlueprints] = useState<BlueprintInfo[]>([]);
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -116,13 +120,31 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
           <img src="/antikythera.png" alt="Antikythera" className="logo-icon" />
           {!collapsed && <span className="logo-text logo-serif">Antikythera</span>}
         </div>
-        <button
-          className="collapse-btn"
-          onClick={onToggleCollapse}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {toggleTheme && (
+            <button
+              onClick={toggleTheme}
+              className="icon-btn"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                padding: '4px',
+                color: 'var(--color-text-secondary)',
+                opacity: 0.7
+              }}
+              title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+          )}
+          <button
+            className="collapse-btn"
+            onClick={onToggleCollapse}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        </div>
       </div>
 
       <div className="sidebar-content">
@@ -167,16 +189,16 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
                 [...blueprints]
                   .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())
                   .map(bp => (
-                  <div
-                    key={bp.id}
-                    className={`list-item ${activeSelection?.type === 'blueprints' && activeSelection?.id === bp.id ? 'active' : ''}`}
-                    onClick={() => onSelectionChange({ type: 'blueprint', id: bp.id })}
-                    title={bp.name}
-                  >
-                    <span className="item-label">{bp.name}</span>
-                    <span className="item-meta">v{bp.version}</span>
-                  </div>
-                ))
+                    <div
+                      key={bp.id}
+                      className={`list-item ${activeSelection?.type === 'blueprints' && activeSelection?.id === bp.id ? 'active' : ''}`}
+                      onClick={() => onSelectionChange({ type: 'blueprint', id: bp.id })}
+                      title={bp.name}
+                    >
+                      <span className="item-label">{bp.name}</span>
+                      <span className="item-meta">v{bp.version}</span>
+                    </div>
+                  ))
               )}
             </div>
           )}
@@ -238,9 +260,9 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
       </div>
 
       {/* Footer / Compas Badge */}
-      <div style={{ padding: '1rem', display: 'flex', justifyContent: 'center', borderTop: '1px solid var(--color-stone-soft)', backgroundColor: 'var(--color-bg-subtle)' }}>
-        <a href="https://compas.dev" target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
-          <img src="https://compas.dev/badge-flat.svg" alt="COMPAS" style={{ maxWidth: collapsed ? '30px' : '120px', transition: 'all 0.3s', display: 'block' }} />
+      <div style={{ padding: '0.8rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.8rem', borderTop: '1px solid var(--color-stone-soft)', backgroundColor: 'var(--color-bg-subtle)' }}>
+        <a href="https://compas.dev" target="_blank" rel="noopener noreferrer" style={{ display: 'block', opacity: 0.7 }}>
+          <img src="https://compas.dev/badge-flat.svg" alt="COMPAS" style={{ maxWidth: collapsed ? '30px' : '100px', transition: 'all 0.3s', display: 'block' }} />
         </a>
       </div>
     </aside>
