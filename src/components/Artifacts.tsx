@@ -6,7 +6,7 @@ interface ArtifactsProps {
   apiBaseUrl?: string;
 }
 
-export function Artifacts({ apiBaseUrl = 'http://localhost:5174/api' }: ArtifactsProps) {
+export function Artifacts({ apiBaseUrl = '/api' }: ArtifactsProps) {
   return (
     <div className="view-container">
       <header className="page-header">

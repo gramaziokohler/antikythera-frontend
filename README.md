@@ -27,7 +27,7 @@ The script will attempt to download `antikythera.proto` and `compas_pb` definiti
 
 ## Configuration
 
-The API base URL is set to `http://localhost:5174/api` in `src/App.tsx`. Update this if your backend runs on a different URL.
+The API base URL is default set to `/api` in `src/App.tsx`. Update this if your backend runs on a different URL.
 
 ## Development
 
