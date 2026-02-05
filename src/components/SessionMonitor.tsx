@@ -37,6 +37,11 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   const [datastoreHeight, setDatastoreHeight] = useState(300)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const isResizingRef = useRef(false)
+  const localBlueprintRef = useRef(null)
+
+  useEffect(() => {
+    localBlueprintRef.current = localBlueprint;
+  }, [localBlueprint]);
 
   useEffect(() => {
     if (commandHistory.length > 0) {
@@ -136,10 +141,10 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           details = blueprintParamVal;
         } else if (blueprintParamVal.dynamic) {
           // Handle various dynamic blueprint formats
-          if (blueprintParamVal.dynamic.element?.element_id) {
-            internalBlueprintId = blueprintParamVal.dynamic.element.element_id;
-          } else if (blueprintParamVal.dynamic.blueprint_id) {
+          if (blueprintParamVal.dynamic.blueprint_id) {
             internalBlueprintId = blueprintParamVal.dynamic.blueprint_id;
+          } else if (blueprintParamVal.dynamic.element?.element_id) {
+            internalBlueprintId = blueprintParamVal.dynamic.element.element_id;
           }
           details = internalBlueprintId || 'Dynamic';
         } else if (blueprintParamVal.static) {
@@ -340,7 +345,18 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
           // We use localBlueprint only for preview unless we want to support editing while running (not implemented)
           // For session, we fetch blueprint from session endpoint and transform it.
-          const blueprintResponse = await fetch(`${apiBaseUrl}/sessions/${sessionId}/blueprint`)
+
+          // Determine target blueprint ID to preserve navigation depth (e.g. expanded inner blueprints)
+          let fetchUrl = `${apiBaseUrl}/sessions/${sessionId}/blueprint`;
+          // Use ref to get the current blueprint ID without breaking the closure or causing infinite loops
+          const currentBlueprint = localBlueprintRef.current || localBlueprint;
+          const currentId = currentBlueprint?.data?.id || currentBlueprint?.id;
+
+          if (currentId) {
+            fetchUrl = `${apiBaseUrl}/sessions/${sessionId}/blueprint/${currentId}`;
+          }
+
+          const blueprintResponse = await fetch(fetchUrl)
           if (blueprintResponse.ok) {
             const blueprint = await blueprintResponse.json()
             setLocalBlueprint(blueprint) // Update local blueprint to support edits during pause
