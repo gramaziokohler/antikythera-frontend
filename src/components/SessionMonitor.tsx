@@ -498,7 +498,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   }
 
   const isRunning = sessionState?.toLowerCase() === 'running';
-  const isFinished = ['completed', 'failed', 'cancelled'].includes(sessionState?.toLowerCase() || '');
+  const isFinished = ['completed', 'cancelled'].includes(sessionState?.toLowerCase() || '');
 
   return (
     <div className="session-monitor">
@@ -528,7 +528,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
                   </button>
                 ) : !isFinished ? (
                   <button onClick={handleResume} className="control-button start-preview-btn" title="Resume/Start Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Play size={16} /> <span>{['paused', 'stopped'].includes(sessionState?.toLowerCase() || '') ? 'Resume session' : 'Start Session'}</span>
+                    <Play size={16} /> <span>{['paused', 'stopped', 'failed'].includes(sessionState?.toLowerCase() || '') ? 'Resume session' : 'Start Session'}</span>
                   </button>
                 ) : null}
               </>
