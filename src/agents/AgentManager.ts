@@ -1,4 +1,5 @@
 import { MqttService } from '../services/MqttService';
+import { uniqueNamesGenerator, adjectives, animals, colors, countries } from 'unique-names-generator';
 import { antikythera, google, compas_pb } from '../proto/bundle';
 import type { Agent } from './Agent';
 import { Task } from './Task';
@@ -22,7 +23,16 @@ export class AgentManager {
 
     private constructor(mqttService: MqttService) {
         this.mqttService = mqttService;
-        this.agentId = `typescript-agent-manager-${Math.random().toString(36).substring(7)}`;
+        const randomName = uniqueNamesGenerator({
+            dictionaries: [adjectives, colors, animals],
+            length: 3,
+            separator: '-',
+            style: 'lowerCase'
+        });
+        const randomLocation = uniqueNamesGenerator({ dictionaries: [countries], length: 1, style: 'lowerCase' });
+
+        // Ensure internally spaced names (like "han solo") become "han-solo"
+        this.agentId = `${randomName.replace(/ /g, '-')}-of-${randomLocation.replace(/ /g, '-')}`;
 
         console.log(`Initializing Agent Manager ${this.agentId}`);
 
@@ -41,6 +51,10 @@ export class AgentManager {
             AgentManager.instance = new AgentManager(mqttService);
         }
         return AgentManager.instance;
+    }
+
+    public getAgentId(): string {
+        return this.agentId;
     }
 
     public registerAgent(agent: Agent) {
