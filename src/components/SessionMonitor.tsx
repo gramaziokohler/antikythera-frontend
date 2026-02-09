@@ -447,7 +447,11 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     }
 
     try {
-      const response = await fetch(`${apiBaseUrl}/blueprints/${internalId}`);
+      const fetchUrl = sessionId 
+        ? `${apiBaseUrl}/sessions/${sessionId}/blueprint/${internalId}`
+        : `${apiBaseUrl}/blueprints/${internalId}`;
+
+      const response = await fetch(fetchUrl);
       if (response.ok) {
         const newBlueprint = await response.json();
 
@@ -461,7 +465,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     } catch (e) {
       console.error("Failed to fetch sub-blueprint", e);
     }
-  }, [apiBaseUrl, localBlueprint, transformBlueprintToGraph]);
+  }, [apiBaseUrl, localBlueprint, transformBlueprintToGraph, sessionId]);
 
   const navigateToBlueprint = (index: number) => {
     // If clicking current blueprint (last item), do nothing
