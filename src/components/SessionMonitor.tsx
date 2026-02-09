@@ -585,6 +585,23 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           </div>
         </div>
 
+        {/* Session Info Row */}
+        {(sessionId || localBlueprint?.name || localBlueprint?.description) && (
+          <div style={{ fontSize: '0.85rem', color: '#777', marginTop: '0.25rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            {sessionId && (
+              <span>
+                Session: <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#444' }}>{sessionId}</span>
+              </span>
+            )}
+
+            {(localBlueprint?.name || localBlueprint?.description) && (
+              <>
+                {sessionId && <span style={{ color: '#ddd' }}></span>}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Breadcrumb Path Row */}
         <div style={{ fontSize: '0.9rem', color: '#666', borderTop: '1px solid #eee', paddingTop: '0.5rem', width: '100%', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', overflowX: 'auto', whiteSpace: 'nowrap', gap: '0', scrollbarWidth: 'none' }}>
@@ -607,22 +624,6 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           </div>
         </div>
 
-        {/* Session Info Row */}
-        {(sessionId || localBlueprint?.name || localBlueprint?.description) && (
-          <div style={{ fontSize: '0.85rem', color: '#777', marginTop: '0.25rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-            {sessionId && (
-              <span>
-                Session: <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#444' }}>{sessionId}</span>
-              </span>
-            )}
-
-            {(localBlueprint?.name || localBlueprint?.description) && (
-              <>
-                {sessionId && <span style={{ color: '#ddd' }}></span>}
-              </>
-            )}
-          </div>
-        )}
       </div>
 
       {error && <p className="error">{error}</p>}
