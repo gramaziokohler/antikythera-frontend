@@ -603,26 +603,28 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
         )}
 
         {/* Breadcrumb Path Row */}
-        <div style={{ fontSize: '0.9rem', color: '#666', borderTop: '1px solid #eee', paddingTop: '0.5rem', width: '100%', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', overflowX: 'auto', whiteSpace: 'nowrap', gap: '0', scrollbarWidth: 'none' }}>
-            {[...blueprintStack, localBlueprint].map((bp, index, arr) => {
-              const isLast = index === arr.length - 1;
-              const displayId = bp?.id || bp?.data?.id || (index === 0 ? (blueprintId || mainBlueprintId) : 'Unknown');
+        {blueprintStack.length > 0 && (
+          <div style={{ fontSize: '0.9rem', color: '#666', borderTop: '1px solid #eee', paddingTop: '0.5rem', width: '100%', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', overflowX: 'auto', whiteSpace: 'nowrap', gap: '0', scrollbarWidth: 'none' }}>
+              {[...blueprintStack, localBlueprint].map((bp, index, arr) => {
+                const isLast = index === arr.length - 1;
+                const displayId = bp?.id || bp?.data?.id || (index === 0 ? (blueprintId || mainBlueprintId) : 'Unknown');
 
-              return (
-                <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
-                  <span
-                    onClick={() => !isLast && navigateToBlueprint(index)}
-                    className={isLast ? 'breadcrumb-current' : 'breadcrumb-link'}
-                  >
-                    {displayId}
-                  </span>
-                  {!isLast && <ChevronRight size={14} style={{ margin: '0 2px', color: '#999', flexShrink: 0 }} />}
-                </div>
-              );
-            })}
+                return (
+                  <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
+                    <span
+                      onClick={() => !isLast && navigateToBlueprint(index)}
+                      className={isLast ? 'breadcrumb-current' : 'breadcrumb-link'}
+                    >
+                      {displayId}
+                    </span>
+                    {!isLast && <ChevronRight size={14} style={{ margin: '0 2px', color: '#999', flexShrink: 0 }} />}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 
