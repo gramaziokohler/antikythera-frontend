@@ -60,7 +60,7 @@ function AgentApp() {
     };
 
     return (
-        <div className="agent-app-shell" style={{
+        <div className="agent-app-shell" data-theme={theme} style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -108,7 +108,7 @@ function AgentApp() {
             </div>
 
             {/* This component handles the actual agent logic and UI popup */}
-            <div style={{ position: 'relative', zIndex: 5 }}>
+            <div style={{ position: 'relative', zIndex: 50 }}>
                 <UserPromptDialog />
             </div>
         </div>

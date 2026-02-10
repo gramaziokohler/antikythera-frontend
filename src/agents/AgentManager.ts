@@ -3,6 +3,7 @@ import { uniqueNamesGenerator, adjectives, animals, colors, countries } from 'un
 import { antikythera, google, compas_pb } from '../proto/bundle';
 import type { Agent } from './Agent';
 import { Task } from './Task';
+import { ExecutionContext } from './ExecutionContext';
 
 // Type aliases for convenience
 type TaskAssignmentMessage = antikythera.v1.ITaskAssignmentMessage;
@@ -19,6 +20,7 @@ export class AgentManager {
     private agentId: string;
     private pendingClaims: Map<string, TaskAssignmentMessage> = new Map();
     private activeTasks: Map<string, TaskAssignmentMessage> = new Map();
+    private activeContexts: Map<string, ExecutionContext> = new Map();
     private messageHandlerCleanup: (() => void) | undefined;
 
     private constructor(mqttService: MqttService) {
@@ -72,6 +74,7 @@ export class AgentManager {
     protected async initializeSubscriptions() {
         await this.mqttService.subscribe('antikythera/task/start');
         await this.mqttService.subscribe('antikythera/task/allocation');
+        await this.mqttService.subscribe('antikythera/task/ack');
     }
 
     protected onMessage(topic: string, message: Buffer) {
@@ -122,6 +125,27 @@ export class AgentManager {
 
                 if (allocation) {
                     this.handleTaskAllocation(allocation);
+                }
+            } else if (topic === 'antikythera/task/ack') {
+                let ack: antikythera.v1.TaskCompletionAckMessage | null = null;
+                const anyMsg = this.unwrapMessage(uint8Message);
+                if (anyMsg) {
+                    if (anyMsg.type_url === 'type.googleapis.com/antikythera.v1.TaskCompletionAckMessage') {
+                        ack = antikythera.v1.TaskCompletionAckMessage.decode(anyMsg.value as Uint8Array);
+                    }
+                }
+                if (!ack) {
+                    try {
+                        ack = antikythera.v1.TaskCompletionAckMessage.decode(uint8Message);
+                    } catch (e) { }
+                }
+
+                if (ack && ack.acceptedAgentId !== this.agentId) {
+                    const context = this.activeContexts.get(ack.id!);
+                    if (context) {
+                        console.warn(`[${ack.id}] received ACK for ${ack.acceptedAgentId}, cancelling local execution.`);
+                        context.cancel();
+                    }
                 }
             }
         } catch (err) {
@@ -243,20 +267,38 @@ export class AgentManager {
             return;
         }
 
+        // Create Execution Context
+        const context = new ExecutionContext();
+        this.activeContexts.set(task.id!, context);
+
         try {
             // Create Task instance
             const taskInstance = new Task(task);
 
             // Invoke tool
             console.log(`Invoking ${agent.type}.${toolName} for task ${task.id}`);
-            const result = await agent[toolName](taskInstance);
+            const result = await agent[toolName](taskInstance, context);
+
+            // If cancelled, we might not want to report success
+            if (context.isCancelled) {
+                console.log(`Task ${task.id} cancelled. Skipping completion message.`);
+                return;
+            }
 
             // Complete task
             this.completeTask(task.id!, result, antikythera.v1.TaskState.TASK_STATE_SUCCEEDED);
 
-        } catch (error) {
+        } catch (error: any) {
+            if (context.isCancelled) {
+                console.log(`Task ${task.id} cancelled during execution (caught exception).`);
+                return;
+            }
             console.error(`Error executing task ${task.id}:`, error);
-            this.completeTask(task.id!, null, antikythera.v1.TaskState.TASK_STATE_FAILED);
+            const errorOutput = { error: error.message || String(error) };
+            this.completeTask(task.id!, errorOutput, antikythera.v1.TaskState.TASK_STATE_FAILED);
+        } finally {
+            this.activeContexts.delete(task.id!);
+            this.activeTasks.delete(task.id!);
         }
     }
 
