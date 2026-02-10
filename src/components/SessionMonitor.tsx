@@ -38,7 +38,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   const [sessionParams, setSessionParams] = useState<any>(null)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const isResizingRef = useRef(false)
-  const localBlueprintRef = useRef(null)
+  const localBlueprintRef = useRef<any>(null);
 
   useEffect(() => {
     localBlueprintRef.current = localBlueprint;
@@ -647,8 +647,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
               <SessionGraph
                 data={graphData}
                 onNodeSwap={localBlueprint ? handleNodeSwap : undefined}
-                onNodeDoubleClick={handleNodeDoubleClick}
-              />
+                onNodeDoubleClick={handleNodeDoubleClick}                activeBlueprintId={localBlueprint?.id || localBlueprint?.data?.id || blueprintId || mainBlueprintId}              />
             ) : (
               <div className="loading-container">
                 <div className="loading-spinner"></div>
