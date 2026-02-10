@@ -647,7 +647,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
               <SessionGraph
                 data={graphData}
                 onNodeSwap={localBlueprint ? handleNodeSwap : undefined}
-                onNodeDoubleClick={handleNodeDoubleClick}                activeBlueprintId={localBlueprint?.id || localBlueprint?.data?.id || blueprintId || mainBlueprintId}              />
+                onNodeDoubleClick={handleNodeDoubleClick} activeBlueprintId={localBlueprint?.id || localBlueprint?.data?.id || blueprintId || mainBlueprintId} />
             ) : (
               <div className="loading-container">
                 <div className="loading-spinner"></div>

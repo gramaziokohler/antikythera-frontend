@@ -92,7 +92,7 @@ export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, activeBluepr
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [isInteractive, setIsInteractive] = useState(false); // Start locked
   const [rfInstance, setRfInstance] = useState<any>(null);
-  
+
   // Store viewports: { [blueprintId]: { x, y, zoom } }
   const viewStates = useRef<Record<string, { x: number, y: number, zoom: number }>>({});
   const prevBlueprintIdRef = useRef<string | undefined>(undefined);
