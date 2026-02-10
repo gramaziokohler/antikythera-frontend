@@ -6,8 +6,19 @@ interface CompasData {
     data: any;
 }
 
-export function convertCompasDataToThree(item: CompasData): THREE.Object3D | null {
-    if (!item || !item.dtype) return null;
+export function convertCompasDataToThree(item: CompasData | any[]): THREE.Object3D | null {
+    if (!item) return null;
+
+    if (Array.isArray(item)) {
+        const group = new THREE.Group();
+        item.forEach(subItem => {
+            const obj = convertCompasDataToThree(subItem);
+            if (obj) group.add(obj);
+        });
+        return group.children.length > 0 ? group : null;
+    }
+
+    if (!item.dtype) return null;
 
     try {
         if (item.dtype.includes('Frame')) {
