@@ -266,3 +266,28 @@
   max-width: 12px;
   max-height: 12px;
 }
+
+/* Breadcrumbs */
+.breadcrumb-link {
+  font-family: monospace;
+  cursor: pointer;
+  color: var(--color-text-secondary, #666);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.breadcrumb-link:hover {
+  color: var(--color-primary-600, #0066cc);
+  background-color: var(--color-bg-subtle, #f5f5f5);
+  text-decoration: none;
+}
+
+.breadcrumb-current {
+  font-family: monospace;
+  font-weight: bold;
+  cursor: default;
+  color: var(--color-graphite, #333);
+  padding: 2px 4px;
+}

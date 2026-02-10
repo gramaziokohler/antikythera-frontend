@@ -1,6 +1,7 @@
 import { Task } from './Task';
+import { ExecutionContext } from './ExecutionContext';
 
-export type ToolFunction = (task: Task) => Promise<any>;
+export type ToolFunction = (task: Task, context?: ExecutionContext) => Promise<any>;
 
 export interface Agent {
     /**

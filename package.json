@@ -20,7 +20,8 @@
     "protobufjs": "^7.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "three": "^0.182.0"
+    "three": "^0.182.0",
+    "unique-names-generator": "^4.7.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

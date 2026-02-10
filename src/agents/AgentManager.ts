@@ -1,7 +1,9 @@
 import { MqttService } from '../services/MqttService';
+import { uniqueNamesGenerator, adjectives, animals, colors, countries } from 'unique-names-generator';
 import { antikythera, google, compas_pb } from '../proto/bundle';
 import type { Agent } from './Agent';
 import { Task } from './Task';
+import { ExecutionContext } from './ExecutionContext';
 
 // Type aliases for convenience
 type TaskAssignmentMessage = antikythera.v1.ITaskAssignmentMessage;
@@ -18,11 +20,21 @@ export class AgentManager {
     private agentId: string;
     private pendingClaims: Map<string, TaskAssignmentMessage> = new Map();
     private activeTasks: Map<string, TaskAssignmentMessage> = new Map();
+    private activeContexts: Map<string, ExecutionContext> = new Map();
     private messageHandlerCleanup: (() => void) | undefined;
 
     private constructor(mqttService: MqttService) {
         this.mqttService = mqttService;
-        this.agentId = `typescript-agent-manager-${Math.random().toString(36).substring(7)}`;
+        const randomName = uniqueNamesGenerator({
+            dictionaries: [adjectives, colors, animals],
+            length: 3,
+            separator: '-',
+            style: 'lowerCase'
+        });
+        const randomLocation = uniqueNamesGenerator({ dictionaries: [countries], length: 1, style: 'lowerCase' });
+
+        // Ensure internally spaced names (like "han solo") become "han-solo"
+        this.agentId = `${randomName.replace(/ /g, '-')}-of-${randomLocation.replace(/ /g, '-')}`;
 
         console.log(`Initializing Agent Manager ${this.agentId}`);
 
@@ -43,6 +55,10 @@ export class AgentManager {
         return AgentManager.instance;
     }
 
+    public getAgentId(): string {
+        return this.agentId;
+    }
+
     public registerAgent(agent: Agent) {
         if (this.agents.has(agent.type)) {
             console.warn(`Agent type ${agent.type} is already registered. Overwriting.`);
@@ -58,6 +74,7 @@ export class AgentManager {
     protected async initializeSubscriptions() {
         await this.mqttService.subscribe('antikythera/task/start');
         await this.mqttService.subscribe('antikythera/task/allocation');
+        await this.mqttService.subscribe('antikythera/task/ack');
     }
 
     protected onMessage(topic: string, message: Buffer) {
@@ -108,6 +125,27 @@ export class AgentManager {
 
                 if (allocation) {
                     this.handleTaskAllocation(allocation);
+                }
+            } else if (topic === 'antikythera/task/ack') {
+                let ack: antikythera.v1.TaskCompletionAckMessage | null = null;
+                const anyMsg = this.unwrapMessage(uint8Message);
+                if (anyMsg) {
+                    if (anyMsg.type_url === 'type.googleapis.com/antikythera.v1.TaskCompletionAckMessage') {
+                        ack = antikythera.v1.TaskCompletionAckMessage.decode(anyMsg.value as Uint8Array);
+                    }
+                }
+                if (!ack) {
+                    try {
+                        ack = antikythera.v1.TaskCompletionAckMessage.decode(uint8Message);
+                    } catch (e) { }
+                }
+
+                if (ack && ack.acceptedAgentId !== this.agentId) {
+                    const context = this.activeContexts.get(ack.id!);
+                    if (context) {
+                        console.warn(`[${ack.id}] received ACK for ${ack.acceptedAgentId}, cancelling local execution.`);
+                        context.cancel();
+                    }
                 }
             }
         } catch (err) {
@@ -229,20 +267,38 @@ export class AgentManager {
             return;
         }
 
+        // Create Execution Context
+        const context = new ExecutionContext();
+        this.activeContexts.set(task.id!, context);
+
         try {
             // Create Task instance
             const taskInstance = new Task(task);
 
             // Invoke tool
             console.log(`Invoking ${agent.type}.${toolName} for task ${task.id}`);
-            const result = await agent[toolName](taskInstance);
+            const result = await agent[toolName](taskInstance, context);
+
+            // If cancelled, we might not want to report success
+            if (context.isCancelled) {
+                console.log(`Task ${task.id} cancelled. Skipping completion message.`);
+                return;
+            }
 
             // Complete task
             this.completeTask(task.id!, result, antikythera.v1.TaskState.TASK_STATE_SUCCEEDED);
 
-        } catch (error) {
+        } catch (error: any) {
+            if (context.isCancelled) {
+                console.log(`Task ${task.id} cancelled during execution (caught exception).`);
+                return;
+            }
             console.error(`Error executing task ${task.id}:`, error);
-            this.completeTask(task.id!, null, antikythera.v1.TaskState.TASK_STATE_FAILED);
+            const errorOutput = { error: error.message || String(error) };
+            this.completeTask(task.id!, errorOutput, antikythera.v1.TaskState.TASK_STATE_FAILED);
+        } finally {
+            this.activeContexts.delete(task.id!);
+            this.activeTasks.delete(task.id!);
         }
     }
 

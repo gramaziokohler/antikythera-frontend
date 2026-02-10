@@ -32,9 +32,11 @@ export class MqttService {
         this.client.on('reconnect', () => console.log('MQTT Client Reconnecting'));
     }
 
-    public static getInstance(brokerUrl: string = 'ws://localhost:8083/mqtt'): MqttService {
+    public static getInstance(brokerUrl?: string): MqttService {
         if (!MqttService.instance) {
-            MqttService.instance = new MqttService(brokerUrl);
+            // Default to current hostname if not provided, assuming standard port 8083
+            const url = brokerUrl || `ws://${window.location.hostname}:8083/mqtt`;
+            MqttService.instance = new MqttService(url);
         }
         return MqttService.instance;
     }

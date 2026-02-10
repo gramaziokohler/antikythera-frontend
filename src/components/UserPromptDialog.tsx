@@ -15,9 +15,14 @@ export function UserPromptDialog() {
         const mqttService = MqttService.getInstance();
         const agentManager = AgentManager.getInstance(mqttService);
 
-        const newAgent = new UserPromptAgent((taskId, options) => {
-            setPrompts(prev => [...prev, { taskId, ...options }])
-        })
+        const newAgent = new UserPromptAgent(
+            (taskId, options) => {
+                setPrompts(prev => [...prev, { taskId, ...options }])
+            },
+            (taskId) => {
+                setPrompts(prev => prev.filter(p => p.taskId !== taskId))
+            }
+        )
 
         agentManager.registerAgent(newAgent);
         setAgent(newAgent)

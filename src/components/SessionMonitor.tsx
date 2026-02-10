@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Play, Pause, Plus, X, ChevronUp, ChevronDown } from 'lucide-react'
+import { Play, Pause, Plus, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
 import { StartSessionDialog } from './StartSessionDialog'
@@ -37,6 +37,11 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   const [datastoreHeight, setDatastoreHeight] = useState(300)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const isResizingRef = useRef(false)
+  const localBlueprintRef = useRef(null)
+
+  useEffect(() => {
+    localBlueprintRef.current = localBlueprint;
+  }, [localBlueprint]);
 
   useEffect(() => {
     if (commandHistory.length > 0) {
@@ -136,10 +141,10 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           details = blueprintParamVal;
         } else if (blueprintParamVal.dynamic) {
           // Handle various dynamic blueprint formats
-          if (blueprintParamVal.dynamic.element?.element_id) {
-            internalBlueprintId = blueprintParamVal.dynamic.element.element_id;
-          } else if (blueprintParamVal.dynamic.blueprint_id) {
+          if (blueprintParamVal.dynamic.blueprint_id) {
             internalBlueprintId = blueprintParamVal.dynamic.blueprint_id;
+          } else if (blueprintParamVal.dynamic.element?.element_id) {
+            internalBlueprintId = blueprintParamVal.dynamic.element.element_id;
           }
           details = internalBlueprintId || 'Dynamic';
         } else if (blueprintParamVal.static) {
@@ -340,9 +345,33 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
           // We use localBlueprint only for preview unless we want to support editing while running (not implemented)
           // For session, we fetch blueprint from session endpoint and transform it.
-          const blueprintResponse = await fetch(`${apiBaseUrl}/sessions/${sessionId}/blueprint`)
+
+          // Determine target blueprint ID to preserve navigation depth (e.g. expanded inner blueprints)
+          let fetchUrl = `${apiBaseUrl}/sessions/${sessionId}/blueprint`;
+          // Use ref to get the current blueprint ID without breaking the closure or causing infinite loops
+          const currentBlueprint = localBlueprintRef.current || localBlueprint;
+          const currentId = currentBlueprint?.data?.id || currentBlueprint?.id;
+
+          if (currentId) {
+            fetchUrl = `${apiBaseUrl}/sessions/${sessionId}/blueprint/${currentId}`;
+          }
+
+          const blueprintResponse = await fetch(fetchUrl)
           if (blueprintResponse.ok) {
             const blueprint = await blueprintResponse.json()
+            
+            // Check if the user has navigated away while the fetch was in progress
+            const activeBlueprint = localBlueprintRef.current;
+            const activeId = activeBlueprint?.data?.id || activeBlueprint?.id;
+            const fetchedId = blueprint?.data?.id || blueprint?.id;
+
+            // Normalize comparison (handle potential differences or undefined initial state)
+            // If we have an active ID and the fetched ID doesn't match, discard the update
+            if (activeId && fetchedId && activeId !== fetchedId) {
+               // console.log(`[DEBUG] Race condition detected. Ignoring update for ${fetchedId} as user is viewing ${activeId}`);
+               return false;
+            }
+
             setLocalBlueprint(blueprint) // Update local blueprint to support edits during pause
             setGraphData(transformBlueprintToGraph(blueprint))
           }
@@ -418,7 +447,11 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     }
 
     try {
-      const response = await fetch(`${apiBaseUrl}/blueprints/${internalId}`);
+      const fetchUrl = sessionId 
+        ? `${apiBaseUrl}/sessions/${sessionId}/blueprint/${internalId}`
+        : `${apiBaseUrl}/blueprints/${internalId}`;
+
+      const response = await fetch(fetchUrl);
       if (response.ok) {
         const newBlueprint = await response.json();
 
@@ -432,7 +465,23 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     } catch (e) {
       console.error("Failed to fetch sub-blueprint", e);
     }
-  }, [apiBaseUrl, localBlueprint, transformBlueprintToGraph]);
+  }, [apiBaseUrl, localBlueprint, transformBlueprintToGraph, sessionId]);
+
+  const navigateToBlueprint = (index: number) => {
+    // If clicking current blueprint (last item), do nothing
+    if (index === blueprintStack.length) return;
+    
+    // We are going back to index. 
+    // The blueprint at index becomes the new localBlueprint.
+    // The stack becomes the elements before index.
+    
+    const targetBlueprint = blueprintStack[index];
+    const newStack = blueprintStack.slice(0, index);
+    
+    setLocalBlueprint(targetBlueprint);
+    setBlueprintStack(newStack);
+    setGraphData(transformBlueprintToGraph(targetBlueprint));
+  };
 
   const handleNavigateBack = () => {
     if (blueprintStack.length === 0) return;
@@ -498,7 +547,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   }
 
   const isRunning = sessionState?.toLowerCase() === 'running';
-  const isFinished = ['completed', 'failed', 'cancelled'].includes(sessionState?.toLowerCase() || '');
+  const isFinished = ['completed', 'cancelled'].includes(sessionState?.toLowerCase() || '');
 
   return (
     <div className="session-monitor">
@@ -528,7 +577,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
                   </button>
                 ) : !isFinished ? (
                   <button onClick={handleResume} className="control-button start-preview-btn" title="Resume/Start Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Play size={16} /> <span>{['paused', 'stopped'].includes(sessionState?.toLowerCase() || '') ? 'Resume session' : 'Start Session'}</span>
+                    <Play size={16} /> <span>{['paused', 'stopped', 'failed'].includes(sessionState?.toLowerCase() || '') ? 'Resume session' : 'Start Session'}</span>
                   </button>
                 ) : null}
               </>
@@ -540,8 +589,9 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           </div>
         </div>
 
+        {/* Session Info Row */}
         {(sessionId || localBlueprint?.name || localBlueprint?.description) && (
-          <div style={{ fontSize: '0.9rem', color: '#666', borderTop: '1px solid #eee', paddingTop: '0.5rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ fontSize: '0.85rem', color: '#777', marginTop: '0.25rem', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             {sessionId && (
               <span>
                 Session: <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#444' }}>{sessionId}</span>
@@ -550,15 +600,36 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
             {(localBlueprint?.name || localBlueprint?.description) && (
               <>
-                {sessionId && <span style={{ color: '#ddd' }}>|</span>}
-                <span>
-                  {localBlueprint?.name && <span style={{ fontWeight: 600, marginRight: '0.5rem' }}>{localBlueprint.name}</span>}
-                  {localBlueprint?.description && <span>{localBlueprint.description}</span>}
-                </span>
+                {sessionId && <span style={{ color: '#ddd' }}></span>}
               </>
             )}
           </div>
         )}
+
+        {/* Breadcrumb Path Row */}
+        {blueprintStack.length > 0 && (
+          <div style={{ fontSize: '0.9rem', color: '#666', borderTop: '1px solid #eee', paddingTop: '0.5rem', width: '100%', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', overflowX: 'auto', whiteSpace: 'nowrap', gap: '0', scrollbarWidth: 'none' }}>
+              {[...blueprintStack, localBlueprint].map((bp, index, arr) => {
+                const isLast = index === arr.length - 1;
+                const displayId = bp?.id || bp?.data?.id || (index === 0 ? (blueprintId || mainBlueprintId) : 'Unknown');
+
+                return (
+                  <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
+                    <span
+                      onClick={() => !isLast && navigateToBlueprint(index)}
+                      className={isLast ? 'breadcrumb-current' : 'breadcrumb-link'}
+                    >
+                      {displayId}
+                    </span>
+                    {!isLast && <ChevronRight size={14} style={{ margin: '0 2px', color: '#999', flexShrink: 0 }} />}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
       </div>
 
       {error && <p className="error">{error}</p>}

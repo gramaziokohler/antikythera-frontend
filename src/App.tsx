@@ -12,7 +12,7 @@ import './styles/layout.css'
 import './styles/components.css'
 import './styles/session-monitor.css'
 
-const API_BASE_URL = 'http://localhost:5174/api'
+const API_BASE_URL = '/api'
 
 // Define the selection type used by the Sidebar
 type Selection = {
