@@ -12,8 +12,8 @@ const THEMES = {
     },
     dark: {
         grid: 'rgb(80, 80, 80)', // Grey
-        blip: 'rgba(255, 255, 255, 0.01)', // Faint white
-        glowingBlip: 'rgba(255, 255, 255, 0.01)', // Faint White
+        blip: 'rgba(255, 255, 255, 0.1)', // Faint white
+        glowingBlip: 'rgba(255, 255, 255, 0.1)', // Faint White
         blipGlow: 'rgba(255, 255, 255, 0.8)', // White glow
         bg: '#000000' // Almost Black
     }
