@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useState } from 'react';
+import { useEffect, useCallback, useMemo, useState, useRef } from 'react';
 import type { MouseEvent } from 'react';
 import {
   ReactFlow,
@@ -18,6 +18,7 @@ import { TaskNode } from './graph/TaskNode';
 interface SessionGraphProps {
   data: GraphData;
   onNodeSwap?: (sourceId: string, targetId: string) => void;
+  activeBlueprintId?: string;
 }
 
 const nodeWidth = 280; // Match TaskNode CSS
@@ -86,11 +87,15 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
   return { nodes: layoutedNodes, edges };
 };
-
-export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick }: SessionGraphProps & { onNodeDoubleClick?: (event: MouseEvent, node: Node) => void }) {
+export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, activeBlueprintId }: SessionGraphProps & { onNodeDoubleClick?: (event: MouseEvent, node: Node) => void }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [isInteractive, setIsInteractive] = useState(false); // Start locked
+  const [rfInstance, setRfInstance] = useState<any>(null);
+
+  // Store viewports: { [blueprintId]: { x, y, zoom } }
+  const viewStates = useRef<Record<string, { x: number, y: number, zoom: number }>>({});
+  const prevBlueprintIdRef = useRef<string | undefined>(undefined);
 
   const nodeTypes = useMemo(() => ({
     task: TaskNode
@@ -143,6 +148,31 @@ export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick }: SessionGra
     setEdges(layoutedEdges);
   }, [data, setNodes, setEdges]);
 
+  // Handle Viewport Restore/Fit when blueprint changes
+  useEffect(() => {
+    if (!rfInstance || !activeBlueprintId || nodes.length === 0) return;
+
+    if (activeBlueprintId !== prevBlueprintIdRef.current) {
+      const savedView = viewStates.current[activeBlueprintId];
+      if (savedView) {
+        rfInstance.setViewport(savedView);
+      } else {
+        // Only fit view if we don't have a saved state
+        // Use a small timeout to ensure nodes are fully rendered/measured by ReactFlow internal
+        setTimeout(() => {
+          rfInstance.fitView({ padding: 0.2, maxZoom: 1.0 });
+        }, 10);
+      }
+      prevBlueprintIdRef.current = activeBlueprintId;
+    }
+  }, [activeBlueprintId, rfInstance, nodes]);
+
+  const onMoveEnd = useCallback((event: any, viewport: any) => {
+    if (activeBlueprintId) {
+      viewStates.current[activeBlueprintId] = viewport;
+    }
+  }, [activeBlueprintId]);
+
   // Update layout when data changes
   useEffect(() => {
     refreshLayout();
@@ -169,8 +199,8 @@ export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick }: SessionGra
         onEdgesChange={onEdgesChange}
         onNodeDragStop={onNodeDragStop}
         onNodeDoubleClick={onNodeDoubleClick}
-        fitView
-        fitViewOptions={{ padding: 0.2, maxZoom: 1.0 }}
+        onInit={setRfInstance}
+        onMoveEnd={onMoveEnd}
         minZoom={0.1}
         maxZoom={1.5}
         nodeExtent={undefined}

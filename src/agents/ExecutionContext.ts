@@ -13,7 +13,7 @@ export class ExecutionContext {
 
     /**
      * Marks the context as cancelled and executes all registered callbacks.
-     * This method is called by the runtime/manager, not by the tool itself.
+     * This method is called by the runtime/launcher, not by the tool itself.
      */
     public cancel(): void {
         if (this._isCancelled) {

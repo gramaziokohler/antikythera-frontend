@@ -12,6 +12,7 @@ interface DataKey {
 interface DataStoreExplorerProps {
     data: any; // The raw session data object
     mainBlueprintId: string;
+    params?: any;
 }
 
 const GEOMETRY_KEYWORDS = [
@@ -22,6 +23,12 @@ const GEOMETRY_KEYWORDS = [
 
 function isGeometry(value: any): boolean {
     if (!value || typeof value !== 'object') return false;
+
+    // Handle arrays of geometries
+    if (Array.isArray(value)) {
+        if (value.length === 0) return false;
+        return isGeometry(value[0]);
+    }
 
     // Check dtype field for geometry keywords
     if (value.dtype && GEOMETRY_KEYWORDS.some(kw => value.dtype.includes(kw))) {
@@ -64,7 +71,7 @@ function detectType(val: any): 'text' | 'number' | 'geometry' | 'json' {
     return 'json';
 }
 
-export function DataStoreExplorer({ data, mainBlueprintId }: DataStoreExplorerProps) {
+export function DataStoreExplorer({ data, mainBlueprintId, params }: DataStoreExplorerProps) {
     const [selectedKey, setSelectedKey] = useState<string | null>(null);
     const [selectedBlueprintId, setSelectedBlueprintId] = useState<string | null>(null);
 
@@ -88,6 +95,10 @@ export function DataStoreExplorer({ data, mainBlueprintId }: DataStoreExplorerPr
             });
         };
 
+        if (params && Object.keys(params).length > 0) {
+            processDict(params, 'Session Parameters');
+        }
+
         if (data.main_blueprint) {
             processDict(data.main_blueprint, mainBlueprintId);
         }
@@ -99,7 +110,7 @@ export function DataStoreExplorer({ data, mainBlueprintId }: DataStoreExplorerPr
         }
 
         return items;
-    }, [data, mainBlueprintId]);
+    }, [data, mainBlueprintId, params]);
 
     // Group by Blueprint ID
     const groupedItems = useMemo(() => {

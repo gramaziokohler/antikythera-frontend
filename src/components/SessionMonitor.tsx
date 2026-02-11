@@ -35,9 +35,10 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   const [blueprintStack, setBlueprintStack] = useState<any[]>([])
   const [showStartDialog, setShowStartDialog] = useState(false)
   const [datastoreHeight, setDatastoreHeight] = useState(300)
+  const [sessionParams, setSessionParams] = useState<any>(null)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const isResizingRef = useRef(false)
-  const localBlueprintRef = useRef(null)
+  const localBlueprintRef = useRef<any>(null);
 
   useEffect(() => {
     localBlueprintRef.current = localBlueprint;
@@ -339,6 +340,9 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           const state = sessionDetails.data?.state || sessionDetails.state || 'pending'
           setSessionState(state)
 
+          const params = sessionDetails.data?.params || sessionDetails.params || {}
+          setSessionParams(params)
+
           // Extract main blueprint ID
           const bpId = sessionDetails.data?.blueprint?.data?.id || sessionDetails.blueprint?.id || 'Main Blueprint'
           setMainBlueprintId(bpId)
@@ -359,7 +363,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           const blueprintResponse = await fetch(fetchUrl)
           if (blueprintResponse.ok) {
             const blueprint = await blueprintResponse.json()
-            
+
             // Check if the user has navigated away while the fetch was in progress
             const activeBlueprint = localBlueprintRef.current;
             const activeId = activeBlueprint?.data?.id || activeBlueprint?.id;
@@ -368,8 +372,8 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
             // Normalize comparison (handle potential differences or undefined initial state)
             // If we have an active ID and the fetched ID doesn't match, discard the update
             if (activeId && fetchedId && activeId !== fetchedId) {
-               // console.log(`[DEBUG] Race condition detected. Ignoring update for ${fetchedId} as user is viewing ${activeId}`);
-               return false;
+              // console.log(`[DEBUG] Race condition detected. Ignoring update for ${fetchedId} as user is viewing ${activeId}`);
+              return false;
             }
 
             setLocalBlueprint(blueprint) // Update local blueprint to support edits during pause
@@ -447,7 +451,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     }
 
     try {
-      const fetchUrl = sessionId 
+      const fetchUrl = sessionId
         ? `${apiBaseUrl}/sessions/${sessionId}/blueprint/${internalId}`
         : `${apiBaseUrl}/blueprints/${internalId}`;
 
@@ -470,14 +474,14 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   const navigateToBlueprint = (index: number) => {
     // If clicking current blueprint (last item), do nothing
     if (index === blueprintStack.length) return;
-    
+
     // We are going back to index. 
     // The blueprint at index becomes the new localBlueprint.
     // The stack becomes the elements before index.
-    
+
     const targetBlueprint = blueprintStack[index];
     const newStack = blueprintStack.slice(0, index);
-    
+
     setLocalBlueprint(targetBlueprint);
     setBlueprintStack(newStack);
     setGraphData(transformBlueprintToGraph(targetBlueprint));
@@ -643,8 +647,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
               <SessionGraph
                 data={graphData}
                 onNodeSwap={localBlueprint ? handleNodeSwap : undefined}
-                onNodeDoubleClick={handleNodeDoubleClick}
-              />
+                onNodeDoubleClick={handleNodeDoubleClick} activeBlueprintId={localBlueprint?.id || localBlueprint?.data?.id || blueprintId || mainBlueprintId} />
             ) : (
               <div className="loading-container">
                 <div className="loading-spinner"></div>
@@ -705,7 +708,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
             <div className="data-container">
               {sessionData ? (
                 <div className="data-viewer-wrapper" style={{ height: '100%' }}>
-                  <DataStoreExplorer data={parsedSessionData} mainBlueprintId={mainBlueprintId} />
+                  <DataStoreExplorer data={parsedSessionData || {}} mainBlueprintId={mainBlueprintId} params={sessionParams} />
                 </div>
               ) : (
                 <div className="loading-container">

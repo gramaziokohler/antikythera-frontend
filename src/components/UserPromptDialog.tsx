@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { UserPromptAgent, type UserPromptOptions } from '../agents/UserPromptAgent'
 import { MqttService } from '../services/MqttService'
-import { AgentManager } from '../agents/AgentManager'
+import { AgentLauncher } from '../agents/AgentLauncher'
 
 interface PendingPrompt extends UserPromptOptions {
     taskId: string
@@ -13,7 +13,7 @@ export function UserPromptDialog() {
 
     useEffect(() => {
         const mqttService = MqttService.getInstance();
-        const agentManager = AgentManager.getInstance(mqttService);
+        const agentLauncher = AgentLauncher.getInstance(mqttService);
 
         const newAgent = new UserPromptAgent(
             (taskId, options) => {
@@ -24,11 +24,11 @@ export function UserPromptDialog() {
             }
         )
 
-        agentManager.registerAgent(newAgent);
+        agentLauncher.registerAgent(newAgent);
         setAgent(newAgent)
 
         return () => {
-            agentManager.unregisterAgent(newAgent.type);
+            agentLauncher.unregisterAgent(newAgent.type);
         }
     }, [])
 
