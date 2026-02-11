@@ -4,6 +4,7 @@ import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
 import { StartSessionDialog } from './StartSessionDialog'
 import { DataStoreExplorer } from './datastore/DataStoreExplorer'
+import { NodeContextMenu } from './graph/NodeContextMenu'
 
 interface SessionMonitorProps {
   apiBaseUrl: string
@@ -37,6 +38,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   const [datastoreHeight, setDatastoreHeight] = useState(300)
   const [sessionParams, setSessionParams] = useState<any>(null)
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string; nodeStatus: string; nodeType: string } | null>(null)
   const isResizingRef = useRef(false)
   const localBlueprintRef = useRef<any>(null);
 
@@ -471,6 +473,71 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     }
   }, [apiBaseUrl, localBlueprint, transformBlueprintToGraph, sessionId]);
 
+  const handleNodeContextMenu = useCallback((event: React.MouseEvent, node: any) => {
+    event.preventDefault();
+
+    const taskId = node?.id || node?.data?.id;
+    if (!taskId) return;
+
+    const nodeStatus = node?.data?.status || 'PENDING';
+    const nodeType = node?.data?.type || '';
+
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      nodeId: taskId,
+      nodeStatus,
+      nodeType,
+    });
+  }, []);
+
+  const handleResetTask = useCallback(async (taskId: string, includeDownstream: boolean) => {
+    setContextMenu(null);
+
+    if (!sessionId) return;
+
+    if (sessionState?.toLowerCase() === 'running') {
+      setError('Pause the session before resetting tasks.');
+      return;
+    }
+
+    const currentBlueprintId = localBlueprint?.data?.id || localBlueprint?.id || blueprintId || mainBlueprintId;
+    if (!currentBlueprintId) return;
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/tasks/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          blueprint_id: currentBlueprintId,
+          task_id: taskId,
+          include_downstream: includeDownstream,
+          clear_outputs: true,
+        }),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || 'Failed to reset task');
+      }
+
+      // Immediately re-fetch the blueprint so the graph updates without
+      // waiting for the next poll cycle.
+      const currentId = localBlueprint?.data?.id || localBlueprint?.id;
+      const refreshUrl = currentId
+        ? `${apiBaseUrl}/sessions/${sessionId}/blueprint/${currentId}`
+        : `${apiBaseUrl}/sessions/${sessionId}/blueprint`;
+      const refreshResp = await fetch(refreshUrl);
+      if (refreshResp.ok) {
+        const updated = await refreshResp.json();
+        setLocalBlueprint(updated);
+        setGraphData(transformBlueprintToGraph(updated));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset task');
+    }
+  }, [apiBaseUrl, blueprintId, localBlueprint, mainBlueprintId, sessionId, sessionState, transformBlueprintToGraph]);
+
   const navigateToBlueprint = (index: number) => {
     // If clicking current blueprint (last item), do nothing
     if (index === blueprintStack.length) return;
@@ -647,7 +714,9 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
               <SessionGraph
                 data={graphData}
                 onNodeSwap={localBlueprint ? handleNodeSwap : undefined}
-                onNodeDoubleClick={handleNodeDoubleClick} activeBlueprintId={localBlueprint?.id || localBlueprint?.data?.id || blueprintId || mainBlueprintId} />
+                onNodeDoubleClick={handleNodeDoubleClick}
+                onNodeContextMenu={handleNodeContextMenu}
+                activeBlueprintId={localBlueprint?.id || localBlueprint?.data?.id || blueprintId || mainBlueprintId} />
             ) : (
               <div className="loading-container">
                 <div className="loading-spinner"></div>
@@ -728,6 +797,19 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           blueprintName={localBlueprint?.name || blueprintId}
           onSessionStarted={onDialogSessionStarted}
           onCancel={() => setShowStartDialog(false)}
+        />
+      )}
+
+      {contextMenu && (
+        <NodeContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          nodeId={contextMenu.nodeId}
+          nodeStatus={contextMenu.nodeStatus}
+          nodeType={contextMenu.nodeType}
+          hasSession={!!sessionId}
+          onResetTask={handleResetTask}
+          onClose={() => setContextMenu(null)}
         />
       )}
     </div>
