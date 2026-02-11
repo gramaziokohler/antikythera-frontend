@@ -202,10 +202,6 @@ export class AgentLauncher {
         if (!task.type || !task.id) return;
 
         // Parse task type: {agent_type}.{tool_name}
-        // We look for the last dot to separate tool name, or maybe the first?
-        // The user said: "{agent_type}.{tool_type}"
-        // Let's assume agent_type can contain dots (e.g. "user_prompt"), so we might need to iterate or find the longest matching agent type.
-
         const { agent, toolName } = this.findAgentForTaskType(task.type);
 
         if (agent && toolName) {
@@ -290,15 +286,13 @@ export class AgentLauncher {
 
         } catch (error: any) {
             if (context.isCancelled) {
-                console.log(`Task ${task.id} cancelled during execution (caught exception).`);
+                console.log(`Task ${task.id} cancelled during exception handling.`);
                 return;
             }
             console.error(`Error executing task ${task.id}:`, error);
-            const errorOutput = { error: error.message || String(error) };
-            this.completeTask(task.id!, errorOutput, antikythera.v1.TaskState.TASK_STATE_FAILED);
+            this.completeTask(task.id!, null, antikythera.v1.TaskState.TASK_STATE_FAILED);
         } finally {
             this.activeContexts.delete(task.id!);
-            this.activeTasks.delete(task.id!);
         }
     }
 

@@ -7,6 +7,7 @@ import { SessionsList } from './components/SessionsList'
 import { UploadBlueprint } from './components/UploadBlueprint'
 import { SessionMonitor } from './components/SessionMonitor'
 import { UserPromptDialog } from './components/UserPromptDialog'
+import { NotificationManager } from './components/NotificationManager'
 
 import './styles/layout.css'
 import './styles/components.css'
@@ -157,6 +158,9 @@ function App() {
       <main className={`main-content ${isSidebarCollapsed ? 'expanded' : ''}`}>
         {renderContent()}
       </main>
+
+      <UserPromptDialog />
+      <NotificationManager />
     </div>
   )
 }

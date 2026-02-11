@@ -3,6 +3,7 @@ import { UserPromptDialog } from './components/UserPromptDialog'
 import { MqttService } from './services/MqttService'
 import { AgentLauncher } from './agents/AgentLauncher'
 import { BlueprintBackground } from './components/BlueprintBackground'
+import { NotificationManager } from './components/NotificationManager'
 
 import './styles/layout.css'
 import './styles/components.css'
@@ -110,6 +111,7 @@ function AgentApp() {
             {/* This component handles the actual agent logic and UI popup */}
             <div style={{ position: 'relative', zIndex: 50 }}>
                 <UserPromptDialog />
+                <NotificationManager />
             </div>
         </div>
     )
