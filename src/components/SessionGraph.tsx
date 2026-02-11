@@ -19,6 +19,7 @@ interface SessionGraphProps {
   data: GraphData;
   onNodeSwap?: (sourceId: string, targetId: string) => void;
   activeBlueprintId?: string;
+  onNodeContextMenu?: (event: MouseEvent, node: Node) => void;
 }
 
 const nodeWidth = 280; // Match TaskNode CSS
@@ -87,7 +88,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
   return { nodes: layoutedNodes, edges };
 };
-export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, activeBlueprintId }: SessionGraphProps & { onNodeDoubleClick?: (event: MouseEvent, node: Node) => void }) {
+export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, onNodeContextMenu, activeBlueprintId }: SessionGraphProps & { onNodeDoubleClick?: (event: MouseEvent, node: Node) => void }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [isInteractive, setIsInteractive] = useState(false); // Start locked
@@ -167,7 +168,7 @@ export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, activeBluepr
     }
   }, [activeBlueprintId, rfInstance, nodes]);
 
-  const onMoveEnd = useCallback((event: any, viewport: any) => {
+  const onMoveEnd = useCallback((_event: any, viewport: any) => {
     if (activeBlueprintId) {
       viewStates.current[activeBlueprintId] = viewport;
     }
@@ -190,7 +191,7 @@ export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, activeBluepr
   // Ensure container has dimensions using absolute positioning trick
   // This is the most reliable way to make React Flow fit a flex parent
   return (
-    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }} onContextMenu={(e) => e.preventDefault()}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -199,6 +200,7 @@ export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, activeBluepr
         onEdgesChange={onEdgesChange}
         onNodeDragStop={onNodeDragStop}
         onNodeDoubleClick={onNodeDoubleClick}
+        onNodeContextMenu={onNodeContextMenu}
         onInit={setRfInstance}
         onMoveEnd={onMoveEnd}
         minZoom={0.1}
