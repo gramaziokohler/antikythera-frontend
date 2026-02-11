@@ -1,0 +1,168 @@
+.notification-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+    /* Allow clicking through container */
+    max-width: 400px;
+    width: 100%;
+}
+
+.notification-toast {
+    position: relative;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06),
+        0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events: auto;
+    /* Enable interaction only for toasts */
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.notification-toast:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 10px 15px -3px rgba(0, 0, 0, 0.1),
+        0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Level Specific Styles */
+.notification-toast.info {
+    border-left-color: #3b82f6;
+}
+
+.notification-toast.success {
+    border-left-color: #22c55e;
+}
+
+.notification-toast.warning {
+    border-left-color: #eab308;
+}
+
+.notification-toast.error {
+    border-left-color: #ef4444;
+}
+
+.notification-icon-wrapper {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 2px;
+}
+
+/* Icon Colors */
+.notification-icon-info {
+    color: #3b82f6;
+}
+
+.notification-icon-success {
+    color: #22c55e;
+}
+
+.notification-icon-warning {
+    color: #eab308;
+}
+
+.notification-icon-error {
+    color: #ef4444;
+}
+
+.notification-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.notification-title {
+    margin: 0;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #111827;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.notification-message {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: #1f2937;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.notification-time {
+    font-size: 0.75rem;
+    color: #6b7280;
+    cursor: help;
+}
+
+.notification-close {
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+}
+
+.notification-close:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #4b5563;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+/* Dark Mode Support via data-theme attribute on parent/body */
+[data-theme='dark'] .notification-toast {
+    background: rgba(31, 41, 55, 0.95);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme='dark'] .notification-title {
+    color: #f3f4f6;
+}
+
+[data-theme='dark'] .notification-message {
+    color: #f3f4f6;
+}
+
+[data-theme='dark'] .notification-time {
+    color: #9ca3af;
+}
+
+[data-theme='dark'] .notification-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e5e7eb;
+}

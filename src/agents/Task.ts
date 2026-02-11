@@ -23,11 +23,28 @@ export class Task {
         return this.extractMap(this._message.inputs);
     }
 
+    get context(): any {
+        return this.extractMap(this._message.context);
+    }
+
+    // Force recompile
+    public toJSON() {
+        return {
+            id: this.id,
+            type: this.type,
+            inputs: this.inputs,
+            params: this.params,
+            context: this.context
+        };
+    }
+
     private extractMap(map: { [k: string]: compas_pb.data.IAnyData } | null | undefined): any {
         if (!map) return {};
         const result: any = {};
         for (const [key, value] of Object.entries(map)) {
-            result[key] = this.extractValue(value);
+            if (value) {
+                result[key] = this.extractValue(value);
+            }
         }
         return result;
     }
