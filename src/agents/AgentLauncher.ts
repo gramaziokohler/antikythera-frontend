@@ -12,8 +12,8 @@ type TaskAllocationMessage = antikythera.v1.ITaskAllocationMessage;
 type TaskCompletionMessage = antikythera.v1.ITaskCompletionMessage;
 type TaskState = antikythera.v1.TaskState;
 
-export class AgentManager {
-    private static instance: AgentManager;
+export class AgentLauncher {
+    private static instance: AgentLauncher;
     private mqttService: MqttService;
     private agents: Map<string, Agent> = new Map();
 
@@ -36,7 +36,7 @@ export class AgentManager {
         // Ensure internally spaced names (like "han solo") become "han-solo"
         this.agentId = `${randomName.replace(/ /g, '-')}-of-${randomLocation.replace(/ /g, '-')}`;
 
-        console.log(`Initializing Agent Manager ${this.agentId}`);
+        console.log(`Initializing Agent Launcher ${this.agentId}`);
 
         // Register message handler
         this.messageHandlerCleanup = this.mqttService.onMessage(this.onMessage.bind(this));
@@ -45,14 +45,14 @@ export class AgentManager {
         this.initializeSubscriptions();
     }
 
-    public static getInstance(mqttService?: MqttService): AgentManager {
-        if (!AgentManager.instance) {
+    public static getInstance(mqttService?: MqttService): AgentLauncher {
+        if (!AgentLauncher.instance) {
             if (!mqttService) {
-                throw new Error("AgentManager must be initialized with MqttService first");
+                throw new Error("AgentLauncher must be initialized with MqttService first");
             }
-            AgentManager.instance = new AgentManager(mqttService);
+            AgentLauncher.instance = new AgentLauncher(mqttService);
         }
-        return AgentManager.instance;
+        return AgentLauncher.instance;
     }
 
     public getAgentId(): string {
@@ -344,7 +344,7 @@ export class AgentManager {
     }
 
     public dispose() {
-        console.log(`Disposing Agent Manager ${this.agentId}`);
+        console.log(`Disposing Agent Launcher ${this.agentId}`);
         if (this.messageHandlerCleanup) {
             this.messageHandlerCleanup();
         }

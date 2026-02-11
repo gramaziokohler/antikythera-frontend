@@ -65,7 +65,7 @@ export class UserPromptAgent implements Agent {
         const resolve = this.pendingResolvers.get(taskId);
         if (resolve) {
             this.cleanup(taskId);
-            // Return object expected by AgentManager to be wrapped in AnyData
+            // Return object expected by AgentLauncher to be wrapped in AnyData
             resolve({ result: result });
         } else {
             console.warn(`No pending resolver found for task ${taskId}`);

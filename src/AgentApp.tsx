@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { UserPromptDialog } from './components/UserPromptDialog'
 import { MqttService } from './services/MqttService'
-import { AgentManager } from './agents/AgentManager'
+import { AgentLauncher } from './agents/AgentLauncher'
 import { BlueprintBackground } from './components/BlueprintBackground'
 
 import './styles/layout.css'
@@ -25,8 +25,8 @@ function AgentApp() {
     useEffect(() => {
         // Just ensure service exists, UserPromptDialog will register the agent
         const service = MqttService.getInstance();
-        const agentManager = AgentManager.getInstance(service);
-        setClientId(agentManager.getAgentId());
+        const agentLauncher = AgentLauncher.getInstance(service);
+        setClientId(agentLauncher.getAgentId());
     }, []);
 
     const toggleTheme = () => {
