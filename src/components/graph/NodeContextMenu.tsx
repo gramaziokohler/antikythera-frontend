@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { RotateCcw, CornerDownRight } from 'lucide-react';
+import { RotateCcw, CornerDownRight, SkipForward } from 'lucide-react';
 import './NodeContextMenu.css';
 
 export interface NodeContextMenuProps {
@@ -14,6 +14,7 @@ export interface NodeContextMenuProps {
     hasSession: boolean;
     /** Callbacks */
     onResetTask: (nodeId: string, includeDownstream: boolean) => void;
+    onSkipTask: (nodeId: string) => void;
     onClose: () => void;
 }
 
@@ -25,6 +26,7 @@ export function NodeContextMenu({
     nodeType,
     hasSession,
     onResetTask,
+    onSkipTask,
     onClose,
 }: NodeContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
@@ -63,7 +65,9 @@ export function NodeContextMenu({
     const status = nodeStatus?.toLowerCase();
     const isStartOrEnd = ['system.start', 'system.end'].includes(nodeType?.toLowerCase?.() || '');
     const isResettable = ['succeeded', 'completed', 'failed', 'skipped', 'running', 'ready'].includes(status);
+    const isSkippable = ['pending', 'ready'].includes(status);
     const canReset = hasSession && isResettable && !isStartOrEnd;
+    const canSkip = hasSession && isSkippable && !isStartOrEnd;
 
     return (
         <div
@@ -94,6 +98,15 @@ export function NodeContextMenu({
             >
                 <CornerDownRight size={14} />
                 <span>Reset with downstream</span>
+            </button>
+
+            <button
+                className="context-menu-item"
+                disabled={!canSkip}
+                onClick={() => { onSkipTask(nodeId); }}
+            >
+                <SkipForward size={14} />
+                <span>Skip task</span>
             </button>
 
             {!hasSession && (
