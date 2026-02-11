@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Play, Pause, Plus, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
 import type { SessionDataResponse, GraphData } from '../types'
+import { useSessionEvents } from '../hooks/useSessionEvents'
 import { SessionGraph } from './SessionGraph'
 import { StartSessionDialog } from './StartSessionDialog'
 import { DataStoreExplorer } from './datastore/DataStoreExplorer'
@@ -321,93 +322,86 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
     if (!sessionId) return
 
-    const fetchData = async () => {
-      try {
-        const [dataResponse, sessionResponse] = await Promise.all([
-          fetch(`${apiBaseUrl}/sessions/${sessionId}/data`),
-          fetch(`${apiBaseUrl}/sessions/${sessionId}`)
-        ])
-
-        if (dataResponse.ok) {
-          // used for viewing the data store
-          const data: SessionDataResponse = await dataResponse.json()
-          setSessionData(data)
-        }
-
-        if (sessionResponse.ok) {
-          // used to follow the execution state. 
-          const sessionDetails: any = await sessionResponse.json()
-
-          // Handle COMPAS Data object structure
-          const state = sessionDetails.data?.state || sessionDetails.state || 'pending'
-          setSessionState(state)
-
-          const params = sessionDetails.data?.params || sessionDetails.params || {}
-          setSessionParams(params)
-
-          // Extract main blueprint ID
-          const bpId = sessionDetails.data?.blueprint?.data?.id || sessionDetails.blueprint?.id || 'Main Blueprint'
-          setMainBlueprintId(bpId)
-
-          // We use localBlueprint only for preview unless we want to support editing while running (not implemented)
-          // For session, we fetch blueprint from session endpoint and transform it.
-
-          // Determine target blueprint ID to preserve navigation depth (e.g. expanded inner blueprints)
-          let fetchUrl = `${apiBaseUrl}/sessions/${sessionId}/blueprint`;
-          // Use ref to get the current blueprint ID without breaking the closure or causing infinite loops
-          const currentBlueprint = localBlueprintRef.current || localBlueprint;
-          const currentId = currentBlueprint?.data?.id || currentBlueprint?.id;
-
-          if (currentId) {
-            fetchUrl = `${apiBaseUrl}/sessions/${sessionId}/blueprint/${currentId}`;
-          }
-
-          const blueprintResponse = await fetch(fetchUrl)
-          if (blueprintResponse.ok) {
-            const blueprint = await blueprintResponse.json()
-
-            // Check if the user has navigated away while the fetch was in progress
-            const activeBlueprint = localBlueprintRef.current;
-            const activeId = activeBlueprint?.data?.id || activeBlueprint?.id;
-            const fetchedId = blueprint?.data?.id || blueprint?.id;
-
-            // Normalize comparison (handle potential differences or undefined initial state)
-            // If we have an active ID and the fetched ID doesn't match, discard the update
-            if (activeId && fetchedId && activeId !== fetchedId) {
-              // console.log(`[DEBUG] Race condition detected. Ignoring update for ${fetchedId} as user is viewing ${activeId}`);
-              return false;
-            }
-
-            setLocalBlueprint(blueprint) // Update local blueprint to support edits during pause
-            setGraphData(transformBlueprintToGraph(blueprint))
-          }
-
-          // Stop polling if session has ended
-          if (state && (
-            state.toLowerCase() === 'completed' ||
-            state.toLowerCase() === 'failed')) {
-            return true // Signal to stop polling
-          }
-        }
-
-        return false // Continue polling
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch session data')
-        console.error(err)
-        return false
-      }
-    };
-
-    fetchData()
-    const interval = setInterval(async () => {
-      const shouldStop = await fetchData()
-      if (shouldStop) {
-        clearInterval(interval)
-      }
-    }, 2000)
-
-    return () => clearInterval(interval)
+    // Initial fetch on mount — subsequent updates are driven by SSE events
+    fetchSessionData()
   }, [sessionId, blueprintId, apiBaseUrl, transformBlueprintToGraph])
+
+  // ---- On-demand fetch (called by SSE callbacks and initial load) ----
+  const fetchSessionData = useCallback(async () => {
+    if (!sessionId) return
+    try {
+      const [dataResponse, sessionResponse] = await Promise.all([
+        fetch(`${apiBaseUrl}/sessions/${sessionId}/data`),
+        fetch(`${apiBaseUrl}/sessions/${sessionId}`)
+      ])
+
+      if (dataResponse.ok) {
+        // used for viewing the data store
+        const data: SessionDataResponse = await dataResponse.json()
+        setSessionData(data)
+      }
+
+      if (sessionResponse.ok) {
+        // used to follow the execution state.
+        const sessionDetails: any = await sessionResponse.json()
+
+        // Handle COMPAS Data object structure
+        const state = sessionDetails.data?.state || sessionDetails.state || 'pending'
+        setSessionState(state)
+
+        const params = sessionDetails.data?.params || sessionDetails.params || {}
+        setSessionParams(params)
+
+        // Extract main blueprint ID
+        const bpId = sessionDetails.data?.blueprint?.data?.id || sessionDetails.blueprint?.id || 'Main Blueprint'
+        setMainBlueprintId(bpId)
+
+        // Determine target blueprint ID to preserve navigation depth (e.g. expanded inner blueprints)
+        let fetchUrl = `${apiBaseUrl}/sessions/${sessionId}/blueprint`;
+        const currentBlueprint = localBlueprintRef.current;
+        const currentId = currentBlueprint?.data?.id || currentBlueprint?.id;
+
+        if (currentId) {
+          fetchUrl = `${apiBaseUrl}/sessions/${sessionId}/blueprint/${currentId}`;
+        }
+
+        const blueprintResponse = await fetch(fetchUrl)
+        if (blueprintResponse.ok) {
+          const blueprint = await blueprintResponse.json()
+
+          // Check if the user has navigated away while the fetch was in progress
+          const activeBlueprint = localBlueprintRef.current;
+          const activeId = activeBlueprint?.data?.id || activeBlueprint?.id;
+          const fetchedId = blueprint?.data?.id || blueprint?.id;
+
+          if (activeId && fetchedId && activeId !== fetchedId) {
+            return;
+          }
+
+          setLocalBlueprint(blueprint)
+          setGraphData(transformBlueprintToGraph(blueprint))
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch session data')
+      console.error(err)
+    }
+  }, [sessionId, apiBaseUrl, transformBlueprintToGraph])
+
+  // ---- SSE-driven real-time updates ----
+  useSessionEvents(apiBaseUrl, sessionId, {
+    onTaskStateChanged: fetchSessionData,
+    onSessionStateChanged: fetchSessionData,
+    onDataStoreUpdated: fetchSessionData,
+    onBlueprintUpdated: fetchSessionData,
+  })
+
+  // ---- Fallback heartbeat poll (safety net, every 30s) ----
+  useEffect(() => {
+    if (!sessionId) return
+    const interval = setInterval(fetchSessionData, 30_000)
+    return () => clearInterval(interval)
+  }, [sessionId, fetchSessionData])
 
   const handlePause = async () => {
     if (!sessionId) return
