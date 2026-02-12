@@ -79,7 +79,7 @@ function HighlightMatch({ text, match }: { text: string; match: string }) {
     const parts = text.split(new RegExp(`(${escapedMatch})`, 'gi'));
     return (
         <>
-            {parts.map((part, index) => 
+            {parts.map((part, index) =>
                 part.toLowerCase() === match.toLowerCase() ? (
                     <span key={index} className="highlight-match">{part}</span>
                 ) : (
