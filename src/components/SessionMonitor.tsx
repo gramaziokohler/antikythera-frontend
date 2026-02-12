@@ -538,6 +538,51 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     }
   }, [apiBaseUrl, blueprintId, localBlueprint, mainBlueprintId, sessionId, sessionState, transformBlueprintToGraph]);
 
+  const handleSkipTask = useCallback(async (taskId: string) => {
+    setContextMenu(null);
+
+    if (!sessionId) return;
+
+    if (sessionState?.toLowerCase() === 'running') {
+      setError('Pause the session before skipping tasks.');
+      return;
+    }
+
+    const currentBlueprintId = localBlueprint?.data?.id || localBlueprint?.id || blueprintId || mainBlueprintId;
+    if (!currentBlueprintId) return;
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/tasks/skip`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          blueprint_id: currentBlueprintId,
+          task_id: taskId,
+        }),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || 'Failed to skip task');
+      }
+
+      // Immediately re-fetch the blueprint so the graph updates without
+      // waiting for the next poll cycle.
+      const currentId = localBlueprint?.data?.id || localBlueprint?.id;
+      const refreshUrl = currentId
+        ? `${apiBaseUrl}/sessions/${sessionId}/blueprint/${currentId}`
+        : `${apiBaseUrl}/sessions/${sessionId}/blueprint`;
+      const refreshResp = await fetch(refreshUrl);
+      if (refreshResp.ok) {
+        const updated = await refreshResp.json();
+        setLocalBlueprint(updated);
+        setGraphData(transformBlueprintToGraph(updated));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to skip task');
+    }
+  }, [apiBaseUrl, blueprintId, localBlueprint, mainBlueprintId, sessionId, sessionState, transformBlueprintToGraph]);
+
   const navigateToBlueprint = (index: number) => {
     // If clicking current blueprint (last item), do nothing
     if (index === blueprintStack.length) return;
@@ -809,6 +854,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           nodeType={contextMenu.nodeType}
           hasSession={!!sessionId}
           onResetTask={handleResetTask}
+          onSkipTask={handleSkipTask}
           onClose={() => setContextMenu(null)}
         />
       )}

@@ -44,6 +44,27 @@
 
 .task-node.skipped {
     border-left: 4px solid var(--color-status-skipped);
+    opacity: 0.6;
+    background: var(--color-bg-subtle);
+}
+
+.task-node.skipped .node-header {
+    background-color: var(--color-bg-subtle);
+}
+
+.task-node.skipped .node-title,
+.task-node.skipped .node-subtitle,
+.task-node.skipped .node-description,
+.task-node.skipped .node-icon-wrapper {
+    color: var(--color-text-muted);
+}
+
+.task-node.skipped .node-content {
+    background: transparent;
+}
+
+.task-node.skipped:hover {
+    opacity: 0.8;
 }
 
 .task-node.ready {

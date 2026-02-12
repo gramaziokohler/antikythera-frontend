@@ -47,17 +47,56 @@
             "get": {
                 "summary": "List Sessions",
                 "operationId": "list_sessions_sessions_get",
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 1000,
+                            "minimum": 1,
+                            "description": "Number of sessions to return",
+                            "default": 10,
+                            "title": "Limit"
+                        },
+                        "description": "Number of sessions to return"
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Offset for pagination",
+                            "default": 0,
+                            "title": "Offset"
+                        },
+                        "description": "Offset for pagination"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "array",
                                     "items": {
                                         "$ref": "#/components/schemas/SessionInfo"
                                     },
-                                    "type": "array",
                                     "title": "Response List Sessions Sessions Get"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
                                 }
                             }
                         }
@@ -318,6 +357,45 @@
                 }
             }
         },
+        "/sessions/{session_id}/stop": {
+            "post": {
+                "summary": "Stop Session",
+                "operationId": "stop_session_sessions__session_id__stop_post",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Session Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionActionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/sessions/{session_id}/start": {
             "post": {
                 "summary": "Start Session",
@@ -333,6 +411,114 @@
                         }
                     }
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RestartSessionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionActionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{session_id}/tasks/reset": {
+            "post": {
+                "summary": "Reset Task",
+                "operationId": "reset_task_sessions__session_id__tasks_reset_post",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Session Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResetTaskRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SessionActionResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{session_id}/tasks/skip": {
+            "post": {
+                "summary": "Skip Task",
+                "operationId": "skip_task_sessions__session_id__tasks_skip_post",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Session Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SkipTaskRequest"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Successful Response",
@@ -497,8 +683,8 @@
         },
         "/sessions/{session_id}/blueprint": {
             "get": {
-                "summary": "Get Session Blueprint",
-                "operationId": "get_session_blueprint_sessions__session_id__blueprint_get",
+                "summary": "Get Session Root Blueprint",
+                "operationId": "get_session_root_blueprint_sessions__session_id__blueprint_get",
                 "parameters": [
                     {
                         "name": "session_id",
@@ -532,11 +718,142 @@
                 }
             }
         },
+        "/sessions/{session_id}/blueprint/{blueprint_id}": {
+            "get": {
+                "summary": "Get Session Blueprint",
+                "operationId": "get_session_blueprint_sessions__session_id__blueprint__blueprint_id__get",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Session Id"
+                        }
+                    },
+                    {
+                        "name": "blueprint_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Blueprint Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/sessions/{session_id}": {
             "get": {
                 "summary": "Get Session Details",
                 "description": "Retrieve full details of a session including blueprints and parameters.\n\nParameters\n----------\nsession_id : str\n    The ID of the session to retrieve.\n\nReturns\n-------\nResponse\n    The session data as a JSON response.\n\nRaises\n------\nHTTPException\n    If the session is not found.",
                 "operationId": "get_session_details_sessions__session_id__get",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Session Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{session_id}/context/{blueprint_id}": {
+            "get": {
+                "summary": "Get Blueprint Context",
+                "description": "Get the context for a specific blueprint within a session.\n\n`blueprint_id` must be of a dynamically expanded composite blueprint.\n\nParameters\n----------\nsession_id : str\n    The ID of the session.\nblueprint_id : str\n    The ID of the blueprint to get context for.\n\nReturns\n-------\nResponse\n    The blueprint context as a JSON response.\n\nRaises\n------\nHTTPException\n    If the session or blueprint is not found.",
+                "operationId": "get_blueprint_context_sessions__session_id__context__blueprint_id__get",
+                "parameters": [
+                    {
+                        "name": "session_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Session Id"
+                        }
+                    },
+                    {
+                        "name": "blueprint_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Blueprint Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sessions/{session_id}/running-composites": {
+            "get": {
+                "summary": "Get Running Composites",
+                "description": "Get the IDs of all composite blueprints in a session that currently have running tasks.\n\nParameters\n----------\nsession_id : str\n    The ID of the session.\n\nReturns\n-------\nResponse\n    A JSON response containing a list of composite blueprint IDs with running tasks.\n\nRaises\n------\nHTTPException\n    If the session is not found.",
+                "operationId": "get_running_composites_sessions__session_id__running_composites_get",
                 "parameters": [
                     {
                         "name": "session_id",
@@ -719,6 +1036,58 @@
                 "type": "object",
                 "title": "HTTPValidationError"
             },
+            "ResetTaskRequest": {
+                "properties": {
+                    "blueprint_id": {
+                        "type": "string",
+                        "title": "Blueprint Id",
+                        "description": "Blueprint ID containing the task."
+                    },
+                    "task_id": {
+                        "type": "string",
+                        "title": "Task Id",
+                        "description": "Task ID to reset."
+                    },
+                    "include_downstream": {
+                        "type": "boolean",
+                        "title": "Include Downstream",
+                        "description": "Also reset tasks that depend on this task.",
+                        "default": true
+                    },
+                    "clear_outputs": {
+                        "type": "boolean",
+                        "title": "Clear Outputs",
+                        "description": "Clear task outputs from session storage.",
+                        "default": true
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "blueprint_id",
+                    "task_id"
+                ],
+                "title": "ResetTaskRequest"
+            },
+            "RestartSessionRequest": {
+                "properties": {
+                    "broker_host": {
+                        "type": "string",
+                        "title": "Broker Host",
+                        "description": "MQTT broker host.",
+                        "default": "127.0.0.1"
+                    },
+                    "broker_port": {
+                        "type": "integer",
+                        "maximum": 65535.0,
+                        "minimum": 1.0,
+                        "title": "Broker Port",
+                        "description": "MQTT broker port.",
+                        "default": 1883
+                    }
+                },
+                "type": "object",
+                "title": "RestartSessionRequest"
+            },
             "SessionActionResponse": {
                 "properties": {
                     "session_id": {
@@ -819,6 +1188,26 @@
                 ],
                 "title": "SessionInfo",
                 "description": "Response model for listing sessions."
+            },
+            "SkipTaskRequest": {
+                "properties": {
+                    "blueprint_id": {
+                        "type": "string",
+                        "title": "Blueprint Id",
+                        "description": "Blueprint ID containing the task."
+                    },
+                    "task_id": {
+                        "type": "string",
+                        "title": "Task Id",
+                        "description": "Task ID to skip."
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "blueprint_id",
+                    "task_id"
+                ],
+                "title": "SkipTaskRequest"
             },
             "StartBlueprintRequest": {
                 "properties": {
