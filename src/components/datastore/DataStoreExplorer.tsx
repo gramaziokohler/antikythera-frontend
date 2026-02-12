@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Search, X } from 'lucide-react';
 import './DataStore.css';
 import { GeometryViewer } from './GeometryViewer';
 
@@ -71,9 +72,28 @@ function detectType(val: any): 'text' | 'number' | 'geometry' | 'json' {
     return 'json';
 }
 
+function HighlightMatch({ text, match }: { text: string; match: string }) {
+    if (!match || !text) return <>{text}</>;
+    // Escape regex characters
+    const escapedMatch = match.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escapedMatch})`, 'gi'));
+    return (
+        <>
+            {parts.map((part, index) =>
+                part.toLowerCase() === match.toLowerCase() ? (
+                    <span key={index} className="highlight-match">{part}</span>
+                ) : (
+                    part
+                )
+            )}
+        </>
+    );
+}
+
 export function DataStoreExplorer({ data, mainBlueprintId, params }: DataStoreExplorerProps) {
     const [selectedKey, setSelectedKey] = useState<string | null>(null);
     const [selectedBlueprintId, setSelectedBlueprintId] = useState<string | null>(null);
+    const [filterText, setFilterText] = useState('');
 
     // Flatten and organize data
     const dataItems = useMemo(() => {
@@ -115,12 +135,21 @@ export function DataStoreExplorer({ data, mainBlueprintId, params }: DataStoreEx
     // Group by Blueprint ID
     const groupedItems = useMemo(() => {
         const groups: Record<string, DataKey[]> = {};
+        const lowerFilter = filterText.toLowerCase();
+
         dataItems.forEach(item => {
+            const matchKey = item.key.toLowerCase().includes(lowerFilter);
+            const matchGroup = item.blueprintId.toLowerCase().includes(lowerFilter);
+
+            if (filterText && !matchKey && !matchGroup) {
+                return;
+            }
+
             if (!groups[item.blueprintId]) groups[item.blueprintId] = [];
             groups[item.blueprintId].push(item);
         });
         return groups;
-    }, [dataItems]);
+    }, [dataItems, filterText]);
 
     const selectedItem = useMemo(() => {
         if (!selectedKey || !selectedBlueprintId) return null;
@@ -162,29 +191,55 @@ export function DataStoreExplorer({ data, mainBlueprintId, params }: DataStoreEx
         <div className="data-store-explorer">
             <div className="data-content">
                 <div className="data-sidebar">
-                    {Object.entries(groupedItems).map(([bpId, items]) => (
-                        <div key={bpId} className="blueprint-group">
-                            <div className="blueprint-header">{bpId}</div>
-                            {items.map(item => (
-                                <div
-                                    key={item.key}
-                                    className={`data-key-item ${selectedKey === item.key && selectedBlueprintId === bpId ? 'selected' : ''}`}
-                                    onClick={() => {
-                                        setSelectedKey(item.key);
-                                        setSelectedBlueprintId(bpId);
-                                    }}
-                                >
-                                    <span className="key-name">{item.key}</span>
-                                    <span className={`type-indicator ${item.type}`}>{item.type}</span>
+                    <div className="data-tree-list" style={{ flex: 1, overflowY: 'auto' }}>
+                        {Object.entries(groupedItems).map(([bpId, items]) => (
+                            <div key={bpId} className="blueprint-group">
+                                <div className="blueprint-header">
+                                    <HighlightMatch text={bpId} match={filterText} />
                                 </div>
-                            ))}
+                                {items.map(item => (
+                                    <div
+                                        key={item.key}
+                                        className={`data-key-item ${selectedKey === item.key && selectedBlueprintId === bpId ? 'selected' : ''}`}
+                                        onClick={() => {
+                                            setSelectedKey(item.key);
+                                            setSelectedBlueprintId(bpId);
+                                        }}
+                                    >
+                                        <span className="key-name">
+                                            <HighlightMatch text={item.key} match={filterText} />
+                                        </span>
+                                        <span className={`type-indicator ${item.type}`}>{item.type}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ))}
+                        {dataItems.length === 0 && (
+                            <div style={{ padding: '1rem', color: '#999', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                                Data store is empty.
+                            </div>
+                        )}
+                    </div>
+                    <div className="search-container">
+                        <div className="search-input-wrapper">
+                            <Search size={14} className="search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Filter..."
+                                value={filterText}
+                                onChange={(e) => setFilterText(e.target.value)}
+                                className="search-input"
+                            />
+                            {filterText && (
+                                <button
+                                    onClick={() => setFilterText('')}
+                                    className="search-clear-btn"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
                         </div>
-                    ))}
-                    {dataItems.length === 0 && (
-                        <div style={{ padding: '1rem', color: '#999', fontSize: '0.9rem', fontStyle: 'italic' }}>
-                            Data store is empty.
-                        </div>
-                    )}
+                    </div>
                 </div>
 
                 <div className="data-preview-pane">
