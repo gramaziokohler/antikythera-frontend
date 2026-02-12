@@ -140,8 +140,6 @@ function App() {
 
   return (
     <div className="app-shell">
-      <UserPromptDialog />
-
       <Sidebar
         apiBaseUrl={API_BASE_URL}
         onSelectionChange={handleSelectionChange}
