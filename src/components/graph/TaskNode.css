@@ -42,7 +42,8 @@
     border-left: 4px solid var(--color-error);
 }
 
-.task-node.skipped {
+.task-node.skipped,
+.task-node.skip_requested {
     border-left: 4px solid var(--color-status-skipped);
     opacity: 0.6;
     background: var(--color-bg-subtle);

@@ -35,6 +35,7 @@ const getStatusIcon = (status: string) => {
     case 'ready':
       return <PlayCircle size={16} className="status-icon ready" />;
     case 'skipped':
+    case 'skip_requested':
       return <XCircle size={16} className="status-icon skipped" />;
     case 'pending':
     case 'unspecified':
