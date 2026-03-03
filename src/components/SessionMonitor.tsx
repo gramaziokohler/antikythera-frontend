@@ -39,6 +39,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   const [sessionParams, setSessionParams] = useState<any>(null)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string; nodeStatus: string; nodeType: string } | null>(null)
+  const [pollingKey, setPollingKey] = useState(0)
   const isResizingRef = useRef(false)
   const localBlueprintRef = useRef<any>(null);
 
@@ -407,7 +408,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     }, 2000)
 
     return () => clearInterval(interval)
-  }, [sessionId, blueprintId, apiBaseUrl, transformBlueprintToGraph])
+  }, [sessionId, blueprintId, apiBaseUrl, transformBlueprintToGraph, pollingKey])
 
   const handlePause = async () => {
     if (!sessionId) return
@@ -435,6 +436,8 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
         }),
       })
       if (!response.ok) throw new Error('Failed to resume session')
+      // Restart polling by bumping the key (in case it was stopped due to a failed state)
+      setPollingKey(k => k + 1)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resume session')
     }
