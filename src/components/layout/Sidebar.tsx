@@ -7,7 +7,8 @@ import {
   FileText,
   Box,
   Moon,
-  Sun
+  Sun,
+  Trash2
 } from 'lucide-react';
 import './Sidebar.css';
 import type { BlueprintInfo, SessionInfo } from '../../types';
@@ -92,6 +93,18 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
   const reloadAll = () => {
     setLoading(true);
     Promise.all([fetchBlueprints(), fetchSessions(true)]).finally(() => setLoading(false));
+  };
+
+  const handleDeleteBlueprint = async (blueprintId: string, blueprintName: string) => {
+    if (!window.confirm(`Delete blueprint "${blueprintName}"?`)) return;
+    try {
+      const res = await fetch(`${apiBaseUrl}/blueprints/${blueprintId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete blueprint');
+      fetchBlueprints();
+    } catch (e) {
+      console.error('Failed to delete blueprint', e);
+      alert(e instanceof Error ? e.message : 'Failed to delete blueprint');
+    }
   };
 
   useEffect(() => {
@@ -197,6 +210,16 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
                     >
                       <span className="item-label">{bp.name}</span>
                       <span className="item-meta">v{bp.version}</span>
+                      <button
+                        className="item-delete-btn"
+                        title="Delete blueprint"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteBlueprint(bp.id, bp.name);
+                        }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   ))
               )}
