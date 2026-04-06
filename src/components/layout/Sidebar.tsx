@@ -4,7 +4,6 @@ import {
   ChevronRight,
   Plus,
   RefreshCw,
-  FileText,
   Box,
   Moon,
   Sun,
@@ -261,7 +260,7 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                           <span className="item-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>{sess.blueprint_id}</span>
                           <span className="item-meta" style={{ fontSize: '0.65rem', background: 'var(--color-gray-200)', padding: '1px 4px', borderRadius: '4px' }}>
-                            {timeAgo(sess.started_at)}
+                            {timeAgo(sess.started_at ?? undefined)}
                           </span>
                         </div>
                         <span className="item-meta">{sess.session_id.substring(0, 8)}...</span>

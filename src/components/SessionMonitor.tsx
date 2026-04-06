@@ -431,8 +431,8 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          "broker_host": "127.0.0.1",
-          "broker_port": 1883,
+          "broker_host": import.meta.env.VITE_MQTT_BROKER_HOST || '127.0.0.1',
+          "broker_port": parseInt(import.meta.env.VITE_MQTT_BROKER_PORT || '1883'),
         }),
       })
       if (!response.ok) throw new Error('Failed to resume session')

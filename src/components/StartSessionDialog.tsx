@@ -97,7 +97,7 @@ export function StartSessionDialog({ apiBaseUrl, blueprintId, onSessionStarted, 
                 },
                 body: JSON.stringify({
                     blueprint_id: blueprintId,
-                    broker_host: '127.0.0.1',
+                    broker_host: import.meta.env.VITE_MQTT_BROKER_HOST || '127.0.0.1',
                     broker_port: 1883,
                     params: Object.keys(params).length > 0 ? params : undefined,
                 }),
