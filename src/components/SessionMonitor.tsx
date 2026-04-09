@@ -515,7 +515,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           blueprint_id: currentBlueprintId,
           task_id: taskId,
           include_downstream: includeDownstream,
-          clear_outputs: true,
+          clear_outputs: false,
         }),
       });
 
