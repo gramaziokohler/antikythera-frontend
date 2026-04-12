@@ -106,6 +106,21 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
     }
   };
 
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!window.confirm(`Delete session "${sessionId.substring(0, 8)}..."?`)) return;
+    try {
+      const res = await fetch(`${apiBaseUrl}/sessions/${sessionId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.detail || 'Failed to delete session');
+      }
+      fetchSessions(true);
+    } catch (e) {
+      console.error('Failed to delete session', e);
+      alert(e instanceof Error ? e.message : 'Failed to delete session');
+    }
+  };
+
   useEffect(() => {
     reloadAll();
   }, [apiBaseUrl, refreshTrigger]);
@@ -265,6 +280,16 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
                         </div>
                         <span className="item-meta">{sess.session_id.substring(0, 8)}...</span>
                       </div>
+                      <button
+                        className="item-delete-btn"
+                        title="Delete session"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSession(sess.session_id);
+                        }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   ))}
                   {/* Infinite Scroll Sentinel */}
