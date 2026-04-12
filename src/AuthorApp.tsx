@@ -44,6 +44,7 @@ function buildDefaultBlueprint(): { nodes: Node[]; edges: Edge[] } {
     } satisfies AuthorNodeData,
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
+    deletable: false,
   };
 
   const endNode: Node = {
@@ -60,6 +61,7 @@ function buildDefaultBlueprint(): { nodes: Node[]; edges: Edge[] } {
     } satisfies AuthorNodeData,
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
+    deletable: false,
   };
 
   return { nodes: [startNode, endNode], edges: [] };
@@ -80,6 +82,7 @@ function blueprintToFlow(bp: Blueprint): { nodes: Node[]; edges: Edge[] } {
     } satisfies AuthorNodeData,
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
+    deletable: task.type !== 'system.start' && task.type !== 'system.end',
   }));
 
   const edges: Edge[] = [];
@@ -89,6 +92,7 @@ function blueprintToFlow(bp: Blueprint): { nodes: Node[]; edges: Edge[] } {
         id: makeEdgeId(dep.id, task.id),
         source: dep.id,
         target: task.id,
+        type: 'deletable',
         markerEnd: { type: MarkerType.ArrowClosed },
         style: { strokeWidth: 2 },
       });
@@ -278,6 +282,14 @@ export function AuthorApp() {
     setSelectedNodeId(id);
   }, [nodes.length]);
 
+  // ---- Delete node ----
+
+  const handleDeleteNode = useCallback((nodeId: string) => {
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    setSelectedNodeId(null);
+  }, []);
+
   // ---- Update node data (from TaskEditPanel) ----
 
   const handleUpdateNode = useCallback(
@@ -346,6 +358,7 @@ export function AuthorApp() {
                 nodeId={selectedNode.id}
                 data={selectedNode.data as AuthorNodeData}
                 onUpdate={handleUpdateNode}
+                onDelete={handleDeleteNode}
                 onClose={() => setSelectedNodeId(null)}
               />
             ) : (

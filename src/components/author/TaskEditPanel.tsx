@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Trash2 } from 'lucide-react';
 import type {
   AuthorNodeData,
   TaskInput,
@@ -171,10 +171,11 @@ interface TaskEditPanelProps {
   nodeId: string;
   data: AuthorNodeData;
   onUpdate: (id: string, newId: string, data: AuthorNodeData) => void;
+  onDelete: (id: string) => void;
   onClose: () => void;
 }
 
-export function TaskEditPanel({ nodeId, data, onUpdate, onClose }: TaskEditPanelProps) {
+export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: TaskEditPanelProps) {
   // Local editable state (kept in sync when nodeId changes)
   const [localId, setLocalId] = useState(nodeId);
   const [localData, setLocalData] = useState<AuthorNodeData>(data);
@@ -206,14 +207,28 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onClose }: TaskEditPanel
     commit(localId, next);
   };
 
+  const isSystemNode = data.taskType === 'system.start' || data.taskType === 'system.end';
+
   return (
     <div className="tep-root">
       {/* Header */}
       <div className="tep-header">
         <span className="tep-header-title">Edit Task: {nodeId}</span>
-        <button className="tep-close-btn" onClick={onClose} title="Close panel">
-          <X size={15} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {!isSystemNode && (
+            <button
+              className="tep-close-btn"
+              onClick={() => onDelete(nodeId)}
+              title="Delete task"
+              style={{ color: '#ef4444' }}
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
+          <button className="tep-close-btn" onClick={onClose} title="Close panel">
+            <X size={15} />
+          </button>
+        </div>
       </div>
 
       <div className="tep-body">
