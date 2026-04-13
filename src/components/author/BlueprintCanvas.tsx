@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -141,6 +141,9 @@ interface BlueprintCanvasProps {
   onEdgesChange: (changes: EdgeChange[]) => void;
   onSetEdges: (updater: (eds: Edge[]) => Edge[]) => void;
   onNodeSelect: (nodeId: string | null) => void;
+  isPlacing?: boolean;
+  onPlaceNode?: (position: { x: number; y: number }) => void;
+  onCancelPlace?: () => void;
 }
 
 export function BlueprintCanvas({
@@ -150,9 +153,24 @@ export function BlueprintCanvas({
   onEdgesChange,
   onSetEdges,
   onNodeSelect,
+  isPlacing = false,
+  onPlaceNode,
+  onCancelPlace,
 }: BlueprintCanvasProps) {
+  const { screenToFlowPosition } = useReactFlow();
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!isPlacing) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancelPlace?.();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isPlacing, onCancelPlace]);
   const onConnect = useCallback(
     (connection: Connection) => {
+      if (isPlacing) return; // ignore while placing
       onSetEdges((eds) =>
         addEdge(
           {
@@ -174,6 +192,14 @@ export function BlueprintCanvas({
     [onNodeSelect],
   );
 
+  const handlePaneClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isPlacing || !onPlaceNode) return;
+      onPlaceNode(screenToFlowPosition({ x: e.clientX, y: e.clientY }));
+    },
+    [isPlacing, onPlaceNode, screenToFlowPosition],
+  );
+
   const defaultEdgeOptions = useMemo(
     () => ({
       type: 'deletable',
@@ -184,33 +210,62 @@ export function BlueprintCanvas({
   );
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      onSelectionChange={onSelectionChange}
-      nodeTypes={nodeTypes}
-      edgeTypes={edgeTypes}
-      defaultEdgeOptions={defaultEdgeOptions}
-      deleteKeyCode="Delete"
-      fitView
-      fitViewOptions={{ padding: 0.2 }}
-      proOptions={{ hideAttribution: false }}
+    <div
+      style={{ width: '100%', height: '100%', cursor: isPlacing ? 'crosshair' : undefined }}
+      onMouseMove={(e) => { if (isPlacing) setMousePos({ x: e.clientX, y: e.clientY }); }}
     >
-      <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
-      <Controls />
-      <MiniMap
-        nodeColor={(n) => {
-          const taskType = (n.data as any)?.taskType ?? '';
-          if (taskType === 'system.start') return '#22c55e';
-          if (taskType === 'system.end') return '#ef4444';
-          return '#3b82f6';
-        }}
-        pannable
-        zoomable
-      />
-    </ReactFlow>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onSelectionChange={onSelectionChange}
+        onPaneClick={handlePaneClick}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        defaultEdgeOptions={defaultEdgeOptions}
+        deleteKeyCode="Delete"
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+        proOptions={{ hideAttribution: false }}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+        <Controls />
+        <MiniMap
+          nodeColor={(n) => {
+            const taskType = (n.data as any)?.taskType ?? '';
+            if (taskType === 'system.start') return '#22c55e';
+            if (taskType === 'system.end') return '#ef4444';
+            return '#3b82f6';
+          }}
+          pannable
+          zoomable
+        />
+      </ReactFlow>
+      {isPlacing && (
+        <div
+          style={{
+            position: 'fixed',
+            left: mousePos.x,
+            top: mousePos.y,
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            opacity: 0.85,
+            zIndex: 9999,
+            width: NODE_WIDTH,
+            background: 'var(--color-bg-card, #fff)',
+            border: '2px dashed #3b82f6',
+            borderRadius: 8,
+            padding: '8px 12px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+            userSelect: 'none',
+          }}
+        >
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#3b82f6' }}>new-task</div>
+          <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>Click to place · Esc to cancel</div>
+        </div>
+      )}
+    </div>
   );
 }

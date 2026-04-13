@@ -16,6 +16,7 @@ interface AuthorToolbarProps {
   onOpen: (file: File) => void;
   onExport: () => void;
   onAddNode: () => void;
+  isPlacing?: boolean;
   errors: string[];
 }
 
@@ -26,6 +27,7 @@ export function AuthorToolbar({
   onOpen,
   onExport,
   onAddNode,
+  isPlacing = false,
   errors,
 }: AuthorToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -80,9 +82,13 @@ export function AuthorToolbar({
       <div className="toolbar-divider" />
 
       {/* Add task */}
-      <button className="toolbar-btn" onClick={onAddNode} title="Add a new task node">
+      <button
+        className={`toolbar-btn${isPlacing ? ' primary' : ''}`}
+        onClick={onAddNode}
+        title={isPlacing ? 'Cancel placement (Esc)' : 'Add a new task node'}
+      >
         <Plus size={14} />
-        Add Task
+        {isPlacing ? 'Placing… (Esc)' : 'Add Task'}
       </button>
 
       <div className="toolbar-spacer" />

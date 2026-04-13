@@ -180,6 +180,7 @@ export function AuthorApp() {
   const [meta, setMeta] = useState<BlueprintMeta>(DEFAULT_META);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+  const [isPlacing, setIsPlacing] = useState(false);
 
   // ---- React Flow change handlers ----
 
@@ -258,15 +259,15 @@ export function AuthorApp() {
   // ---- Add node ----
 
   const handleAddNode = useCallback(() => {
-    const count = nodes.length;
+    setIsPlacing((prev) => !prev);
+  }, []);
+
+  const handlePlaceNode = useCallback((position: { x: number; y: number }) => {
     const id = `task_${Date.now()}`;
     const newNode: Node = {
       id,
       type: 'authorTask',
-      position: {
-        x: 200 + (count % 4) * 60,
-        y: 80 + count * 130,
-      },
+      position,
       data: {
         taskType: 'system.sleep',
         description: '',
@@ -280,7 +281,12 @@ export function AuthorApp() {
     };
     setNodes((nds) => [...nds, newNode]);
     setSelectedNodeId(id);
-  }, [nodes.length]);
+    setIsPlacing(false);
+  }, []);
+
+  const handleCancelPlace = useCallback(() => {
+    setIsPlacing(false);
+  }, []);
 
   // ---- Delete node ----
 
@@ -335,6 +341,7 @@ export function AuthorApp() {
           onOpen={handleOpen}
           onExport={handleExport}
           onAddNode={handleAddNode}
+          isPlacing={isPlacing}
           errors={errors}
         />
 
@@ -348,6 +355,9 @@ export function AuthorApp() {
               onEdgesChange={onEdgesChange}
               onSetEdges={onSetEdges}
               onNodeSelect={handleNodeSelect}
+              isPlacing={isPlacing}
+              onPlaceNode={handlePlaceNode}
+              onCancelPlace={handleCancelPlace}
             />
           </div>
 
