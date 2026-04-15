@@ -84,9 +84,18 @@ export interface GraphEdge {
   target: string;
 }
 
+export interface ScopeInfo {
+  id: string;
+  label: string;
+  task_ids: string[];
+  policy_type: 'skip' | 'retry' | 'while';
+  policy: Record<string, any>;
+}
+
 export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  scopes?: ScopeInfo[];
 }
 
 export interface AntikytheraDependency {
