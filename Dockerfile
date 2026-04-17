@@ -20,6 +20,9 @@ RUN npm run build
 # ---- Serve stage ----
 FROM nginx:stable-alpine
 
+LABEL \
+    org.opencontainers.image.authors="Chen Kasirer <kasirer@arch.ethz.ch>" 
+
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
