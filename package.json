@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/update-protos.js && tsc -b && vite build",
     "proto:update": "node scripts/update-protos.js",
     "lint": "eslint .",
     "preview": "vite preview"
