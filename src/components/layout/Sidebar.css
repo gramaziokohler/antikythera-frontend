@@ -279,3 +279,30 @@
     background-color: rgba(211, 107, 74, 0.2);
     color: var(--color-terracotta-500);
 }
+
+.item-delete-btn {
+    background: transparent;
+    border: none;
+    padding: 2px 3px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--transition-fast), color var(--transition-fast), background-color var(--transition-fast);
+    flex-shrink: 0;
+    box-shadow: none;
+    line-height: 0;
+}
+
+.list-item:hover .item-delete-btn {
+    opacity: 1;
+}
+
+.item-delete-btn:hover {
+    color: var(--color-error);
+    background-color: rgba(220, 38, 38, 0.1);
+    box-shadow: none;
+}
