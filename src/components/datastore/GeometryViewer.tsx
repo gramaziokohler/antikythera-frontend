@@ -1,6 +1,6 @@
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, Center } from '@react-three/drei';
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import * as THREE from 'three';
 import { convertCompasDataToThree } from '../../utils/compas-converter';
 

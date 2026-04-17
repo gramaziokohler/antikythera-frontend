@@ -1,0 +1,129 @@
+.atn-root {
+  background: var(--color-bg-card);
+  border: 2px solid var(--color-border-strong);
+  border-radius: 8px;
+  width: 240px;
+  min-height: 70px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.15s, border-color 0.15s, transform 0.1s;
+  overflow: hidden;
+  position: relative;
+  font-family: var(--font-sans, sans-serif);
+  cursor: pointer;
+}
+
+.atn-root:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+/* Type-based left border accent */
+.atn-root.atn-start {
+  border-color: #22c55e;
+  border-left: 4px solid #22c55e;
+}
+
+.atn-root.atn-end {
+  border-color: #ef4444;
+  border-left: 4px solid #ef4444;
+}
+
+.atn-root.atn-task {
+  border-color: var(--color-border-strong);
+  border-left: 4px solid #3b82f6;
+}
+
+/* Selected state */
+.atn-root.selected,
+.atn-root.atn-start.selected,
+.atn-root.atn-end.selected,
+.atn-root.atn-task.selected {
+  border-color: var(--color-terracotta-500);
+  box-shadow: 0 0 0 2px rgba(211, 107, 74, 0.3), 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Header */
+.atn-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px 8px;
+}
+
+.atn-id {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.atn-type {
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Description */
+.atn-desc {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  padding: 0 12px 8px;
+  line-height: 1.4;
+  border-top: 1px solid var(--color-border-subtle);
+  padding-top: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* IO / Param badges */
+.atn-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 0 12px 10px;
+}
+
+.atn-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--color-bg-subtle);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.atn-badge.inputs {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.atn-badge.outputs {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.atn-badge.params {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+/* Handles */
+.atn-handle {
+  width: 10px !important;
+  height: 10px !important;
+  background: var(--color-border-strong) !important;
+  border: 2px solid var(--color-bg-card) !important;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.atn-handle:hover {
+  background: var(--color-terracotta-500) !important;
+  transform: scale(1.3);
+}

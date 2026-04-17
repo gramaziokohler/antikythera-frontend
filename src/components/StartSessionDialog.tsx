@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react'
 import type { StartBlueprintResponse } from '../types'
 
+function slugify(value: string): string {
+    return value
+        .toLowerCase()
+        .replace(/[^\w-]+/g, '-')
+        .replace(/-{2,}/g, '-')
+        .replace(/^-+|-+$/g, '')
+}
+
 interface StartSessionDialogProps {
     apiBaseUrl: string
     blueprintId: string
@@ -10,6 +18,7 @@ interface StartSessionDialogProps {
 }
 
 export function StartSessionDialog({ apiBaseUrl, blueprintId, onSessionStarted, onCancel }: StartSessionDialogProps) {
+    const [sessionName, setSessionName] = useState('')
     const [blueprintParams, setBlueprintParams] = useState<Array<{ key: string, value: string, type: 'custom' | 'model' }>>([])
     const [models, setModels] = useState<string[]>([])
     const [loading, setLoading] = useState(false)
@@ -97,9 +106,10 @@ export function StartSessionDialog({ apiBaseUrl, blueprintId, onSessionStarted, 
                 },
                 body: JSON.stringify({
                     blueprint_id: blueprintId,
-                    broker_host: '127.0.0.1',
+                    broker_host: import.meta.env.VITE_MQTT_BROKER_HOST || '127.0.0.1',
                     broker_port: 1883,
                     params: Object.keys(params).length > 0 ? params : undefined,
+                    session_name: sessionName.trim() || undefined,
                 }),
             })
 
@@ -121,6 +131,28 @@ export function StartSessionDialog({ apiBaseUrl, blueprintId, onSessionStarted, 
                 <p className="dialog-description">Configure parameters for this session.</p>
 
                 {error && <p className="dialog-error">{error}</p>}
+
+                <div className="params-container" style={{ marginBottom: '0.75rem' }}>
+                    <div className="param-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '4px' }}>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--color-text-secondary, #666)' }}>
+                            Session name <span style={{ fontWeight: 400, opacity: 0.7 }}>(optional)</span>
+                        </label>
+                        <input
+                            type="text"
+                            className="param-input"
+                            style={{ width: '100%' }}
+                            placeholder="e.g. my-run-01  (leave blank for auto ID)"
+                            value={sessionName}
+                            onChange={(e) => setSessionName(e.target.value)}
+                            disabled={loading}
+                        />
+                        {sessionName.trim() && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted, #888)', fontFamily: 'monospace' }}>
+                                ID: <strong>{slugify(sessionName.trim())}</strong>
+                            </span>
+                        )}
+                    </div>
+                </div>
 
                 <div className="params-container params-list">
                     {blueprintParams.length === 0 && (

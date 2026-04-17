@@ -24,7 +24,7 @@ interface Blip {
     index: number; // grid index
     position: number; // pixels along the line
     speed: number;
-    headFunction: (t: number) => number; // Optional easing or variation? Nah, linear is fine.
+    headFunction?: (t: number) => number; // Optional easing or variation? Nah, linear is fine.
     length: number;
     opacity: number;
     isGlowing: boolean;

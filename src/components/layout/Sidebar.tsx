@@ -4,7 +4,6 @@ import {
   ChevronRight,
   Plus,
   RefreshCw,
-  FileText,
   Box,
   Moon,
   Sun,
@@ -104,6 +103,21 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
     } catch (e) {
       console.error('Failed to delete blueprint', e);
       alert(e instanceof Error ? e.message : 'Failed to delete blueprint');
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!window.confirm(`Delete session "${sessionId.substring(0, 8)}..."?`)) return;
+    try {
+      const res = await fetch(`${apiBaseUrl}/sessions/${sessionId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.detail || 'Failed to delete session');
+      }
+      fetchSessions(true);
+    } catch (e) {
+      console.error('Failed to delete session', e);
+      alert(e instanceof Error ? e.message : 'Failed to delete session');
     }
   };
 
@@ -261,11 +275,21 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                           <span className="item-label" style={{ fontSize: '0.8rem', fontWeight: 600 }}>{sess.blueprint_id}</span>
                           <span className="item-meta" style={{ fontSize: '0.65rem', background: 'var(--color-gray-200)', padding: '1px 4px', borderRadius: '4px' }}>
-                            {timeAgo(sess.started_at)}
+                            {timeAgo(sess.started_at ?? undefined)}
                           </span>
                         </div>
                         <span className="item-meta">{sess.session_id.substring(0, 8)}...</span>
                       </div>
+                      <button
+                        className="item-delete-btn"
+                        title="Delete session"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSession(sess.session_id);
+                        }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   ))}
                   {/* Infinite Scroll Sentinel */}
