@@ -38,7 +38,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   const [datastoreHeight, setDatastoreHeight] = useState(300)
   const [sessionParams, setSessionParams] = useState<any>(null)
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string; nodeStatus: string; nodeType: string } | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string; nodeStatus: string; nodeType: string; scopeName: string | null } | null>(null)
   const [pollingKey, setPollingKey] = useState(0)
   const isResizingRef = useRef(false)
   const localBlueprintRef = useRef<any>(null);
@@ -496,6 +496,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
     const nodeStatus = node?.data?.status || 'PENDING';
     const nodeType = node?.data?.type || '';
+    const scopeName = graphData?.scopes?.find(s => s.task_ids.includes(taskId))?.id ?? null;
 
     setContextMenu({
       x: event.clientX,
@@ -503,6 +504,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
       nodeId: taskId,
       nodeStatus,
       nodeType,
+      scopeName,
     });
   }, []);
 
@@ -597,6 +599,42 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
       setError(err instanceof Error ? err.message : 'Failed to skip task');
     }
   }, [apiBaseUrl, blueprintId, localBlueprint, mainBlueprintId, sessionId, sessionState, transformBlueprintToGraph]);
+
+  const handleResetScope = useCallback(async (scopeName: string) => {
+    setContextMenu(null);
+
+    if (!sessionId) return;
+
+    if (sessionState?.toLowerCase() === 'running') {
+      setError('Pause the session before resetting a scope.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/scopes/${encodeURIComponent(scopeName)}/reset`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || 'Failed to reset scope');
+      }
+
+      // Re-fetch the blueprint so the graph updates immediately.
+      const currentId = localBlueprint?.data?.id || localBlueprint?.id;
+      const refreshUrl = currentId
+        ? `${apiBaseUrl}/sessions/${sessionId}/blueprint/${currentId}`
+        : `${apiBaseUrl}/sessions/${sessionId}/blueprint`;
+      const refreshResp = await fetch(refreshUrl);
+      if (refreshResp.ok) {
+        const updated = await refreshResp.json();
+        setLocalBlueprint(updated);
+        setGraphData(transformBlueprintToGraph(updated));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset scope');
+    }
+  }, [apiBaseUrl, localBlueprint, sessionId, sessionState, transformBlueprintToGraph]);
 
   const navigateToBlueprint = (index: number) => {
     // If clicking current blueprint (last item), do nothing
@@ -867,9 +905,11 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           nodeId={contextMenu.nodeId}
           nodeStatus={contextMenu.nodeStatus}
           nodeType={contextMenu.nodeType}
+          scopeName={contextMenu.scopeName}
           hasSession={!!sessionId}
           onResetTask={handleResetTask}
           onSkipTask={handleSkipTask}
+          onResetScope={handleResetScope}
           onClose={() => setContextMenu(null)}
         />
       )}

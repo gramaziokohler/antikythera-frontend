@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { RotateCcw, CornerDownRight, SkipForward } from 'lucide-react';
+import { RotateCcw, CornerDownRight, SkipForward, RefreshCw } from 'lucide-react';
 import './NodeContextMenu.css';
 
 export interface NodeContextMenuProps {
@@ -10,11 +10,14 @@ export interface NodeContextMenuProps {
     nodeId: string;
     nodeStatus: string;
     nodeType: string;
+    /** Scope this task belongs to, or null if not in a scope */
+    scopeName: string | null;
     /** Whether the session is active (has a sessionId) */
     hasSession: boolean;
     /** Callbacks */
     onResetTask: (nodeId: string, includeDownstream: boolean) => void;
     onSkipTask: (nodeId: string) => void;
+    onResetScope: (scopeName: string) => void;
     onClose: () => void;
 }
 
@@ -24,9 +27,11 @@ export function NodeContextMenu({
     nodeId,
     nodeStatus,
     nodeType,
+    scopeName,
     hasSession,
     onResetTask,
     onSkipTask,
+    onResetScope,
     onClose,
 }: NodeContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
@@ -107,6 +112,17 @@ export function NodeContextMenu({
             >
                 <SkipForward size={14} />
                 <span>Skip task</span>
+            </button>
+
+            <div className="context-menu-divider" />
+
+            <button
+                className="context-menu-item"
+                disabled={!canReset || !scopeName}
+                onClick={() => { if (scopeName) onResetScope(scopeName); }}
+            >
+                <RefreshCw size={14} />
+                <span>{scopeName ? `Reset scope '${scopeName}'` : 'Reset scope'}</span>
             </button>
 
             {!hasSession && (
