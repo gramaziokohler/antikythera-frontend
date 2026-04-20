@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
+import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight, Settings } from 'lucide-react'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
 import { StartSessionDialog } from './StartSessionDialog'
@@ -40,6 +40,11 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string; nodeStatus: string; nodeType: string; scopeName: string | null } | null>(null)
   const [pollingKey, setPollingKey] = useState(0)
+  const [pollInterval, setPollInterval] = useState<number>(() => {
+    const saved = localStorage.getItem('antikythera.pollInterval')
+    return saved ? parseInt(saved, 10) : 500
+  })
+  const [showSettings, setShowSettings] = useState(false)
   const isResizingRef = useRef(false)
   const localBlueprintRef = useRef<any>(null);
 
@@ -417,10 +422,10 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
       if (shouldStop) {
         clearInterval(interval)
       }
-    }, 2000)
+    }, pollInterval)
 
     return () => clearInterval(interval)
-  }, [sessionId, blueprintId, apiBaseUrl, transformBlueprintToGraph, pollingKey])
+  }, [sessionId, blueprintId, apiBaseUrl, transformBlueprintToGraph, pollingKey, pollInterval])
 
   const handlePause = async () => {
     if (!sessionId) return
@@ -731,7 +736,46 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
             </span>
           </div>
 
-          <div className="session-controls" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div className="session-controls" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
+            <button
+              onClick={() => setShowSettings(s => !s)}
+              className="control-button"
+              title="Settings"
+              style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}
+            >
+              <Settings size={16} />
+            </button>
+            {showSettings && (
+              <div style={{
+                position: 'absolute', top: '110%', right: 0, zIndex: 100,
+                background: 'var(--color-surface, #fff)', border: '1px solid var(--color-border, #ddd)',
+                borderRadius: '8px', padding: '1rem', minWidth: '220px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.12)'
+              }}>
+                <div style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.9rem' }}>Settings</div>
+                <label style={{ fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem' }}>Poll interval</label>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  {[250, 500, 1000, 2000, 5000].map(ms => (
+                    <button
+                      key={ms}
+                      onClick={() => {
+                        setPollInterval(ms)
+                        localStorage.setItem('antikythera.pollInterval', String(ms))
+                      }}
+                      style={{
+                        padding: '3px 10px', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer',
+                        border: '1px solid var(--color-border, #ccc)',
+                        background: pollInterval === ms ? 'var(--color-primary, #0066cc)' : 'transparent',
+                        color: pollInterval === ms ? '#fff' : 'inherit',
+                        fontWeight: pollInterval === ms ? 600 : 400,
+                      }}
+                    >
+                      {ms < 1000 ? `${ms}ms` : `${ms / 1000}s`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {blueprintStack.length > 0 && (
               <button onClick={handleNavigateBack} className="control-button back-btn" style={{ marginRight: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span>← Back</span>
