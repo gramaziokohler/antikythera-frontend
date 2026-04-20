@@ -12,8 +12,9 @@ import {
 import type { Node, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import dagre from '@dagrejs/dagre';
-import type { GraphData } from '../types';
+import type { GraphData, ScopeInfo } from '../types';
 import { TaskNode } from './graph/TaskNode';
+import { ScopeGroupNode } from './graph/ScopeGroupNode';
 
 interface SessionGraphProps {
   data: GraphData;
@@ -99,7 +100,8 @@ export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, onNodeContex
   const prevBlueprintIdRef = useRef<string | undefined>(undefined);
 
   const nodeTypes = useMemo(() => ({
-    task: TaskNode
+    task: TaskNode,
+    scopeGroup: ScopeGroupNode,
   }), []);
 
   const refreshLayout = useCallback(() => {
@@ -145,7 +147,67 @@ export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, onNodeContex
       initialEdges
     );
 
-    setNodes(layoutedNodes);
+    // Build scope group nodes from bounding boxes of laid-out task positions
+    const scopeNodes: Node[] = [];
+    const scopes = data.scopes || [];
+    if (scopes.length > 0) {
+      const padding = 30;
+      const nodePositions = new Map(layoutedNodes.map(n => [n.id, n]));
+
+      for (const scope of scopes) {
+        const memberNodes = scope.task_ids
+          .map(id => nodePositions.get(id))
+          .filter(n => n !== undefined);
+
+        if (memberNodes.length === 0) continue;
+
+        // Compute bounding box
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const n of memberNodes) {
+          const w = (typeof n!.style?.width === 'number' ? n!.style.width : nodeWidth);
+          const h = (typeof n!.style?.height === 'number' ? n!.style.height : nodeHeight);
+          minX = Math.min(minX, n!.position.x);
+          minY = Math.min(minY, n!.position.y);
+          maxX = Math.max(maxX, n!.position.x + w);
+          maxY = Math.max(maxY, n!.position.y + h);
+        }
+
+        // Build policy summary text
+        let policySummary = '';
+        const policy = scope.policy || {};
+        if (scope.policy_type === 'retry') {
+          const retries = policy.retry_policy?.retries;
+          policySummary = retries !== undefined ? `${retries}x` : '';
+        } else if (scope.policy_type === 'while') {
+          const cond = policy.while_policy?.condition;
+          const max = policy.while_policy?.max_iterations;
+          policySummary = cond || '';
+          if (max) policySummary += ` (max ${max})`;
+        }
+
+        scopeNodes.push({
+          id: `scope-${scope.id}`,
+          type: 'scopeGroup',
+          position: { x: minX - padding, y: minY - padding },
+          style: {
+            width: maxX - minX + padding * 2,
+            height: maxY - minY + padding * 2,
+          },
+          data: {
+            label: scope.label,
+            policyType: scope.policy_type,
+            policySummary,
+          },
+          selectable: false,
+          draggable: false,
+          // Render behind task nodes
+          zIndex: -1,
+        });
+      }
+    }
+
+    // Scope groups go first so they render behind task nodes
+    setNodes([...scopeNodes, ...layoutedNodes]);
     setEdges(layoutedEdges);
   }, [data, setNodes, setEdges]);
 

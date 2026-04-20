@@ -199,7 +199,19 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
       }).filter((e: any) => e !== null);
     })
 
-    return { nodes, edges };
+    // Pass scope information through for visualization
+    const scopes = (blueprintData.scopes || []).map((s: any) => {
+      const scopeData = s.data || s;
+      return {
+        id: scopeData.id,
+        label: scopeData.label || scopeData.id,
+        task_ids: scopeData.task_ids || [],
+        policy_type: scopeData.policy_type || 'skip',
+        policy: scopeData.policy || {},
+      };
+    });
+
+    return { nodes, edges, scopes };
   }, []);
 
   const parsedSessionData = useMemo(() => {
