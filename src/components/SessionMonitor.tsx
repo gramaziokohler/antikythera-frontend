@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Play, Pause, Plus, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
+import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
 import { StartSessionDialog } from './StartSessionDialog'
@@ -506,7 +506,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
       nodeType,
       scopeName,
     });
-  }, []);
+  }, [graphData]);
 
   const handleResetTask = useCallback(async (taskId: string, includeDownstream: boolean) => {
     setContextMenu(null);
@@ -716,7 +716,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   }
 
   const isRunning = sessionState?.toLowerCase() === 'running';
-  const isFinished = ['completed', 'cancelled'].includes(sessionState?.toLowerCase() || '');
+  const isFinished = ['completed', 'failed', 'cancelled'].includes(sessionState?.toLowerCase() || '');
 
   return (
     <div className="session-monitor">
@@ -744,11 +744,15 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
                   <button onClick={handlePause} className="control-button start-preview-btn" title="Pause Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Pause size={16} /> <span>Pause</span>
                   </button>
-                ) : !isFinished ? (
+                ) : isFinished ? (
+                  <button onClick={handleResume} className="control-button start-preview-btn" title="Restart Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <RotateCcw size={16} /> <span>Restart Session</span>
+                  </button>
+                ) : (
                   <button onClick={handleResume} className="control-button start-preview-btn" title="Resume/Start Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Play size={16} /> <span>{['paused', 'stopped', 'failed'].includes(sessionState?.toLowerCase() || '') ? 'Resume session' : 'Start Session'}</span>
                   </button>
-                ) : null}
+                )}
               </>
             ) : (
               <button onClick={handleStartSession} className="control-button start-preview-btn" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
