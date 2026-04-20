@@ -1,5 +1,7 @@
 # Antikythera Frontend
 
+> For full documentation, architecture details, and backend setup, see the [antikythera backend repository](https://github.com/gramaziokohler/antikythera).
+
 A React frontend for managing and monitoring blueprint execution.
 
 ## Prerequisites
