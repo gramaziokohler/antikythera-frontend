@@ -26,6 +26,7 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [activeBlueprintId, setActiveBlueprintId] = useState<string | null>(null)
+  const [blueprintUploadCount, setBlueprintUploadCount] = useState(0)
 
   // Theme state
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
@@ -111,6 +112,7 @@ function App() {
             <div className="panel upload-panel" style={{ maxWidth: '800px', margin: '0 auto' }}>
               <UploadBlueprint
                 apiBaseUrl={API_BASE_URL}
+                onUploadSuccess={() => setBlueprintUploadCount(c => c + 1)}
               />
             </div>
           </div>
@@ -145,6 +147,7 @@ function App() {
         onSelectionChange={handleSelectionChange}
         collapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        refreshTrigger={blueprintUploadCount}
         activeSelection={{
           type: activeView as any,
           id: activeView === 'sessions' ? activeSessionId || undefined : undefined
