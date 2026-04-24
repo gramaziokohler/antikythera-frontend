@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import type { StartBlueprintResponse } from '../types'
 
+// Persists for the lifetime of the frontend process (survives dialog re-opens).
+let _autoStartDefault = false;
+
 function slugify(value: string): string {
     return value
         .toLowerCase()
@@ -23,6 +26,12 @@ export function StartSessionDialog({ apiBaseUrl, blueprintId, onSessionStarted, 
     const [models, setModels] = useState<string[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [autoStart, setAutoStart] = useState(_autoStartDefault)
+
+    const handleAutoStartChange = (checked: boolean) => {
+        _autoStartDefault = checked
+        setAutoStart(checked)
+    }
 
     useEffect(() => {
         fetchModels()
@@ -116,6 +125,19 @@ export function StartSessionDialog({ apiBaseUrl, blueprintId, onSessionStarted, 
             if (!response.ok) throw new Error('Failed to start blueprint')
 
             const data: StartBlueprintResponse = await response.json()
+
+            if (autoStart) {
+                const startResp = await fetch(`${apiBaseUrl}/sessions/${data.session_id}/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        broker_host: import.meta.env.VITE_MQTT_BROKER_HOST || '127.0.0.1',
+                        broker_port: parseInt(import.meta.env.VITE_MQTT_BROKER_PORT || '1883'),
+                    }),
+                })
+                if (!startResp.ok) throw new Error('Session created but failed to start automatically')
+            }
+
             onSessionStarted(data.session_id)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to start blueprint')
@@ -225,6 +247,19 @@ export function StartSessionDialog({ apiBaseUrl, blueprintId, onSessionStarted, 
                     >
                         + Add Parameter
                     </button>
+                </div>
+
+                <div className="dialog-footer" style={{ marginTop: '0.5rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'var(--color-text-secondary, #666)', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                            type="checkbox"
+                            checked={autoStart}
+                            onChange={(e) => handleAutoStartChange(e.target.checked)}
+                            disabled={loading}
+                            style={{ width: '14px', height: '14px', cursor: 'pointer' }}
+                        />
+                        Start session automatically
+                    </label>
                 </div>
 
                 <div className="user-prompt-actions">

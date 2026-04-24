@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Play, Pause, Plus, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
+import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight, Settings } from 'lucide-react'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
 import { StartSessionDialog } from './StartSessionDialog'
@@ -38,8 +38,13 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   const [datastoreHeight, setDatastoreHeight] = useState(300)
   const [sessionParams, setSessionParams] = useState<any>(null)
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string; nodeStatus: string; nodeType: string } | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string; nodeStatus: string; nodeType: string; scopeName: string | null } | null>(null)
   const [pollingKey, setPollingKey] = useState(0)
+  const [pollInterval, setPollInterval] = useState<number>(() => {
+    const saved = localStorage.getItem('antikythera.pollInterval')
+    return saved ? parseInt(saved, 10) : 500
+  })
+  const [showSettings, setShowSettings] = useState(false)
   const isResizingRef = useRef(false)
   const localBlueprintRef = useRef<any>(null);
 
@@ -417,10 +422,10 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
       if (shouldStop) {
         clearInterval(interval)
       }
-    }, 2000)
+    }, pollInterval)
 
     return () => clearInterval(interval)
-  }, [sessionId, blueprintId, apiBaseUrl, transformBlueprintToGraph, pollingKey])
+  }, [sessionId, blueprintId, apiBaseUrl, transformBlueprintToGraph, pollingKey, pollInterval])
 
   const handlePause = async () => {
     if (!sessionId) return
@@ -496,6 +501,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
     const nodeStatus = node?.data?.status || 'PENDING';
     const nodeType = node?.data?.type || '';
+    const scopeName = graphData?.scopes?.find(s => s.task_ids.includes(taskId))?.id ?? null;
 
     setContextMenu({
       x: event.clientX,
@@ -503,8 +509,9 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
       nodeId: taskId,
       nodeStatus,
       nodeType,
+      scopeName,
     });
-  }, []);
+  }, [graphData]);
 
   const handleResetTask = useCallback(async (taskId: string, includeDownstream: boolean) => {
     setContextMenu(null);
@@ -598,6 +605,42 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     }
   }, [apiBaseUrl, blueprintId, localBlueprint, mainBlueprintId, sessionId, sessionState, transformBlueprintToGraph]);
 
+  const handleResetScope = useCallback(async (scopeName: string) => {
+    setContextMenu(null);
+
+    if (!sessionId) return;
+
+    if (sessionState?.toLowerCase() === 'running') {
+      setError('Pause the session before resetting a scope.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/scopes/${encodeURIComponent(scopeName)}/reset`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || 'Failed to reset scope');
+      }
+
+      // Re-fetch the blueprint so the graph updates immediately.
+      const currentId = localBlueprint?.data?.id || localBlueprint?.id;
+      const refreshUrl = currentId
+        ? `${apiBaseUrl}/sessions/${sessionId}/blueprint/${currentId}`
+        : `${apiBaseUrl}/sessions/${sessionId}/blueprint`;
+      const refreshResp = await fetch(refreshUrl);
+      if (refreshResp.ok) {
+        const updated = await refreshResp.json();
+        setLocalBlueprint(updated);
+        setGraphData(transformBlueprintToGraph(updated));
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reset scope');
+    }
+  }, [apiBaseUrl, localBlueprint, sessionId, sessionState, transformBlueprintToGraph]);
+
   const navigateToBlueprint = (index: number) => {
     // If clicking current blueprint (last item), do nothing
     if (index === blueprintStack.length) return;
@@ -678,7 +721,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   }
 
   const isRunning = sessionState?.toLowerCase() === 'running';
-  const isFinished = ['completed', 'cancelled'].includes(sessionState?.toLowerCase() || '');
+  const isFinished = ['completed', 'failed', 'cancelled'].includes(sessionState?.toLowerCase() || '');
 
   return (
     <div className="session-monitor">
@@ -693,7 +736,46 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
             </span>
           </div>
 
-          <div className="session-controls" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div className="session-controls" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
+            <button
+              onClick={() => setShowSettings(s => !s)}
+              className="control-button"
+              title="Settings"
+              style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}
+            >
+              <Settings size={16} />
+            </button>
+            {showSettings && (
+              <div style={{
+                position: 'absolute', top: '110%', right: 0, zIndex: 100,
+                background: 'var(--color-surface, #fff)', border: '1px solid var(--color-border, #ddd)',
+                borderRadius: '8px', padding: '1rem', minWidth: '220px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.12)'
+              }}>
+                <div style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.9rem' }}>Settings</div>
+                <label style={{ fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem' }}>Poll interval</label>
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  {[250, 500, 1000, 2000, 5000].map(ms => (
+                    <button
+                      key={ms}
+                      onClick={() => {
+                        setPollInterval(ms)
+                        localStorage.setItem('antikythera.pollInterval', String(ms))
+                      }}
+                      style={{
+                        padding: '3px 10px', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer',
+                        border: '1px solid var(--color-border, #ccc)',
+                        background: pollInterval === ms ? 'var(--color-primary, #0066cc)' : 'transparent',
+                        color: pollInterval === ms ? '#fff' : 'inherit',
+                        fontWeight: pollInterval === ms ? 600 : 400,
+                      }}
+                    >
+                      {ms < 1000 ? `${ms}ms` : `${ms / 1000}s`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {blueprintStack.length > 0 && (
               <button onClick={handleNavigateBack} className="control-button back-btn" style={{ marginRight: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span>← Back</span>
@@ -706,11 +788,15 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
                   <button onClick={handlePause} className="control-button start-preview-btn" title="Pause Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Pause size={16} /> <span>Pause</span>
                   </button>
-                ) : !isFinished ? (
+                ) : isFinished ? (
+                  <button onClick={handleResume} className="control-button start-preview-btn" title="Restart Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <RotateCcw size={16} /> <span>Restart Session</span>
+                  </button>
+                ) : (
                   <button onClick={handleResume} className="control-button start-preview-btn" title="Resume/Start Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Play size={16} /> <span>{['paused', 'stopped', 'failed'].includes(sessionState?.toLowerCase() || '') ? 'Resume session' : 'Start Session'}</span>
                   </button>
-                ) : null}
+                )}
               </>
             ) : (
               <button onClick={handleStartSession} className="control-button start-preview-btn" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -867,9 +953,11 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           nodeId={contextMenu.nodeId}
           nodeStatus={contextMenu.nodeStatus}
           nodeType={contextMenu.nodeType}
+          scopeName={contextMenu.scopeName}
           hasSession={!!sessionId}
           onResetTask={handleResetTask}
           onSkipTask={handleSkipTask}
+          onResetScope={handleResetScope}
           onClose={() => setContextMenu(null)}
         />
       )}
