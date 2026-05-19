@@ -1,5 +1,15 @@
 import mqtt from 'mqtt';
 
+function defaultBrokerUrl(): string {
+    if (import.meta.env.VITE_MQTT_BROKER_URL) {
+        return import.meta.env.VITE_MQTT_BROKER_URL;
+    }
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const port = window.location.protocol === 'https:' ? '' : ':8083';
+    return `${protocol}//${window.location.hostname}${port}/mqtt`;
+}
+
 export class MqttService {
     private static instance: MqttService;
     private client: mqtt.MqttClient;
@@ -35,7 +45,7 @@ export class MqttService {
     public static getInstance(brokerUrl?: string): MqttService {
         if (!MqttService.instance) {
             // Default to current hostname if not provided, assuming standard port 8083
-            const url = brokerUrl || `ws://${window.location.hostname}:8083/mqtt`;
+            const url = brokerUrl || defaultBrokerUrl();
             MqttService.instance = new MqttService(url);
         }
         return MqttService.instance;
