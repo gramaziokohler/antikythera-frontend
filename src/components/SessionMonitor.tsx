@@ -360,6 +360,13 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           const state = sessionDetails.data?.state || sessionDetails.state || 'pending'
           setSessionState(state)
 
+          if (state.toLowerCase() === 'failed') {
+            const lastTaskError = sessionDetails.data?.last_task_error || sessionDetails.last_task_error
+            if (lastTaskError) {
+              setError(`Task failed: ${lastTaskError}`)
+            }
+          }
+
           const params = sessionDetails.data?.params || sessionDetails.params || {}
           setSessionParams(params)
 

@@ -9,7 +9,10 @@ import {
   Box,
   ArrowRight,
   Play,
-  Plus
+  Plus,
+  Wifi,
+  Copy,
+  Check
 } from 'lucide-react';
 import '../styles/Dashboard.css';
 import heroImage from '../assets/antikythera-frontend.png';
@@ -45,6 +48,29 @@ interface DashboardStats {
 
 export function Dashboard({ onNavigate, apiBaseUrl }: DashboardProps) {
   const [lastSession, setLastSession] = useState<SessionInfo | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const fallbackPort = import.meta.env.VITE_MQTT_BROKER_PORT || '1883';
+  const [brokerAddress, setBrokerAddress] = useState(`${window.location.hostname}:${fallbackPort}`);
+
+  const copyBrokerAddress = () => {
+    navigator.clipboard.writeText(brokerAddress).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  useEffect(() => {
+    if (!apiBaseUrl) return;
+    fetch(`${apiBaseUrl}/system/info`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.mqtt_broker_external_host) {
+          setBrokerAddress(`${data.mqtt_broker_external_host}:${data.mqtt_broker_port}`);
+        }
+      })
+      .catch(() => {/* keep fallback */});
+  }, [apiBaseUrl]);
 
   useEffect(() => {
     if (!apiBaseUrl) return;
@@ -133,6 +159,23 @@ export function Dashboard({ onNavigate, apiBaseUrl }: DashboardProps) {
           </div>
         </div>
         <img src={heroImage} alt="" className="hero-visual-image" />
+      </section>
+
+      {/* Broker Connection Info */}
+      <section className="broker-info-banner">
+        <div className="broker-info-content">
+          <Wifi size={18} className="broker-info-icon" />
+          <span className="broker-info-label">Connect agents to:</span>
+          <code className="broker-info-address">{brokerAddress}</code>
+        </div>
+        <button
+          className={`broker-info-copy${copied ? ' copied' : ''}`}
+          onClick={copyBrokerAddress}
+          title="Copy broker address"
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
       </section>
 
       {/* Quick Stats Grid */}

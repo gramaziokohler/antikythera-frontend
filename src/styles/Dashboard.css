@@ -1,5 +1,71 @@
 /* Dashboard Modern Styles */
 
+/* Broker Connection Info Banner */
+.broker-info-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 2rem;
+  background: var(--color-white);
+  border: 1px solid var(--color-terracotta-300);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.broker-info-content {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.broker-info-icon {
+  color: var(--color-terracotta-600);
+  flex-shrink: 0;
+}
+
+.broker-info-label {
+  font-size: 0.85rem;
+  color: var(--color-info);
+  font-weight: 500;
+}
+
+.broker-info-address {
+  font-family: var(--font-mono, 'ui-monospace', 'SFMono-Regular', 'Menlo', monospace);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-graphite);
+  background: var(--color-terracotta-100);
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm, 4px);
+  letter-spacing: 0.02em;
+}
+
+.broker-info-copy {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-terracotta-600);
+  background: transparent;
+  border: 1px solid var(--color-terracotta-300);
+  border-radius: var(--radius-full, 9999px);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.broker-info-copy:hover {
+  background: var(--color-terracotta-100);
+}
+
+.broker-info-copy.copied {
+  color: #388e3c;
+  border-color: #c8e6c9;
+  background: #e8f5e9;
+}
+
 /* Serif Font Options for Hero Title (adjust .hero-title styles below as needed):
    
    Crimson Pro:     font-weight: 500; font-size: 3rem; letter-spacing: -0.02em;
