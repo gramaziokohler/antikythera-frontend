@@ -8,7 +8,9 @@
     "build": "node scripts/update-protos.js && tsc -b && vite build",
     "proto:update": "node scripts/update-protos.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.8",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@testing-library/react": "^16.3.2",
     "@types/dagre": "^0.7.53",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
@@ -34,9 +37,11 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "jsdom": "^29.1.1",
     "protobufjs-cli": "^2.0.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vitest": "^4.1.8"
   }
 }

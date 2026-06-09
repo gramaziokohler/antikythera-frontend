@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import { resolve } from 'path'
@@ -24,5 +25,10 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, '')
       },
     },
+  },
+  test: {
+    environment: 'jsdom',
+    globals: false,
+    include: ['src/**/__tests__/**/*.test.ts', 'src/**/__tests__/**/*.test.tsx'],
   },
 })
