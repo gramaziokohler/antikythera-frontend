@@ -256,4 +256,56 @@ describe('useSessionStream', () => {
     expect(firstEs.closed).toBe(true)
     expect(fetchMock.mock.calls.length).toBeGreaterThan(callsBefore)
   })
+
+  it('filters outer blueprint events when visibleBlueprintId changes to an inner blueprint', async () => {
+    vi.stubGlobal('fetch', makeFetchMock())
+
+    const { result, rerender } = renderHook(
+      ({ bpId }: { bpId: string }) => useSessionStream(SESSION_ID, API_BASE, bpId),
+      { initialProps: { bpId: BLUEPRINT_ID } }
+    )
+
+    await waitFor(() => expect(result.current.graphData).not.toBeNull())
+    expect(result.current.graphData!.nodes[0].status).toBe('pending')
+
+    // Simulate user drilling into a composite task — visible blueprint switches to inner
+    rerender({ bpId: 'inner-bp' })
+
+    // Outer blueprint event arrives — must be discarded
+    act(() => {
+      MockEventSource.lastInstance!.emit('task_state_changed', {
+        blueprint_id: BLUEPRINT_ID,
+        task_id: 'task-a',
+        state: 'succeeded',
+      })
+    })
+
+    expect(result.current.graphData!.nodes[0].status).toBe('pending')
+  })
+
+  it('resumes processing outer blueprint events after visibleBlueprintId reverts on navigate-back', async () => {
+    vi.stubGlobal('fetch', makeFetchMock())
+
+    const { result, rerender } = renderHook(
+      ({ bpId }: { bpId: string }) => useSessionStream(SESSION_ID, API_BASE, bpId),
+      { initialProps: { bpId: BLUEPRINT_ID } }
+    )
+
+    await waitFor(() => expect(result.current.graphData).not.toBeNull())
+
+    // Drill into inner blueprint then navigate back
+    rerender({ bpId: 'inner-bp' })
+    rerender({ bpId: BLUEPRINT_ID })
+
+    // Outer event arrives after navigate-back — must be processed
+    act(() => {
+      MockEventSource.lastInstance!.emit('task_state_changed', {
+        blueprint_id: BLUEPRINT_ID,
+        task_id: 'task-a',
+        state: 'succeeded',
+      })
+    })
+
+    expect(result.current.graphData!.nodes[0].status).toBe('succeeded')
+  })
 })
