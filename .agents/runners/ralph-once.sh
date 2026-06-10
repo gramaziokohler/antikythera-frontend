@@ -1,6 +1,6 @@
 #!/bin/bash
 
-claude --permission-mode acceptEdits "@.agents/prd/unified-brep-wrapper.md @.agents/issues/unified-brep-wrapper/ @.agents/progress.txt \
+claude --permission-mode acceptEdits "@.agents/prd-sse-session-stream.md @.agents/issues/ @.agents/progress.txt \
 1. Find the first issue file whose acceptance criteria are not all checked off and implement it. \
 2. Run your tests and type checks. \
 3. Check off the completed acceptance criteria in the issue file. \
