@@ -393,6 +393,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
   const handlePause = async () => {
     if (!sessionId) return
+    setSessionState('paused')
     try {
       const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/pause`, {
         method: 'POST'
@@ -405,6 +406,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
   const handleResume = async () => {
     if (!sessionId) return
+    setSessionState('running')
     try {
       const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/start`, {
         method: 'POST',
