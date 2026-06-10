@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight, Settings } from 'lucide-react'
+import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
+import { useSessionStream } from '../hooks/useSessionStream'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
 import { StartSessionDialog } from './StartSessionDialog'
@@ -39,24 +40,31 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   const [sessionParams, setSessionParams] = useState<any>(null)
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string; nodeStatus: string; nodeType: string; scopeName: string | null } | null>(null)
-  const [pollingKey, setPollingKey] = useState(0)
-  const [pollInterval, setPollInterval] = useState<number>(() => {
-    const saved = localStorage.getItem('antikythera.pollInterval')
-    return saved ? parseInt(saved, 10) : 500
-  })
-  const [showSettings, setShowSettings] = useState(false)
   const isResizingRef = useRef(false)
-  const localBlueprintRef = useRef<any>(null);
-
-  useEffect(() => {
-    localBlueprintRef.current = localBlueprint;
-  }, [localBlueprint]);
 
   useEffect(() => {
     if (commandHistory.length > 0) {
       console.log('Command History Updated:', commandHistory);
     }
   }, [commandHistory]);
+
+  const visibleBlueprintId = localBlueprint?.data?.id || localBlueprint?.id || null
+
+  const { graphData: hookGraphData, sessionState: hookSessionState } = useSessionStream(
+    sessionId, apiBaseUrl, visibleBlueprintId
+  )
+
+  // Sync sessionState from SSE hook (session mode only; preview mode sets it separately)
+  useEffect(() => {
+    if (sessionId) setSessionState(hookSessionState)
+  }, [hookSessionState, sessionId])
+
+  // Sync graphData from SSE hook when at top-level blueprint in session mode
+  useEffect(() => {
+    if (sessionId && blueprintStack.length === 0 && hookGraphData) {
+      setGraphData(hookGraphData)
+    }
+  }, [hookGraphData, sessionId, blueprintStack.length])
 
   const startResizing = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -318,121 +326,70 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     // TODO: Transmit to backend
   };
 
+  // Preview mode: fetch blueprint once
   useEffect(() => {
-    // If we only have a blueprint ID, fetch just the blueprint structure
-    if (!sessionId && blueprintId) {
-      const fetchBlueprint = async () => {
-        try {
-          const response = await fetch(`${apiBaseUrl}/blueprints/${blueprintId}`)
-          if (response.ok) {
-            const blueprint = await response.json()
-            setLocalBlueprint(blueprint) // This will trigger the graph update via other useEffect
-            setSessionState('preview')
-          }
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to fetch blueprint')
-        }
-      }
-      fetchBlueprint()
-      return
-    }
+    if (sessionId || !blueprintId) return
 
+    const fetchBlueprint = async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/blueprints/${blueprintId}`)
+        if (response.ok) {
+          const blueprint = await response.json()
+          setLocalBlueprint(blueprint)
+          setSessionState('preview')
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch blueprint')
+      }
+    }
+    fetchBlueprint()
+  }, [sessionId, blueprintId, apiBaseUrl])
+
+  // Session init: one-time fetch for session params, blueprint ID, and local blueprint
+  useEffect(() => {
     if (!sessionId) return
 
-    const fetchData = async () => {
+    const init = async () => {
       try {
-        const [dataResponse, sessionResponse] = await Promise.all([
-          fetch(`${apiBaseUrl}/sessions/${sessionId}/data`),
-          fetch(`${apiBaseUrl}/sessions/${sessionId}`)
+        const [sessRes, bpRes] = await Promise.all([
+          fetch(`${apiBaseUrl}/sessions/${sessionId}`),
+          fetch(`${apiBaseUrl}/sessions/${sessionId}/blueprint`),
         ])
-
-        if (dataResponse.ok) {
-          // used for viewing the data store
-          const data: SessionDataResponse = await dataResponse.json()
-          setSessionData(data)
+        if (sessRes.ok) {
+          const d = await sessRes.json()
+          setMainBlueprintId(d.data?.blueprint?.data?.id || d.blueprint?.id || 'Main Blueprint')
+          setSessionParams(d.data?.params || d.params || {})
         }
-
-        if (sessionResponse.ok) {
-          // used to follow the execution state. 
-          const sessionDetails: any = await sessionResponse.json()
-
-          // Handle COMPAS Data object structure
-          const state = sessionDetails.data?.state || sessionDetails.state || 'pending'
-          setSessionState(state)
-
-          if (state.toLowerCase() === 'failed') {
-            const lastTaskError = sessionDetails.data?.last_task_error || sessionDetails.last_task_error
-            if (lastTaskError) {
-              setError(`Task failed: ${lastTaskError}`)
-            }
-          }
-
-          const params = sessionDetails.data?.params || sessionDetails.params || {}
-          setSessionParams(params)
-
-          // Extract main blueprint ID
-          const bpId = sessionDetails.data?.blueprint?.data?.id || sessionDetails.blueprint?.id || 'Main Blueprint'
-          setMainBlueprintId(bpId)
-
-          // We use localBlueprint only for preview unless we want to support editing while running (not implemented)
-          // For session, we fetch blueprint from session endpoint and transform it.
-
-          // Determine target blueprint ID to preserve navigation depth (e.g. expanded inner blueprints)
-          let fetchUrl = `${apiBaseUrl}/sessions/${sessionId}/blueprint`;
-          // Use ref to get the current blueprint ID without breaking the closure or causing infinite loops
-          const currentBlueprint = localBlueprintRef.current || localBlueprint;
-          const currentId = currentBlueprint?.data?.id || currentBlueprint?.id;
-
-          if (currentId) {
-            fetchUrl = `${apiBaseUrl}/sessions/${sessionId}/blueprint/${currentId}`;
-          }
-
-          const blueprintResponse = await fetch(fetchUrl)
-          if (blueprintResponse.ok) {
-            const blueprint = await blueprintResponse.json()
-
-            // Check if the user has navigated away while the fetch was in progress
-            const activeBlueprint = localBlueprintRef.current;
-            const activeId = activeBlueprint?.data?.id || activeBlueprint?.id;
-            const fetchedId = blueprint?.data?.id || blueprint?.id;
-
-            // Normalize comparison (handle potential differences or undefined initial state)
-            // If we have an active ID and the fetched ID doesn't match, discard the update
-            if (activeId && fetchedId && activeId !== fetchedId) {
-              // console.log(`[DEBUG] Race condition detected. Ignoring update for ${fetchedId} as user is viewing ${activeId}`);
-              return false;
-            }
-
-            setLocalBlueprint(blueprint) // Update local blueprint to support edits during pause
-            setGraphData(transformBlueprintToGraph(blueprint))
-          }
-
-          // Stop polling if session has ended
-          if (state && (
-            state.toLowerCase() === 'completed' ||
-            state.toLowerCase() === 'failed')) {
-            return true // Signal to stop polling
-          }
+        if (bpRes.ok) {
+          setLocalBlueprint(await bpRes.json())
         }
-
-        return false // Continue polling
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch session data')
-        console.error(err)
-        return false
+        setError(err instanceof Error ? err.message : 'Failed to initialize session')
       }
-    };
+    }
+    init()
+  }, [sessionId, apiBaseUrl])
 
-    fetchData()
-    const interval = setInterval(async () => {
-      const shouldStop = await fetchData()
-      if (shouldStop) {
-        clearInterval(interval)
-      }
-    }, pollInterval)
+  // Datastore fetch when session reaches a terminal state
+  useEffect(() => {
+    if (!sessionId || (sessionState !== 'completed' && sessionState !== 'failed')) return
 
-    return () => clearInterval(interval)
-  }, [sessionId, blueprintId, apiBaseUrl, transformBlueprintToGraph, pollingKey, pollInterval])
+    fetch(`${apiBaseUrl}/sessions/${sessionId}/data`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setSessionData(data as SessionDataResponse) })
+      .catch(err => console.error('[SessionMonitor] datastore fetch failed', err))
+
+    if (sessionState === 'failed') {
+      fetch(`${apiBaseUrl}/sessions/${sessionId}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (!d) return
+          const lastTaskError = d.data?.last_task_error || d.last_task_error
+          if (lastTaskError) setError(`Task failed: ${lastTaskError}`)
+        })
+        .catch(console.error)
+    }
+  }, [sessionState, sessionId, apiBaseUrl])
 
   const handlePause = async () => {
     if (!sessionId) return
@@ -460,8 +417,6 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
         }),
       })
       if (!response.ok) throw new Error('Failed to resume session')
-      // Restart polling by bumping the key (in case it was stopped due to a failed state)
-      setPollingKey(k => k + 1)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resume session')
     }
@@ -744,45 +699,6 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           </div>
 
           <div className="session-controls" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
-            <button
-              onClick={() => setShowSettings(s => !s)}
-              className="control-button"
-              title="Settings"
-              style={{ display: 'flex', alignItems: 'center', padding: '4px 8px' }}
-            >
-              <Settings size={16} />
-            </button>
-            {showSettings && (
-              <div style={{
-                position: 'absolute', top: '110%', right: 0, zIndex: 100,
-                background: 'var(--color-surface, #fff)', border: '1px solid var(--color-border, #ddd)',
-                borderRadius: '8px', padding: '1rem', minWidth: '220px',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.12)'
-              }}>
-                <div style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '0.9rem' }}>Settings</div>
-                <label style={{ fontSize: '0.85rem', display: 'block', marginBottom: '0.4rem' }}>Poll interval</label>
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  {[250, 500, 1000, 2000, 5000].map(ms => (
-                    <button
-                      key={ms}
-                      onClick={() => {
-                        setPollInterval(ms)
-                        localStorage.setItem('antikythera.pollInterval', String(ms))
-                      }}
-                      style={{
-                        padding: '3px 10px', borderRadius: '4px', fontSize: '0.8rem', cursor: 'pointer',
-                        border: '1px solid var(--color-border, #ccc)',
-                        background: pollInterval === ms ? 'var(--color-primary, #0066cc)' : 'transparent',
-                        color: pollInterval === ms ? '#fff' : 'inherit',
-                        fontWeight: pollInterval === ms ? 600 : 400,
-                      }}
-                    >
-                      {ms < 1000 ? `${ms}ms` : `${ms / 1000}s`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
             {blueprintStack.length > 0 && (
               <button onClick={handleNavigateBack} className="control-button back-btn" style={{ marginRight: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span>← Back</span>
