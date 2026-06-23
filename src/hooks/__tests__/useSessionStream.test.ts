@@ -78,10 +78,15 @@ const mockBlueprint = {
 
 const mockSessionDetails = { data: { state: 'running' } }
 
-function makeFetchMock(blueprint = mockBlueprint, sessionDetails = mockSessionDetails) {
+const mockSessionData = { session_id: 'sess-1', state: 'running', data: '{}' }
+
+function makeFetchMock(blueprint = mockBlueprint, sessionDetails = mockSessionDetails, sessionData = mockSessionData) {
   return vi.fn(async (url: string) => {
     if ((url as string).includes('/blueprint')) {
       return { ok: true, json: async () => blueprint }
+    }
+    if ((url as string).includes('/data')) {
+      return { ok: true, json: async () => sessionData }
     }
     return { ok: true, json: async () => sessionDetails }
   })
@@ -307,5 +312,65 @@ describe('useSessionStream', () => {
     })
 
     expect(result.current.graphData!.nodes[0].status).toBe('succeeded')
+  })
+
+  it('calls onDatastoreUpdate with __snapshot__ on connect', async () => {
+    const snapshotData = { session_id: SESSION_ID, state: 'running', data: '{"main_blueprint":{}}' }
+    vi.stubGlobal('fetch', makeFetchMock(mockBlueprint, mockSessionDetails, snapshotData))
+
+    const onDatastoreUpdate = vi.fn()
+
+    renderHook(() =>
+      useSessionStream(SESSION_ID, API_BASE, BLUEPRINT_ID, { onDatastoreUpdate })
+    )
+
+    await waitFor(() => expect(onDatastoreUpdate).toHaveBeenCalled())
+
+    expect(onDatastoreUpdate).toHaveBeenCalledWith('__snapshot__', snapshotData)
+  })
+
+  it('calls onDatastoreUpdate with blueprint_id and data on datastore_updated SSE event', async () => {
+    vi.stubGlobal('fetch', makeFetchMock())
+
+    const onDatastoreUpdate = vi.fn()
+
+    renderHook(() =>
+      useSessionStream(SESSION_ID, API_BASE, BLUEPRINT_ID, { onDatastoreUpdate })
+    )
+
+    await waitFor(() => expect(MockEventSource.lastInstance).not.toBeNull())
+    // Flush the snapshot call so we can assert on the SSE event separately
+    onDatastoreUpdate.mockClear()
+
+    act(() => {
+      MockEventSource.lastInstance!.emit('datastore_updated', {
+        blueprint_id: BLUEPRINT_ID,
+        data: { score: { value: 42, type: 'number' } },
+      })
+    })
+
+    expect(onDatastoreUpdate).toHaveBeenCalledWith(
+      BLUEPRINT_ID,
+      { score: { value: 42, type: 'number' } }
+    )
+  })
+
+  it('calls onDatastoreUpdate with __snapshot__ again on reconnect', async () => {
+    vi.stubGlobal('fetch', makeFetchMock())
+
+    const onDatastoreUpdate = vi.fn()
+
+    const { result } = renderHook(() =>
+      useSessionStream(SESSION_ID, API_BASE, BLUEPRINT_ID, { reconnectDelay: 0, onDatastoreUpdate })
+    )
+
+    await waitFor(() => expect(MockEventSource.lastInstance).not.toBeNull())
+    const callsBefore = onDatastoreUpdate.mock.calls.filter(c => c[0] === '__snapshot__').length
+
+    act(() => { result.current.reconnect() })
+
+    await waitFor(() =>
+      expect(onDatastoreUpdate.mock.calls.filter(c => c[0] === '__snapshot__').length).toBeGreaterThan(callsBefore)
+    )
   })
 })

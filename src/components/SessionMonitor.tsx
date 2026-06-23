@@ -50,8 +50,33 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
   const visibleBlueprintId = localBlueprint?.data?.id || localBlueprint?.id || null
 
+  const handleDatastoreUpdate = useCallback(
+    (blueprintId: string, data: unknown) => {
+      if (blueprintId === '__snapshot__') {
+        setSessionData(data as SessionDataResponse)
+        return
+      }
+      setSessionData(prev => {
+        if (!prev) return prev
+        const parsed =
+          typeof prev.data === 'string' ? JSON.parse(prev.data) : prev.data
+        if (blueprintId === mainBlueprintId) {
+          parsed.main_blueprint = { ...parsed.main_blueprint, ...(data as object) }
+        } else if (parsed.inner_blueprints?.[blueprintId]) {
+          parsed.inner_blueprints[blueprintId] = {
+            ...parsed.inner_blueprints[blueprintId],
+            ...(data as object),
+          }
+        }
+        return { ...prev, data: JSON.stringify(parsed) }
+      })
+    },
+    [mainBlueprintId]
+  )
+
   const { graphData: hookGraphData, sessionState: hookSessionState } = useSessionStream(
-    sessionId, apiBaseUrl, visibleBlueprintId
+    sessionId, apiBaseUrl, visibleBlueprintId,
+    { onDatastoreUpdate: sessionId ? handleDatastoreUpdate : undefined }
   )
 
   // Sync sessionState from SSE hook (session mode only; preview mode sets it separately)
@@ -370,7 +395,9 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     init()
   }, [sessionId, apiBaseUrl])
 
-  // Datastore fetch when session reaches a terminal state
+  // Safety net: fetch datastore on terminal state for sessions that were already
+  // completed before the client connected (the reconnect hydration path covers
+  // this case via __snapshot__, but this guard catches any timing gaps).
   useEffect(() => {
     if (!sessionId || (sessionState !== 'completed' && sessionState !== 'failed')) return
 

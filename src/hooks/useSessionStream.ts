@@ -6,6 +6,7 @@ const DEFAULT_RECONNECT_DELAY_MS = 2000
 
 export interface UseSessionStreamOptions {
   reconnectDelay?: number
+  onDatastoreUpdate?: (blueprintId: string, data: Record<string, unknown>) => void
 }
 
 export interface UseSessionStreamResult {
@@ -18,7 +19,7 @@ export function useSessionStream(
   sessionId: string | null | undefined,
   apiBaseUrl: string,
   visibleBlueprintId: string | null | undefined,
-  { reconnectDelay = DEFAULT_RECONNECT_DELAY_MS }: UseSessionStreamOptions = {}
+  { reconnectDelay = DEFAULT_RECONNECT_DELAY_MS, onDatastoreUpdate }: UseSessionStreamOptions = {}
 ): UseSessionStreamResult {
   const [graphData, setGraphData] = useState<GraphData | null>(null)
   const [sessionState, setSessionState] = useState<string>('pending')
@@ -73,6 +74,14 @@ export function useSessionStream(
             setSessionState(sessDetails.data?.state || sessDetails.state || 'pending')
           }
         }
+
+        if (onDatastoreUpdate) {
+          const dataRes = await fetch(`${apiBaseUrl}/sessions/${sessionId}/data`)
+          if (dataRes.ok && !cancelled) {
+            const sessionData = await dataRes.json()
+            onDatastoreUpdate('__snapshot__', sessionData)
+          }
+        }
       } catch (err) {
         console.error('[useSessionStream] snapshot fetch failed', err)
         if (!cancelled) scheduleReconnect()
@@ -110,6 +119,18 @@ export function useSessionStream(
         }
       })
 
+      es.addEventListener('datastore_updated', (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data) as {
+            blueprint_id: string
+            data: Record<string, unknown>
+          }
+          onDatastoreUpdate?.(payload.blueprint_id, payload.data)
+        } catch (e) {
+          console.error('[useSessionStream] failed to parse datastore_updated', e)
+        }
+      })
+
       es.onerror = () => {
         if (cancelled) return
         closeAll()
@@ -129,7 +150,7 @@ export function useSessionStream(
       cancelled = true
       closeAll()
     }
-  }, [sessionId, apiBaseUrl, reconnectKey, reconnectDelay])
+  }, [sessionId, apiBaseUrl, reconnectKey, reconnectDelay, onDatastoreUpdate])
 
   return { graphData, sessionState, reconnect }
 }
