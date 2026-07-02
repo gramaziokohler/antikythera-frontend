@@ -114,4 +114,52 @@ describe('SessionMonitor optimistic pause/resume', () => {
 
     await waitFor(() => expect(badge()?.textContent).toBe('completed'))
   })
+
+  it('reverts to the pre-click state when the pause POST fails', async () => {
+    renderMonitor()
+
+    await waitFor(() => expect(badge()?.textContent).toBe('running'))
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })))
+
+    fireEvent.click(screen.getByTitle('Pause Session'))
+    expect(badge()?.textContent).toBe('paused')
+
+    await waitFor(() => expect(badge()?.textContent).toBe('running'))
+  })
+
+  it('reverts to the pre-click state when the resume POST fails', async () => {
+    mockState.initial = 'paused'
+    renderMonitor()
+
+    await waitFor(() => expect(badge()?.textContent).toBe('paused'))
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })))
+
+    fireEvent.click(screen.getByTitle('Resume/Start Session'))
+    expect(badge()?.textContent).toBe('running')
+
+    await waitFor(() => expect(badge()?.textContent).toBe('paused'))
+  })
+
+  it('an SSE correction arriving after a pause failure wins over the revert', async () => {
+    renderMonitor()
+
+    await waitFor(() => expect(badge()?.textContent).toBe('running'))
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })))
+
+    fireEvent.click(screen.getByTitle('Pause Session'))
+    expect(badge()?.textContent).toBe('paused')
+
+    // Wait for the failed POST to settle and the revert to apply.
+    await waitFor(() => expect(badge()?.textContent).toBe('running'))
+
+    // A real correction arrives afterwards and must win.
+    await act(async () => {
+      streamControl.set('completed')
+    })
+
+    await waitFor(() => expect(badge()?.textContent).toBe('completed'))
+  })
 })

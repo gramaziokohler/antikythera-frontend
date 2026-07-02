@@ -302,6 +302,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
 
   const handlePause = async () => {
     if (!sessionId) return
+    const previousSessionState = sessionState
     setSessionState('paused')
     try {
       const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/pause`, {
@@ -309,12 +310,14 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
       })
       if (!response.ok) throw new Error('Failed to pause session')
     } catch (err) {
+      setSessionState(previousSessionState)
       setError(err instanceof Error ? err.message : 'Failed to pause session')
     }
   }
 
   const handleResume = async () => {
     if (!sessionId) return
+    const previousSessionState = sessionState
     setSessionState('running')
     try {
       const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/start`, {
@@ -329,6 +332,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
       })
       if (!response.ok) throw new Error('Failed to resume session')
     } catch (err) {
+      setSessionState(previousSessionState)
       setError(err instanceof Error ? err.message : 'Failed to resume session')
     }
   }
