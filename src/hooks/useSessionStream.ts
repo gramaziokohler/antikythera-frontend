@@ -30,6 +30,11 @@ export function useSessionStream(
     visibleBlueprintIdRef.current = visibleBlueprintId
   }, [visibleBlueprintId])
 
+  // Tracks which blueprint id the most recently kicked-off snapshot fetch is
+  // for, so the visible-blueprint-change effect below doesn't re-fetch a
+  // snapshot that connect() (mount / reconnect) already fetched.
+  const lastSnapshotBlueprintIdRef = useRef<string | null | undefined>(undefined)
+
   const reconnect = useCallback(() => {
     setReconnectKey(k => k + 1)
   }, [])
@@ -55,9 +60,15 @@ export function useSessionStream(
     const connect = async () => {
       closeAll()
 
+      const targetBlueprintId = visibleBlueprintIdRef.current
+      lastSnapshotBlueprintIdRef.current = targetBlueprintId
+      const blueprintUrl = targetBlueprintId
+        ? `${apiBaseUrl}/sessions/${sessionId}/blueprint/${targetBlueprintId}`
+        : `${apiBaseUrl}/sessions/${sessionId}/blueprint`
+
       try {
         const [bpRes, sessRes] = await Promise.all([
-          fetch(`${apiBaseUrl}/sessions/${sessionId}/blueprint`),
+          fetch(blueprintUrl),
           fetch(`${apiBaseUrl}/sessions/${sessionId}`),
         ])
 
@@ -151,6 +162,31 @@ export function useSessionStream(
       closeAll()
     }
   }, [sessionId, apiBaseUrl, reconnectKey, reconnectDelay, onDatastoreUpdate])
+
+  // Drilling into / out of a composite task changes which blueprint should be
+  // displayed. Re-fetch that blueprint's current snapshot here, decoupled from
+  // the EventSource lifecycle above, so navigating the blueprint stack never
+  // tears down and reopens the stream connection.
+  useEffect(() => {
+    if (!sessionId || visibleBlueprintId == null) return
+    if (visibleBlueprintId === lastSnapshotBlueprintIdRef.current) return
+
+    let cancelled = false
+    lastSnapshotBlueprintIdRef.current = visibleBlueprintId
+
+    fetch(`${apiBaseUrl}/sessions/${sessionId}/blueprint/${visibleBlueprintId}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(blueprint => {
+        if (!cancelled && blueprint) setGraphData(transformBlueprintToGraph(blueprint))
+      })
+      .catch(err => {
+        console.error('[useSessionStream] visible blueprint fetch failed', err)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [sessionId, apiBaseUrl, visibleBlueprintId])
 
   return { graphData, sessionState, reconnect }
 }

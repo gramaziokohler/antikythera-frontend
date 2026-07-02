@@ -85,12 +85,15 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     if (sessionId) setSessionState(hookSessionState)
   }, [hookSessionState, sessionId])
 
-  // Sync graphData from SSE hook when at top-level blueprint in session mode
+  // Sync graphData from SSE hook in session mode, at any blueprint stack depth.
+  // The hook is the source of truth for "what's visible" (it fetches the
+  // snapshot for visibleBlueprintId and patches it via SSE); it applies at
+  // every depth, not just the top-level blueprint.
   useEffect(() => {
-    if (sessionId && blueprintStack.length === 0 && hookGraphData) {
+    if (sessionId && hookGraphData) {
       setGraphData(hookGraphData)
     }
-  }, [hookGraphData, sessionId, blueprintStack.length])
+  }, [hookGraphData, sessionId])
 
   const startResizing = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
