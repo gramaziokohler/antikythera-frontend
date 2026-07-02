@@ -36,11 +36,6 @@ export function transformBlueprintToGraph(blueprint: unknown): GraphData {
       blueprintParamVal = params.blueprint
     }
 
-    if (taskData.type?.toLowerCase().includes('composite')) {
-      console.log(`[DEBUG] Task ${taskData.id} params JSON:`, JSON.stringify(params))
-      console.log(`[DEBUG] Extracted blueprintParamVal:`, blueprintParamVal)
-    }
-
     let internalBlueprintId = null
     if (blueprintParamVal) {
       if (typeof blueprintParamVal === 'string') {
