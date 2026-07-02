@@ -1,0 +1,216 @@
+import { useState, useEffect, useRef, useCallback } from 'react'
+import type { GraphData } from '../types'
+import { transformBlueprintToGraph } from '../utils/transform-blueprint'
+
+const DEFAULT_RECONNECT_DELAY_MS = 2000
+
+function extractBlueprintId(blueprint: unknown): string | null {
+  if (!blueprint || typeof blueprint !== 'object') return null
+  const obj = blueprint as { data?: { id?: string }; id?: string }
+  return obj.data?.id ?? obj.id ?? null
+}
+
+export interface UseSessionStreamOptions {
+  reconnectDelay?: number
+  onDatastoreUpdate?: (blueprintId: string, data: Record<string, unknown>) => void
+}
+
+export interface UseSessionStreamResult {
+  graphData: GraphData | null
+  sessionState: string
+  blueprint: unknown | null
+  reconnect: () => void
+}
+
+export function useSessionStream(
+  sessionId: string | null | undefined,
+  apiBaseUrl: string,
+  visibleBlueprintId: string | null | undefined,
+  { reconnectDelay = DEFAULT_RECONNECT_DELAY_MS, onDatastoreUpdate }: UseSessionStreamOptions = {}
+): UseSessionStreamResult {
+  const [graphData, setGraphData] = useState<GraphData | null>(null)
+  const [sessionState, setSessionState] = useState<string>('pending')
+  const [blueprint, setBlueprint] = useState<unknown | null>(null)
+  const [reconnectKey, setReconnectKey] = useState(0)
+
+  const visibleBlueprintIdRef = useRef(visibleBlueprintId)
+  useEffect(() => {
+    visibleBlueprintIdRef.current = visibleBlueprintId
+  }, [visibleBlueprintId])
+
+  // Tracks which blueprint id the most recently kicked-off snapshot fetch is
+  // for, so the visible-blueprint-change effect below doesn't re-fetch a
+  // snapshot that connect() (mount / reconnect) already fetched.
+  const lastSnapshotBlueprintIdRef = useRef<string | null | undefined>(undefined)
+
+  const reconnect = useCallback(() => {
+    setReconnectKey(k => k + 1)
+  }, [])
+
+  useEffect(() => {
+    if (!sessionId) return
+
+    let cancelled = false
+    let es: EventSource | null = null
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const closeAll = () => {
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
+      }
+      if (es) {
+        es.close()
+        es = null
+      }
+    }
+
+    const connect = async () => {
+      closeAll()
+
+      const targetBlueprintId = visibleBlueprintIdRef.current
+      lastSnapshotBlueprintIdRef.current = targetBlueprintId
+      const blueprintUrl = targetBlueprintId
+        ? `${apiBaseUrl}/sessions/${sessionId}/blueprint/${targetBlueprintId}`
+        : `${apiBaseUrl}/sessions/${sessionId}/blueprint`
+
+      try {
+        const [bpRes, sessRes] = await Promise.all([
+          fetch(blueprintUrl),
+          fetch(`${apiBaseUrl}/sessions/${sessionId}`),
+        ])
+
+        if (cancelled) return
+
+        if (bpRes.ok) {
+          const fetchedBlueprint = await bpRes.json()
+          if (!cancelled) {
+            setBlueprint(fetchedBlueprint)
+            setGraphData(transformBlueprintToGraph(fetchedBlueprint))
+            // Opening at the top level (no visible blueprint yet) means the
+            // fetched snapshot's own id IS the visible blueprint. Resolve it
+            // synchronously so the SSE filter below (and any event that
+            // arrives before this state change propagates back through the
+            // caller's props) uses the right id from the very first event.
+            if (targetBlueprintId == null) {
+              const resolvedId = extractBlueprintId(fetchedBlueprint)
+              visibleBlueprintIdRef.current = resolvedId
+              lastSnapshotBlueprintIdRef.current = resolvedId
+            }
+          }
+        }
+
+        if (sessRes.ok) {
+          const sessDetails = await sessRes.json()
+          if (!cancelled) {
+            setSessionState(sessDetails.data?.state || sessDetails.state || 'pending')
+          }
+        }
+
+        if (onDatastoreUpdate) {
+          const dataRes = await fetch(`${apiBaseUrl}/sessions/${sessionId}/data`)
+          if (dataRes.ok && !cancelled) {
+            const sessionData = await dataRes.json()
+            onDatastoreUpdate('__snapshot__', sessionData)
+          }
+        }
+      } catch (err) {
+        console.error('[useSessionStream] snapshot fetch failed', err)
+        if (!cancelled) scheduleReconnect()
+        return
+      }
+
+      if (cancelled) return
+
+      es = new EventSource(`${apiBaseUrl}/sessions/${sessionId}/stream`)
+
+      es.addEventListener('task_state_changed', (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data) as { blueprint_id: string; task_id: string; state: string }
+          if (payload.blueprint_id !== visibleBlueprintIdRef.current) return
+          setGraphData(prev => {
+            if (!prev) return prev
+            return {
+              ...prev,
+              nodes: prev.nodes.map(node =>
+                node.id === payload.task_id ? { ...node, status: payload.state } : node
+              ),
+            }
+          })
+        } catch (e) {
+          console.error('[useSessionStream] failed to parse task_state_changed', e)
+        }
+      })
+
+      es.addEventListener('session_state_changed', (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data) as { state: string }
+          setSessionState(payload.state)
+        } catch (e) {
+          console.error('[useSessionStream] failed to parse session_state_changed', e)
+        }
+      })
+
+      es.addEventListener('datastore_updated', (event: MessageEvent) => {
+        try {
+          const payload = JSON.parse(event.data) as {
+            blueprint_id: string
+            data: Record<string, unknown>
+          }
+          onDatastoreUpdate?.(payload.blueprint_id, payload.data)
+        } catch (e) {
+          console.error('[useSessionStream] failed to parse datastore_updated', e)
+        }
+      })
+
+      es.onerror = () => {
+        if (cancelled) return
+        closeAll()
+        scheduleReconnect()
+      }
+    }
+
+    const scheduleReconnect = () => {
+      timer = setTimeout(() => {
+        if (!cancelled) setReconnectKey(k => k + 1)
+      }, reconnectDelay)
+    }
+
+    connect()
+
+    return () => {
+      cancelled = true
+      closeAll()
+    }
+  }, [sessionId, apiBaseUrl, reconnectKey, reconnectDelay, onDatastoreUpdate])
+
+  // Drilling into / out of a composite task changes which blueprint should be
+  // displayed. Re-fetch that blueprint's current snapshot here, decoupled from
+  // the EventSource lifecycle above, so navigating the blueprint stack never
+  // tears down and reopens the stream connection.
+  useEffect(() => {
+    if (!sessionId || visibleBlueprintId == null) return
+    if (visibleBlueprintId === lastSnapshotBlueprintIdRef.current) return
+
+    let cancelled = false
+    lastSnapshotBlueprintIdRef.current = visibleBlueprintId
+
+    fetch(`${apiBaseUrl}/sessions/${sessionId}/blueprint/${visibleBlueprintId}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(fetchedBlueprint => {
+        if (!cancelled && fetchedBlueprint) {
+          setBlueprint(fetchedBlueprint)
+          setGraphData(transformBlueprintToGraph(fetchedBlueprint))
+        }
+      })
+      .catch(err => {
+        console.error('[useSessionStream] visible blueprint fetch failed', err)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [sessionId, apiBaseUrl, visibleBlueprintId])
+
+  return { graphData, sessionState, blueprint, reconnect }
+}
