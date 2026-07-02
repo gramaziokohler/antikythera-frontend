@@ -4,6 +4,12 @@ import { transformBlueprintToGraph } from '../utils/transform-blueprint'
 
 const DEFAULT_RECONNECT_DELAY_MS = 2000
 
+function extractBlueprintId(blueprint: unknown): string | null {
+  if (!blueprint || typeof blueprint !== 'object') return null
+  const obj = blueprint as { data?: { id?: string }; id?: string }
+  return obj.data?.id ?? obj.id ?? null
+}
+
 export interface UseSessionStreamOptions {
   reconnectDelay?: number
   onDatastoreUpdate?: (blueprintId: string, data: Record<string, unknown>) => void
@@ -12,6 +18,7 @@ export interface UseSessionStreamOptions {
 export interface UseSessionStreamResult {
   graphData: GraphData | null
   sessionState: string
+  blueprint: unknown | null
   reconnect: () => void
 }
 
@@ -23,6 +30,7 @@ export function useSessionStream(
 ): UseSessionStreamResult {
   const [graphData, setGraphData] = useState<GraphData | null>(null)
   const [sessionState, setSessionState] = useState<string>('pending')
+  const [blueprint, setBlueprint] = useState<unknown | null>(null)
   const [reconnectKey, setReconnectKey] = useState(0)
 
   const visibleBlueprintIdRef = useRef(visibleBlueprintId)
@@ -75,8 +83,21 @@ export function useSessionStream(
         if (cancelled) return
 
         if (bpRes.ok) {
-          const blueprint = await bpRes.json()
-          if (!cancelled) setGraphData(transformBlueprintToGraph(blueprint))
+          const fetchedBlueprint = await bpRes.json()
+          if (!cancelled) {
+            setBlueprint(fetchedBlueprint)
+            setGraphData(transformBlueprintToGraph(fetchedBlueprint))
+            // Opening at the top level (no visible blueprint yet) means the
+            // fetched snapshot's own id IS the visible blueprint. Resolve it
+            // synchronously so the SSE filter below (and any event that
+            // arrives before this state change propagates back through the
+            // caller's props) uses the right id from the very first event.
+            if (targetBlueprintId == null) {
+              const resolvedId = extractBlueprintId(fetchedBlueprint)
+              visibleBlueprintIdRef.current = resolvedId
+              lastSnapshotBlueprintIdRef.current = resolvedId
+            }
+          }
         }
 
         if (sessRes.ok) {
@@ -176,8 +197,11 @@ export function useSessionStream(
 
     fetch(`${apiBaseUrl}/sessions/${sessionId}/blueprint/${visibleBlueprintId}`)
       .then(res => (res.ok ? res.json() : null))
-      .then(blueprint => {
-        if (!cancelled && blueprint) setGraphData(transformBlueprintToGraph(blueprint))
+      .then(fetchedBlueprint => {
+        if (!cancelled && fetchedBlueprint) {
+          setBlueprint(fetchedBlueprint)
+          setGraphData(transformBlueprintToGraph(fetchedBlueprint))
+        }
       })
       .catch(err => {
         console.error('[useSessionStream] visible blueprint fetch failed', err)
@@ -188,5 +212,5 @@ export function useSessionStream(
     }
   }, [sessionId, apiBaseUrl, visibleBlueprintId])
 
-  return { graphData, sessionState, reconnect }
+  return { graphData, sessionState, blueprint, reconnect }
 }

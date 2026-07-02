@@ -75,7 +75,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     [mainBlueprintId]
   )
 
-  const { graphData: hookGraphData, sessionState: hookSessionState } = useSessionStream(
+  const { graphData: hookGraphData, sessionState: hookSessionState, blueprint: hookBlueprint } = useSessionStream(
     sessionId, apiBaseUrl, visibleBlueprintId,
     { onDatastoreUpdate: sessionId ? handleDatastoreUpdate : undefined }
   )
@@ -84,6 +84,16 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   useEffect(() => {
     if (sessionId) setSessionState(hookSessionState)
   }, [hookSessionState, sessionId])
+
+  // Seed localBlueprint from the hook's own snapshot fetch on session open.
+  // The hook is the single owner of the initial `GET /sessions/{id}/blueprint`
+  // fetch (see issue-sse-10); once localBlueprint has a value, drilling in/out
+  // of composite tasks manages it directly and this effect no longer applies.
+  useEffect(() => {
+    if (sessionId && hookBlueprint && localBlueprint === null) {
+      setLocalBlueprint(hookBlueprint)
+    }
+  }, [sessionId, hookBlueprint, localBlueprint])
 
   // Sync graphData from SSE hook in session mode, at any blueprint stack depth.
   // The hook is the source of truth for "what's visible" (it fetches the
@@ -246,23 +256,19 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     fetchBlueprint()
   }, [sessionId, blueprintId, apiBaseUrl])
 
-  // Session init: one-time fetch for session params, blueprint ID, and local blueprint
+  // Session init: one-time fetch for session params and main blueprint ID.
+  // The local blueprint snapshot itself is sourced from useSessionStream (see
+  // above) rather than fetched here again — see issue-sse-10.
   useEffect(() => {
     if (!sessionId) return
 
     const init = async () => {
       try {
-        const [sessRes, bpRes] = await Promise.all([
-          fetch(`${apiBaseUrl}/sessions/${sessionId}`),
-          fetch(`${apiBaseUrl}/sessions/${sessionId}/blueprint`),
-        ])
+        const sessRes = await fetch(`${apiBaseUrl}/sessions/${sessionId}`)
         if (sessRes.ok) {
           const d = await sessRes.json()
           setMainBlueprintId(d.data?.blueprint?.data?.id || d.blueprint?.id || 'Main Blueprint')
           setSessionParams(d.data?.params || d.params || {})
-        }
-        if (bpRes.ok) {
-          setLocalBlueprint(await bpRes.json())
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to initialize session')

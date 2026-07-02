@@ -195,4 +195,29 @@ describe('SessionMonitor inner blueprint live updates (issue-sse-09)', () => {
       expect(lastGraphProps!.data.nodes.find(n => n.id === 'inner-task-a')!.status).toBe('succeeded')
     )
   })
+
+  it('fetches the root blueprint snapshot exactly once on session open (issue-sse-10)', async () => {
+    const fetchMock = makeFetchMock()
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <SessionMonitor
+        apiBaseUrl={API_BASE}
+        sessionId={SESSION_ID}
+        blueprintId={TOP_BLUEPRINT_ID}
+        onClose={vi.fn()}
+      />
+    )
+
+    await waitFor(() =>
+      expect(lastGraphProps?.data?.nodes.some(n => n.id === 'composite-1')).toBe(true)
+    )
+
+    // SessionMonitor's session-init effect used to fetch GET .../blueprint
+    // itself, duplicating useSessionStream's own fetch of the same URL.
+    const rootBlueprintCalls = fetchMock.mock.calls.filter(([url]) =>
+      (url as string).endsWith('/blueprint')
+    )
+    expect(rootBlueprintCalls).toHaveLength(1)
+  })
 })

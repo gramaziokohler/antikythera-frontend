@@ -355,6 +355,57 @@ describe('useSessionStream', () => {
     )
   })
 
+  it('exposes the fetched blueprint snapshot so callers do not need their own fetch', async () => {
+    vi.stubGlobal('fetch', makeFetchMock())
+
+    const { result } = renderHook(() =>
+      useSessionStream(SESSION_ID, API_BASE, BLUEPRINT_ID)
+    )
+
+    await waitFor(() => expect(result.current.blueprint).not.toBeNull())
+    expect(result.current.blueprint).toEqual(mockBlueprint)
+  })
+
+  it('does not drop a task_state_changed event that arrives right after opening with no visible blueprint yet', async () => {
+    // Mirrors SessionMonitor on session mount: it doesn't know the visible
+    // blueprint id until a snapshot resolves, so it passes null/undefined
+    // for visibleBlueprintId on the first render.
+    vi.stubGlobal('fetch', makeFetchMock())
+
+    const { result } = renderHook(() =>
+      useSessionStream(SESSION_ID, API_BASE, null)
+    )
+
+    await waitFor(() => expect(MockEventSource.lastInstance).not.toBeNull())
+
+    // Event carries the real blueprint id (the snapshot's own id) — the hook
+    // must have resolved this internally already, without waiting for a
+    // caller-supplied visibleBlueprintId prop to round-trip back in.
+    act(() => {
+      MockEventSource.lastInstance!.emit('task_state_changed', {
+        blueprint_id: BLUEPRINT_ID,
+        task_id: 'task-a',
+        state: 'succeeded',
+      })
+    })
+
+    expect(result.current.graphData!.nodes[0].status).toBe('succeeded')
+  })
+
+  it('fetches the blueprint snapshot exactly once for a session open with no visible blueprint yet', async () => {
+    const fetchMock = makeFetchMock()
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderHook(() => useSessionStream(SESSION_ID, API_BASE, null))
+
+    await waitFor(() => expect(MockEventSource.lastInstance).not.toBeNull())
+
+    const blueprintCalls = (fetchMock.mock.calls as Array<[string]>).filter(([url]) =>
+      url.endsWith('/blueprint')
+    )
+    expect(blueprintCalls).toHaveLength(1)
+  })
+
   it('calls onDatastoreUpdate with __snapshot__ again on reconnect', async () => {
     vi.stubGlobal('fetch', makeFetchMock())
 
