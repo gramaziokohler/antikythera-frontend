@@ -1,4 +1,5 @@
 import type { Blueprint } from '../types/blueprint-schema';
+import type { StartBlueprintResponse } from '../types';
 
 export interface UploadBlueprintResult {
   blueprint_id: string;
@@ -43,6 +44,28 @@ export async function uploadBlueprint(
   });
   if (!response.ok) {
     throw new Error(`Save failed (${response.status})`);
+  }
+  return response.json();
+}
+
+/** Starts a session from an already-uploaded blueprint (same call the dashboard's start dialog makes). */
+export async function startBlueprintSession(
+  apiBaseUrl: string,
+  blueprintId: string,
+): Promise<StartBlueprintResponse> {
+  const response = await fetch(`${apiBaseUrl}/blueprints/start`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      blueprint_id: blueprintId,
+      broker_host: import.meta.env.VITE_MQTT_BROKER_HOST || '127.0.0.1',
+      broker_port: parseInt(import.meta.env.VITE_MQTT_BROKER_PORT || '1883'),
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to start session (${response.status})`);
   }
   return response.json();
 }

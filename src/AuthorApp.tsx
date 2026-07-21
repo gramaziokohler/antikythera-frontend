@@ -19,7 +19,18 @@ import type {
   Blueprint,
   BlueprintTask,
 } from './types/blueprint-schema';
-import { blueprintIdExists, uploadBlueprint } from './utils/blueprint-save';
+import {
+  SYSTEM_START_TASK_TYPE,
+  SYSTEM_END_TASK_TYPE,
+  SYSTEM_SLEEP_TASK_TYPE,
+} from './types/blueprint-schema';
+import {
+  blueprintIdExists,
+  uploadBlueprint,
+  startBlueprintSession,
+} from './utils/blueprint-save';
+import { deriveSimulationBlueprint } from './utils/blueprint-simulate';
+import { markDrivingSimulationSession } from './utils/simulation-session';
 import './styles/author.css';
 
 const API_BASE_URL = '/api';
@@ -38,7 +49,7 @@ function buildDefaultBlueprint(): { nodes: Node[]; edges: Edge[] } {
     type: 'authorTask',
     position: { x: 80, y: 200 },
     data: {
-      taskType: 'system.start',
+      taskType: SYSTEM_START_TASK_TYPE,
       description: '',
       condition: '',
       inputs: [],
@@ -55,7 +66,7 @@ function buildDefaultBlueprint(): { nodes: Node[]; edges: Edge[] } {
     type: 'authorTask',
     position: { x: 480, y: 200 },
     data: {
-      taskType: 'system.end',
+      taskType: SYSTEM_END_TASK_TYPE,
       description: '',
       condition: '',
       inputs: [],
@@ -85,7 +96,7 @@ function blueprintToFlow(bp: Blueprint): { nodes: Node[]; edges: Edge[] } {
     } satisfies AuthorNodeData,
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
-    deletable: task.type !== 'system.start' && task.type !== 'system.end',
+    deletable: task.type !== SYSTEM_START_TASK_TYPE && task.type !== SYSTEM_END_TASK_TYPE,
   }));
 
   const edges: Edge[] = [];
@@ -148,8 +159,8 @@ function validateFlow(nodes: Node[]): string[] {
   const errors: string[] = [];
   const data = nodes.map((n) => n.data as AuthorNodeData);
 
-  const starts = data.filter((d) => d.taskType === 'system.start');
-  const ends = data.filter((d) => d.taskType === 'system.end');
+  const starts = data.filter((d) => d.taskType === SYSTEM_START_TASK_TYPE);
+  const ends = data.filter((d) => d.taskType === SYSTEM_END_TASK_TYPE);
 
   if (starts.length === 0) errors.push('Missing system.start task');
   else if (starts.length > 1) errors.push('Multiple system.start tasks');
@@ -189,6 +200,7 @@ export function AuthorApp() {
     kind: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   // ---- React Flow change handlers ----
 
@@ -306,6 +318,44 @@ export function AuthorApp() {
     }
   }, [nodes, edges, meta]);
 
+  // ---- Simulate (rewrite task types, upload under `{id}__sim`, start a session) ----
+
+  const handleSimulate = useCallback(async () => {
+    const errs = validateFlow(nodes);
+    if (errs.length) {
+      setErrors(errs);
+      setSaveStatus(null);
+      return;
+    }
+    setErrors([]);
+    setSaveStatus(null);
+
+    const bp = flowToBlueprint(nodes, edges, meta);
+
+    let simBp: Blueprint;
+    try {
+      simBp = deriveSimulationBlueprint(bp);
+    } catch (err) {
+      setErrors([
+        err instanceof Error ? err.message : 'Failed to prepare simulation',
+      ]);
+      return;
+    }
+
+    setIsSimulating(true);
+    try {
+      await uploadBlueprint(API_BASE_URL, simBp);
+      const { session_id } = await startBlueprintSession(API_BASE_URL, simBp.id);
+      markDrivingSimulationSession(session_id);
+      // Authoring tool and dashboard are separate page entry points (author.html vs
+      // index.html) — a full navigation is the only way to hand the tab over.
+      window.location.href = `/?session=${encodeURIComponent(session_id)}`;
+    } catch (err) {
+      setErrors([err instanceof Error ? err.message : 'Simulate failed']);
+      setIsSimulating(false);
+    }
+  }, [nodes, edges, meta]);
+
   // ---- Add node ----
 
   const handleAddNode = useCallback(() => {
@@ -319,7 +369,7 @@ export function AuthorApp() {
       type: 'authorTask',
       position,
       data: {
-        taskType: 'system.sleep',
+        taskType: SYSTEM_SLEEP_TASK_TYPE,
         description: '',
         condition: '',
         inputs: [],
@@ -393,6 +443,8 @@ export function AuthorApp() {
           onSave={handleSave}
           isSaving={isSaving}
           saveStatus={saveStatus}
+          onSimulate={handleSimulate}
+          isSimulating={isSimulating}
           onAddNode={handleAddNode}
           isPlacing={isPlacing}
           errors={errors}

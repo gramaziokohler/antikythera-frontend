@@ -67,3 +67,23 @@ export const KNOWN_TASK_TYPES: string[] = [
   'user_interaction.user_output',
   'user_interaction.notification',
 ];
+
+// System task types are structurally load-bearing in the orchestrator (see
+// ADR-0003) and are never rewritten by Simulate. Everything that needs to
+// know "is this a system type" — the Simulate rewrite, blueprint validation,
+// node-deletability rules — reads from these instead of repeating literals.
+export const SYSTEM_START_TASK_TYPE = 'system.start';
+export const SYSTEM_END_TASK_TYPE = 'system.end';
+export const SYSTEM_COMPOSITE_TASK_TYPE = 'system.composite';
+export const SYSTEM_SLEEP_TASK_TYPE = 'system.sleep';
+
+export const SYSTEM_TASK_TYPES = [
+  SYSTEM_START_TASK_TYPE,
+  SYSTEM_END_TASK_TYPE,
+  SYSTEM_COMPOSITE_TASK_TYPE,
+  SYSTEM_SLEEP_TASK_TYPE,
+] as const;
+
+export function isSystemTaskType(type: string): boolean {
+  return (SYSTEM_TASK_TYPES as readonly string[]).includes(type);
+}

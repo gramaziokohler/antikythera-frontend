@@ -8,6 +8,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Plus,
+  Play,
 } from 'lucide-react';
 import type { BlueprintMeta } from '../../types/blueprint-schema';
 
@@ -25,6 +26,8 @@ interface AuthorToolbarProps {
   onSave: () => void;
   isSaving?: boolean;
   saveStatus?: SaveStatus | null;
+  onSimulate: () => void;
+  isSimulating?: boolean;
   onAddNode: () => void;
   isPlacing?: boolean;
   errors: string[];
@@ -39,6 +42,8 @@ export function AuthorToolbar({
   onSave,
   isSaving = false,
   saveStatus = null,
+  onSimulate,
+  isSimulating = false,
   onAddNode,
   isPlacing = false,
   errors,
@@ -100,6 +105,16 @@ export function AuthorToolbar({
       >
         <Save size={14} />
         {isSaving ? 'Saving…' : 'Save'}
+      </button>
+
+      <button
+        className="toolbar-btn primary"
+        onClick={onSimulate}
+        disabled={isSimulating}
+        title="Derive a simulation blueprint, upload it, and start a session"
+      >
+        <Play size={14} />
+        {isSimulating ? 'Simulating…' : 'Simulate'}
       </button>
 
       <div className="toolbar-divider" />
