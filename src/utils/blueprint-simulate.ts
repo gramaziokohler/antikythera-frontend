@@ -21,6 +21,36 @@ export function simulatedOutputParamName(outputName: string): string {
   return `${SIMULATED_OUTPUT_PARAM_PREFIX}${outputName}`;
 }
 
+/**
+ * Reserved param name marking a task as opted out of simulation (ADR-0003: "Tasks may opt out
+ * via a per-task toggle in the authoring tool, keeping their real type so a real agent claims
+ * them"). Lives as an ordinary param on the *source* task so it round-trips through Save/Open
+ * like any other authored data, and is inert in a real run — nothing reads this param name.
+ */
+export const SIMULATION_OPT_OUT_PARAM_NAME = '__sim_use_real_agent__';
+
+/** True if `params` carries the opt-out flag. Operates on a bare param list so both the
+ * derive-time rewrite and the authoring-tool panel (which only has `AuthorNodeData.params`,
+ * not a full `BlueprintTask`) can share one check. */
+export function isOptedOutParams(params: TaskParam[] | undefined): boolean {
+  return (params ?? []).some(
+    (p) => p.name === SIMULATION_OPT_OUT_PARAM_NAME && p.value === true,
+  );
+}
+
+export function isOptedOutOfSimulation(task: BlueprintTask): boolean {
+  return isOptedOutParams(task.params);
+}
+
+/** Adds or removes the opt-out param, preserving every other param untouched. */
+export function setOptedOutOfSimulation(
+  params: TaskParam[] | undefined,
+  optedOut: boolean,
+): TaskParam[] {
+  const rest = (params ?? []).filter((p) => p.name !== SIMULATION_OPT_OUT_PARAM_NAME);
+  return optedOut ? [...rest, { name: SIMULATION_OPT_OUT_PARAM_NAME, value: true }] : rest;
+}
+
 export function deriveSimulationBlueprintId(id: string): string {
   return `${id}${SIMULATION_ID_SUFFIX}`;
 }
@@ -38,8 +68,13 @@ export class CompositeTaskNotSupportedError extends Error {
   }
 }
 
-function rewriteTaskType(type: string): string {
-  if (isSystemTaskType(type) || type.startsWith(SIMULATION_TYPE_PREFIX)) {
+function rewriteTaskType(task: BlueprintTask): string {
+  const { type } = task;
+  if (
+    isSystemTaskType(type) ||
+    type.startsWith(SIMULATION_TYPE_PREFIX) ||
+    isOptedOutOfSimulation(task)
+  ) {
     return type;
   }
   return `${SIMULATION_TYPE_PREFIX}${type}`;
@@ -71,7 +106,7 @@ export function deriveSimulationBlueprint(bp: Blueprint): Blueprint {
   }
 
   const tasks: BlueprintTask[] = bp.tasks.map((task) => {
-    const type = rewriteTaskType(task.type);
+    const type = rewriteTaskType(task);
     // Only tasks actually rewritten to simulation.* need their outputs carried as params —
     // this also keeps the rewrite idempotent (re-deriving an already-derived task, whose type
     // does not change here, does not re-copy or duplicate the params).

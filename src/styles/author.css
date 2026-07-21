@@ -408,6 +408,28 @@
   min-width: 0;
 }
 
+/* Simulation opt-out toggle */
+.tep-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.tep-hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 6px 0 10px;
+}
+
+.tep-value-opted-out {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
 /* Tier 3 output editor: raw COMPAS JSON textarea */
 .tep-json-editor {
   display: flex;
