@@ -7,7 +7,11 @@ import type {
   TaskParam,
   BlueprintMeta,
 } from '../../types/blueprint-schema';
-import { KNOWN_TASK_TYPES } from '../../types/blueprint-schema';
+import {
+  KNOWN_TASK_TYPES,
+  SYSTEM_START_TASK_TYPE,
+  SYSTEM_END_TASK_TYPE,
+} from '../../types/blueprint-schema';
 
 /* ------------------------------------------------------------------ */
 /*  BlueprintMetaPanel – shown when no node is selected                */
@@ -207,7 +211,7 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: Tas
     commit(localId, next);
   };
 
-  const isSystemNode = data.taskType === 'system.start' || data.taskType === 'system.end';
+  const isSystemNode = data.taskType === SYSTEM_START_TASK_TYPE || data.taskType === SYSTEM_END_TASK_TYPE;
 
   return (
     <div className="tep-root">

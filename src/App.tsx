@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Sidebar } from './components/layout/Sidebar'
 import { Dashboard } from './components/Dashboard'
 import { Artifacts } from './components/Artifacts'
@@ -24,7 +24,12 @@ type Selection = {
 function App() {
   const [activeView, setActiveView] = useState<'dashboard' | 'upload-blueprint' | 'sessions' | 'artifacts'>('dashboard')
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
+  // Simulate (in the authoring tool) hands the tab over via a full navigation
+  // to `/?session=<id>`, since the authoring tool and dashboard are separate
+  // page entry points with no shared in-app router.
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(
+    () => new URLSearchParams(window.location.search).get('session'),
+  )
   const [activeBlueprintId, setActiveBlueprintId] = useState<string | null>(null)
   const [blueprintUploadCount, setBlueprintUploadCount] = useState(0)
 
@@ -37,7 +42,11 @@ function App() {
     document.documentElement.setAttribute('data-theme', newTheme)
   }
 
-
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('session')) {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
 
 
   const handleSelectionChange = (selection: Selection) => {
