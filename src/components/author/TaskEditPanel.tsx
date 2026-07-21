@@ -12,7 +12,13 @@ import {
   KNOWN_TASK_TYPES,
   SYSTEM_START_TASK_TYPE,
   SYSTEM_END_TASK_TYPE,
+  isSystemTaskType,
 } from '../../types/blueprint-schema';
+import {
+  isOptedOutParams,
+  setOptedOutOfSimulation,
+  SIMULATION_OPT_OUT_PARAM_NAME,
+} from '../../utils/blueprint-simulate';
 
 /* ------------------------------------------------------------------ */
 /*  BlueprintMetaPanel – shown when no node is selected                */
@@ -372,6 +378,12 @@ function renderOutputValueEditor(field: TaskOutput, onChange: (value: unknown) =
   return renderTypedValueEditor(field.type, field.value, onChange);
 }
 
+/** A task opted out of simulation is claimed by its real agent, so an authored output value is
+ * never used — surface that instead of an editor that would look meaningful but isn't. */
+function renderOptedOutOutputEditor(): ReactNode {
+  return <span className="tep-value-opted-out">Real agent produces this output</span>;
+}
+
 /* ------------------------------------------------------------------ */
 /*  TaskEditPanel – shown when a node is selected                      */
 /* ------------------------------------------------------------------ */
@@ -417,6 +429,8 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: Tas
   };
 
   const isSystemNode = data.taskType === SYSTEM_START_TASK_TYPE || data.taskType === SYSTEM_END_TASK_TYPE;
+  const isSystemTask = isSystemTaskType(data.taskType);
+  const optedOut = isOptedOutParams(localData.params);
 
   return (
     <div className="tep-root">
@@ -525,6 +539,28 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: Tas
           </div>
         </div>
 
+        {/* ---- Simulation ---- */}
+        {!isSystemTask && (
+          <div className="tep-section">
+            <div className="tep-section-title">Simulation</div>
+            <label className="tep-checkbox-label">
+              <input
+                type="checkbox"
+                checked={optedOut}
+                onChange={(e) =>
+                  patchData({ params: setOptedOutOfSimulation(localData.params, e.target.checked) })
+                }
+              />
+              Use real agent (opt out of simulation)
+            </label>
+            <p className="tep-hint">
+              Keeps this task&rsquo;s real type in a simulated run, so a real agent must be
+              registered for it on the broker — otherwise the session fails with
+              NO_AGENT_CLAIMED.
+            </p>
+          </div>
+        )}
+
         {/* ---- Inputs ---- */}
         <div className="tep-section">
           <div className="tep-section-title">Inputs</div>
@@ -544,7 +580,7 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: Tas
             onChange={(outputs) => patchData({ outputs })}
             addLabel="Add output"
             emptyField={() => ({ name: '' })}
-            renderValue={renderOutputValueEditor}
+            renderValue={optedOut ? renderOptedOutOutputEditor : renderOutputValueEditor}
           />
         </div>
 
@@ -552,8 +588,8 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: Tas
         <div className="tep-section">
           <div className="tep-section-title">Parameters</div>
           <FieldList<TaskParam>
-            fields={localData.params}
-            onChange={(params) => patchData({ params })}
+            fields={localData.params.filter((p) => p.name !== SIMULATION_OPT_OUT_PARAM_NAME)}
+            onChange={(params) => patchData({ params: setOptedOutOfSimulation(params, optedOut) })}
             addLabel="Add param"
             emptyField={() => ({ name: '' })}
           />

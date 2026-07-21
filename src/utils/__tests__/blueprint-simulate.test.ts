@@ -6,6 +6,10 @@ import {
   simulatedOutputParamName,
   SIMULATED_OUTPUT_PARAM_PREFIX,
   CompositeTaskNotSupportedError,
+  SIMULATION_OPT_OUT_PARAM_NAME,
+  isOptedOutParams,
+  isOptedOutOfSimulation,
+  setOptedOutOfSimulation,
 } from '../blueprint-simulate';
 
 const BLUEPRINT: Blueprint = {
@@ -149,6 +153,44 @@ describe('deriveSimulationBlueprint', () => {
     );
   });
 
+  it('skips a task opted out of simulation, keeping its real type, while still prefixing every other non-system task', () => {
+    const withOptOut: Blueprint = {
+      ...BLUEPRINT,
+      tasks: BLUEPRINT.tasks.map((task) =>
+        task.id === 'plan'
+          ? { ...task, params: [...(task.params ?? []), { name: SIMULATION_OPT_OUT_PARAM_NAME, value: true }] }
+          : task,
+      ),
+    };
+
+    const derived = deriveSimulationBlueprint(withOptOut);
+
+    expect(derived.tasks.find((t) => t.id === 'plan')?.type).toBe('compas_fab.plan_trajectory');
+  });
+
+  it('does not carry simulated-output params onto an opted-out task', () => {
+    const withOptOutAndOutput: Blueprint = {
+      ...BLUEPRINT,
+      tasks: BLUEPRINT.tasks.map((task) =>
+        task.id === 'plan'
+          ? {
+              ...task,
+              outputs: [{ name: 'trajectory', type: 'compas_fab.JointTrajectory', value: { dtype: 'Trajectory' } }],
+              params: [...(task.params ?? []), { name: SIMULATION_OPT_OUT_PARAM_NAME, value: true }],
+            }
+          : task,
+      ),
+    };
+
+    const derived = deriveSimulationBlueprint(withOptOutAndOutput);
+    const plan = derived.tasks.find((t) => t.id === 'plan');
+
+    expect(plan?.params).toEqual([
+      { name: 'speed', type: 'float', value: 1.5 },
+      { name: SIMULATION_OPT_OUT_PARAM_NAME, value: true },
+    ]);
+  });
+
   it('throws CompositeTaskNotSupportedError naming the offending tasks and does not derive anything', () => {
     const withComposite: Blueprint = {
       ...BLUEPRINT,
@@ -167,5 +209,42 @@ describe('deriveSimulationBlueprint', () => {
 
     expect(caught).toBeInstanceOf(CompositeTaskNotSupportedError);
     expect((caught as CompositeTaskNotSupportedError).taskIds).toEqual(['inner']);
+  });
+});
+
+describe('opt-out helpers (issue-sim-05)', () => {
+  it('isOptedOutParams is true only when the reserved param is present with value true', () => {
+    expect(isOptedOutParams(undefined)).toBe(false);
+    expect(isOptedOutParams([])).toBe(false);
+    expect(isOptedOutParams([{ name: 'speed', value: 1.5 }])).toBe(false);
+    expect(isOptedOutParams([{ name: SIMULATION_OPT_OUT_PARAM_NAME, value: false }])).toBe(false);
+    expect(isOptedOutParams([{ name: SIMULATION_OPT_OUT_PARAM_NAME, value: true }])).toBe(true);
+  });
+
+  it('isOptedOutOfSimulation reads the flag off a task', () => {
+    expect(isOptedOutOfSimulation({ id: 't', type: 'x' })).toBe(false);
+    expect(
+      isOptedOutOfSimulation({
+        id: 't',
+        type: 'x',
+        params: [{ name: SIMULATION_OPT_OUT_PARAM_NAME, value: true }],
+      }),
+    ).toBe(true);
+  });
+
+  it('setOptedOutOfSimulation adds the flag without disturbing other params', () => {
+    const params = setOptedOutOfSimulation([{ name: 'speed', value: 1.5 }], true);
+    expect(params).toEqual([
+      { name: 'speed', value: 1.5 },
+      { name: SIMULATION_OPT_OUT_PARAM_NAME, value: true },
+    ]);
+  });
+
+  it('setOptedOutOfSimulation removes the flag and leaves other params untouched', () => {
+    const params = setOptedOutOfSimulation(
+      [{ name: 'speed', value: 1.5 }, { name: SIMULATION_OPT_OUT_PARAM_NAME, value: true }],
+      false,
+    );
+    expect(params).toEqual([{ name: 'speed', value: 1.5 }]);
   });
 });
