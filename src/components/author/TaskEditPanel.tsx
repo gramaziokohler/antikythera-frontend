@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import type {
   AuthorNodeData,
@@ -85,6 +86,8 @@ interface FieldListProps<T extends GenericField> {
   showValue?: boolean;
   addLabel: string;
   emptyField: () => T;
+  /** Overrides the default free-text value cell, e.g. for a type-appropriate output editor. */
+  renderValue?: (field: T, onChange: (value: unknown) => void) => ReactNode;
 }
 
 function FieldList<T extends GenericField>({
@@ -93,6 +96,7 @@ function FieldList<T extends GenericField>({
   showValue = true,
   addLabel,
   emptyField,
+  renderValue,
 }: FieldListProps<T>) {
   const update = (i: number, patch: Partial<T>) => {
     const next = fields.map((f, idx) => (idx === i ? { ...f, ...patch } : f));
@@ -145,14 +149,20 @@ function FieldList<T extends GenericField>({
             }
           />
           {showValue && (
-            <input
-              className="tep-input field-value"
-              placeholder="value"
-              value={valueAsString(f.value)}
-              onChange={(e) =>
-                update(i, { value: parseValue(e.target.value) } as Partial<T>)
-              }
-            />
+            renderValue ? (
+              <div className="tep-field-value-cell">
+                {renderValue(f, (value) => update(i, { value } as Partial<T>))}
+              </div>
+            ) : (
+              <input
+                className="tep-input field-value"
+                placeholder="value"
+                value={valueAsString(f.value)}
+                onChange={(e) =>
+                  update(i, { value: parseValue(e.target.value) } as Partial<T>)
+                }
+              />
+            )
           )}
           <button className="tep-del-btn" onClick={() => remove(i)} title="Remove">
             <X size={12} />
@@ -165,6 +175,86 @@ function FieldList<T extends GenericField>({
       </button>
     </div>
   );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Output value editor – tier 1 of ADR-0003's simulation editor        */
+/* ------------------------------------------------------------------ */
+
+// Tier 1: native types render as a type-appropriate input. Tiers 2 (list[T]) and 3 (raw COMPAS
+// JSON) are issue-sim-04; until then a non-tier-1 output has no editor and therefore no
+// authored value, which is a defined state (the stand-in holds the task instead of completing
+// it empty).
+const TIER1_OUTPUT_TYPES = ['str', 'int', 'float', 'bool', 'timestamp'] as const;
+type Tier1OutputType = (typeof TIER1_OUTPUT_TYPES)[number];
+
+function isTier1OutputType(type: string | undefined): type is Tier1OutputType {
+  return !!type && (TIER1_OUTPUT_TYPES as readonly string[]).includes(type);
+}
+
+function renderOutputValueEditor(field: TaskOutput, onChange: (value: unknown) => void): ReactNode {
+  if (!isTier1OutputType(field.type)) {
+    return (
+      <span className="tep-value-unsupported" title="list[T] and raw JSON authoring land in issue-sim-04">
+        —
+      </span>
+    );
+  }
+
+  switch (field.type) {
+    case 'str':
+      return (
+        <input
+          className="tep-input field-value"
+          placeholder="value"
+          value={typeof field.value === 'string' ? field.value : ''}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      );
+    case 'int':
+      return (
+        <input
+          className="tep-input field-value"
+          type="number"
+          step={1}
+          placeholder="value"
+          value={typeof field.value === 'number' ? field.value : ''}
+          onChange={(e) =>
+            onChange(e.target.value === '' ? undefined : parseInt(e.target.value, 10))
+          }
+        />
+      );
+    case 'float':
+      return (
+        <input
+          className="tep-input field-value"
+          type="number"
+          step="any"
+          placeholder="value"
+          value={typeof field.value === 'number' ? field.value : ''}
+          onChange={(e) =>
+            onChange(e.target.value === '' ? undefined : parseFloat(e.target.value))
+          }
+        />
+      );
+    case 'bool':
+      return (
+        <input
+          type="checkbox"
+          checked={field.value === true}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+      );
+    case 'timestamp':
+      return (
+        <input
+          className="tep-input field-value"
+          type="datetime-local"
+          value={typeof field.value === 'string' ? field.value : ''}
+          onChange={(e) => onChange(e.target.value === '' ? undefined : e.target.value)}
+        />
+      );
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -339,6 +429,7 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: Tas
             onChange={(outputs) => patchData({ outputs })}
             addLabel="Add output"
             emptyField={() => ({ name: '' })}
+            renderValue={renderOutputValueEditor}
           />
         </div>
 

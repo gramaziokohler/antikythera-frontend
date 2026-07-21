@@ -396,6 +396,23 @@
   flex: 1.2;
 }
 
+.tep-field-row .tep-field-value-cell {
+  flex: 1.2;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.tep-field-value-cell .tep-input.field-value {
+  flex: 1;
+  min-width: 0;
+}
+
+.tep-value-unsupported {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
 .tep-field-row-labels {
   display: flex;
   gap: 4px;

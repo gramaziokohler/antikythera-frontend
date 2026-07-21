@@ -3,6 +3,8 @@ import type { Blueprint } from '../../types/blueprint-schema';
 import {
   deriveSimulationBlueprint,
   deriveSimulationBlueprintId,
+  simulatedOutputParamName,
+  SIMULATED_OUTPUT_PARAM_PREFIX,
   CompositeTaskNotSupportedError,
 } from '../blueprint-simulate';
 
@@ -85,6 +87,66 @@ describe('deriveSimulationBlueprint', () => {
     expect(derived.name).toBe(BLUEPRINT.name);
     expect(derived.description).toBe(BLUEPRINT.description);
     expect(derived.version).toBe(BLUEPRINT.version);
+  });
+
+  it('copies each authored output value onto the derived task as a __sim_out__-prefixed param', () => {
+    const withAuthoredOutput: Blueprint = {
+      ...BLUEPRINT,
+      tasks: BLUEPRINT.tasks.map((task) =>
+        task.id === 'plan'
+          ? { ...task, outputs: [{ name: 'trajectory', type: 'compas_fab.JointTrajectory', value: { dtype: 'Trajectory' } }] }
+          : task,
+      ),
+    };
+
+    const derived = deriveSimulationBlueprint(withAuthoredOutput);
+    const plan = derived.tasks.find((t) => t.id === 'plan');
+
+    expect(plan?.params).toEqual([
+      { name: 'speed', type: 'float', value: 1.5 },
+      { name: '__sim_out__trajectory', value: { dtype: 'Trajectory' } },
+    ]);
+    expect(simulatedOutputParamName('trajectory')).toBe('__sim_out__trajectory');
+    expect('__sim_out__trajectory'.startsWith(SIMULATED_OUTPUT_PARAM_PREFIX)).toBe(true);
+  });
+
+  it('does not add a param for an output with no authored value', () => {
+    const derived = deriveSimulationBlueprint(BLUEPRINT);
+    const plan = derived.tasks.find((t) => t.id === 'plan');
+
+    // The fixture's `trajectory` output has no `value`, so no __sim_out__ param is added —
+    // params carry only the original `speed` param.
+    expect(plan?.params).toEqual([{ name: 'speed', type: 'float', value: 1.5 }]);
+  });
+
+  it('does not add simulated-output params to system tasks (never rewritten)', () => {
+    const withAuthoredSystemOutput: Blueprint = {
+      ...BLUEPRINT,
+      tasks: BLUEPRINT.tasks.map((task) =>
+        task.id === 'start' ? { ...task, outputs: [{ name: 'process_start_time', type: 'timestamp', value: '2026-07-21T10:00' }] } : task,
+      ),
+    };
+
+    const derived = deriveSimulationBlueprint(withAuthoredSystemOutput);
+    const start = derived.tasks.find((t) => t.id === 'start');
+
+    expect(start?.params).toBeUndefined();
+  });
+
+  it('re-deriving an already-derived blueprint does not re-copy simulated-output params', () => {
+    const withAuthoredOutput: Blueprint = {
+      ...BLUEPRINT,
+      tasks: BLUEPRINT.tasks.map((task) =>
+        task.id === 'plan' ? { ...task, outputs: [{ name: 'trajectory', type: 'str', value: 'ok' }] } : task,
+      ),
+    };
+
+    const derived = deriveSimulationBlueprint(withAuthoredOutput);
+    const reDerived = deriveSimulationBlueprint(derived);
+
+    expect(reDerived.tasks.find((t) => t.id === 'plan')?.params).toEqual(
+      derived.tasks.find((t) => t.id === 'plan')?.params,
+    );
   });
 
   it('throws CompositeTaskNotSupportedError naming the offending tasks and does not derive anything', () => {

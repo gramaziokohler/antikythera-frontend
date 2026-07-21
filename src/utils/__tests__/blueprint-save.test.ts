@@ -83,7 +83,7 @@ describe('blueprintIdExists', () => {
 
 describe('uploadBlueprint', () => {
   it('POSTs to /blueprints/upload with the blueprint as multipart form data', async () => {
-    const fetchMock = vi.fn(async () => ({
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => ({
       ok: true,
       json: async () => ({ blueprint_id: 'my-blueprint', message: 'Saved' }),
     }));
