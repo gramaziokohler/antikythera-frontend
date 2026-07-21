@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
 import { useSessionStream } from '../hooks/useSessionStream'
+import { useSimulationStandIn } from '../hooks/useSimulationStandIn'
 import { transformBlueprintToGraph } from '../utils/transform-blueprint'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
@@ -79,6 +80,9 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     sessionId, apiBaseUrl, visibleBlueprintId,
     { onDatastoreUpdate: sessionId ? handleDatastoreUpdate : undefined }
   )
+
+  // Only the tab that pressed Simulate registers the ADR-0003 stand-in agent for this session.
+  useSimulationStandIn(sessionId)
 
   // Sync sessionState from SSE hook (session mode only; preview mode sets it separately)
   useEffect(() => {

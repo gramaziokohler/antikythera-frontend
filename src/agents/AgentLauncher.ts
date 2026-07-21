@@ -228,8 +228,12 @@ export class AgentLauncher {
             const prefix = agent.type + ".";
             if (taskType.startsWith(prefix)) {
                 const toolName = taskType.substring(prefix.length);
-                // Check if the agent actually has this tool
-                if (typeof agent[toolName] === 'function') {
+                // Agents that claim every tool under their prefix (e.g. a stand-in) implement
+                // canHandleTool instead of one method per tool.
+                const handlesTool = agent.canHandleTool
+                    ? agent.canHandleTool(toolName)
+                    : typeof agent[toolName] === 'function';
+                if (handlesTool) {
                     return { agent, toolName };
                 }
             }
@@ -271,9 +275,12 @@ export class AgentLauncher {
             // Create Task instance
             const taskInstance = new Task(task);
 
-            // Invoke tool
+            // Invoke tool. Agents with no method named after the tool (i.e. those that matched
+            // via canHandleTool) are invoked generically through invokeTool instead.
             console.log(`Invoking ${agent.type}.${toolName} for task ${task.id}`);
-            const result = await agent[toolName](taskInstance, context);
+            const result = typeof agent[toolName] === 'function'
+                ? await agent[toolName](taskInstance, context)
+                : await agent.invokeTool!(toolName, taskInstance, context);
 
             // If cancelled, we might not want to report success
             if (context.isCancelled) {
