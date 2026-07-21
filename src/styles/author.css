@@ -408,9 +408,49 @@
   min-width: 0;
 }
 
-.tep-value-unsupported {
-  color: var(--color-text-muted);
+/* Tier 3 output editor: raw COMPAS JSON textarea */
+.tep-json-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  min-width: 0;
+}
+
+.tep-json-textarea {
+  font-family: var(--font-mono);
   font-size: 12px;
+  min-height: 46px;
+  resize: vertical;
+}
+
+.tep-json-textarea.tep-json-invalid {
+  border-color: #ef4444;
+}
+
+.tep-json-error {
+  font-size: 11px;
+  color: #ef4444;
+}
+
+/* Tier 2 output editor: list[T] */
+.tep-list-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.tep-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.tep-list-item-value {
+  flex: 1;
+  min-width: 0;
 }
 
 .tep-field-row-labels {

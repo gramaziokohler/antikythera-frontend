@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SimulationAgent, SIMULATION_AGENT_TYPE } from '../SimulationAgent';
 import { simulatedOutputParamName } from '../../utils/blueprint-simulate';
+import { isAnyDataPassthrough } from '../anyDataCodec';
 import type { Agent } from '../Agent';
 import { Task } from '../Task';
 import { antikythera, compas_pb } from '../../proto/bundle';
@@ -36,9 +37,36 @@ describe('SimulationAgent', () => {
       [simulatedOutputParamName('trajectory')]: { stringValue: 'ok' },
     });
 
-    const result = await agent.invokeTool!('compas_fab.plan_trajectory', task);
+    const result = (await agent.invokeTool!('compas_fab.plan_trajectory', task)) as Record<string, unknown>;
 
-    expect(result).toEqual({ trajectory: 'ok' });
+    expect(Object.keys(result)).toEqual(['trajectory']);
+    // Forwarded as a raw-AnyData passthrough (see anyDataCodec.ts), not decoded — the param may
+    // have arrived using a wire shape the frontend has no reason to understand.
+    expect(isAnyDataPassthrough(result.trajectory)).toBe(true);
+    expect((result.trajectory as { anyData: unknown }).anyData).toEqual({ value: { stringValue: 'ok' } });
+  });
+
+  it('forwards a param wrapped in an AnyData shape the frontend does not decode (e.g. a native COMPAS geometry message) unchanged', async () => {
+    const agent = new SimulationAgent();
+    const message: antikythera.v1.ITaskAssignmentMessage = {
+      id: 'task-2',
+      type: 'simulation.demo.make_frame',
+      params: {
+        [simulatedOutputParamName('frame')]: {
+          message: {
+            type_url: 'type.googleapis.com/compas_pb.data.FrameData',
+            value: new Uint8Array([1, 2, 3]),
+          },
+        },
+      },
+    };
+    const task = new Task(message);
+
+    const result = (await agent.invokeTool!('demo.make_frame', task)) as Record<string, unknown>;
+
+    expect((result.frame as { anyData: unknown }).anyData).toEqual({
+      message: { type_url: 'type.googleapis.com/compas_pb.data.FrameData', value: new Uint8Array([1, 2, 3]) },
+    });
   });
 
   it('holds (never resolves) when no simulated output param is present', async () => {
