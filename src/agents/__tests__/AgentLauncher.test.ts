@@ -2,6 +2,17 @@ import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { AgentLauncher } from '../AgentLauncher';
 import type { Agent } from '../Agent';
 import type { MqttService } from '../../services/MqttService';
+import { passthroughAnyData } from '../anyDataCodec';
+import { antikythera, compas_pb } from '../../proto/bundle';
+
+/** Decodes a published completion-message buffer back to its outputs map, mirroring
+ * AgentLauncher's own wrapMessage (MessageData -> AnyData -> Any -> TaskCompletionMessage). */
+function decodeCompletionOutputs(buffer: Buffer): { [k: string]: compas_pb.data.IAnyData } {
+  const msgData = compas_pb.data.MessageData.decode(new Uint8Array(buffer));
+  const anyMsg = msgData.data!.message!;
+  const completion = antikythera.v1.TaskCompletionMessage.decode(anyMsg.value as Uint8Array);
+  return completion.outputs ?? {};
+}
 
 // The private surface of AgentLauncher this suite needs to reach directly, since
 // findAgentForTaskType/executeTask aren't part of its public API.
@@ -103,5 +114,61 @@ describe('AgentLauncher generic tool matching (ADR-0003)', () => {
 
     expect(confirm).toHaveBeenCalledTimes(1);
     expect(invokeTool).not.toHaveBeenCalled();
+  });
+});
+
+describe('AgentLauncher completion output encoding (issue-sim-04)', () => {
+  beforeEach(() => {
+    resetSingleton();
+  });
+
+  it('forwards a passthrough output byte-for-byte instead of re-encoding it', async () => {
+    const mqtt = fakeMqttService();
+    const launcher = AgentLauncher.getInstance(mqtt);
+    const rawFrame: compas_pb.data.IAnyData = {
+      message: {
+        type_url: 'type.googleapis.com/compas_pb.data.FrameData',
+        value: new Uint8Array([9, 8, 7]),
+      },
+    };
+    const agent: Agent = {
+      type: 'simulation',
+      canHandleTool: () => true,
+      invokeTool: async () => ({ frame: passthroughAnyData(rawFrame) }),
+    };
+    launcher.registerAgent(agent);
+
+    await (launcher as unknown as { executeTask(task: { id: string; type: string }): Promise<void> }).executeTask({
+      id: 't3',
+      type: 'simulation.demo.make_frame',
+    });
+
+    const publishMock = mqtt.publish as unknown as Mock;
+    const completedCall = publishMock.mock.calls.find(([topic]) => topic === 'antikythera/task/completed')!;
+    const outputs = decodeCompletionOutputs(completedCall[1] as Buffer);
+
+    expect(outputs.frame).toEqual(rawFrame);
+  });
+
+  it('still encodes a plain JS output value via encodeAnyData when not a passthrough', async () => {
+    const mqtt = fakeMqttService();
+    const launcher = AgentLauncher.getInstance(mqtt);
+    const agent: Agent = {
+      type: 'simulation',
+      canHandleTool: () => true,
+      invokeTool: async () => ({ trajectory: 'ok' }),
+    };
+    launcher.registerAgent(agent);
+
+    await (launcher as unknown as { executeTask(task: { id: string; type: string }): Promise<void> }).executeTask({
+      id: 't4',
+      type: 'simulation.demo.plan',
+    });
+
+    const publishMock = mqtt.publish as unknown as Mock;
+    const completedCall = publishMock.mock.calls.find(([topic]) => topic === 'antikythera/task/completed')!;
+    const outputs = decodeCompletionOutputs(completedCall[1] as Buffer);
+
+    expect(outputs.trajectory).toEqual({ value: { stringValue: 'ok' } });
   });
 });

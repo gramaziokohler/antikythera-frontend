@@ -4,6 +4,7 @@ import { antikythera, google, compas_pb } from '../proto/bundle';
 import type { Agent } from './Agent';
 import { Task } from './Task';
 import { ExecutionContext } from './ExecutionContext';
+import { encodeAnyData, isAnyDataPassthrough } from './anyDataCodec';
 
 // Type aliases for convenience
 type TaskAssignmentMessage = antikythera.v1.ITaskAssignmentMessage;
@@ -307,12 +308,13 @@ export class AgentLauncher {
         console.log(`Completing task ${taskId} with state ${state}`);
 
         // Convert outputs to AnyData map
-        // For now, we assume outputs is a simple object { key: value } where value is string/number/bool
         const outputMap: { [k: string]: compas_pb.data.IAnyData } = {};
 
         if (outputs && typeof outputs === 'object') {
             for (const [key, val] of Object.entries(outputs)) {
-                outputMap[key] = this.createAnyData(val);
+                // A passthrough (see SimulationAgent) carries an already wire-ready AnyData —
+                // forward it verbatim instead of re-deriving it from a decoded JS value.
+                outputMap[key] = isAnyDataPassthrough(val) ? val.anyData : encodeAnyData(val);
             }
         }
 
@@ -329,19 +331,6 @@ export class AgentLauncher {
 
         this.mqttService.publish('antikythera/task/completed', buffer);
         this.activeTasks.delete(taskId);
-    }
-
-    private createAnyData(val: any): compas_pb.data.IAnyData {
-        // Simple encoding for primitive types
-        if (typeof val === 'string') {
-            return { value: { stringValue: val } };
-        } else if (typeof val === 'number') {
-            return { value: { numberValue: val } };
-        } else if (typeof val === 'boolean') {
-            return { value: { boolValue: val } };
-        }
-        // Fallback for null or unknown
-        return { value: { nullValue: 0 } };
     }
 
     public dispose() {
