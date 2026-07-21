@@ -4,10 +4,17 @@ import {
   PlusCircle,
   FolderOpen,
   Download,
+  Save,
   AlertCircle,
+  CheckCircle2,
   Plus,
 } from 'lucide-react';
 import type { BlueprintMeta } from '../../types/blueprint-schema';
+
+export interface SaveStatus {
+  kind: 'success' | 'error';
+  message: string;
+}
 
 interface AuthorToolbarProps {
   meta: BlueprintMeta;
@@ -15,6 +22,9 @@ interface AuthorToolbarProps {
   onNew: () => void;
   onOpen: (file: File) => void;
   onExport: () => void;
+  onSave: () => void;
+  isSaving?: boolean;
+  saveStatus?: SaveStatus | null;
   onAddNode: () => void;
   isPlacing?: boolean;
   errors: string[];
@@ -26,6 +36,9 @@ export function AuthorToolbar({
   onNew,
   onOpen,
   onExport,
+  onSave,
+  isSaving = false,
+  saveStatus = null,
   onAddNode,
   isPlacing = false,
   errors,
@@ -79,6 +92,16 @@ export function AuthorToolbar({
         Export
       </button>
 
+      <button
+        className="toolbar-btn primary"
+        onClick={onSave}
+        disabled={isSaving}
+        title="Save blueprint to the orchestrator"
+      >
+        <Save size={14} />
+        {isSaving ? 'Saving…' : 'Save'}
+      </button>
+
       <div className="toolbar-divider" />
 
       {/* Add task */}
@@ -120,6 +143,22 @@ export function AuthorToolbar({
         <div className="toolbar-errors">
           <AlertCircle size={14} />
           <span>{errors.join('  ·  ')}</span>
+        </div>
+      )}
+
+      {/* Save result */}
+      {errors.length === 0 && saveStatus && (
+        <div
+          className={
+            saveStatus.kind === 'success' ? 'toolbar-status success' : 'toolbar-errors'
+          }
+        >
+          {saveStatus.kind === 'success' ? (
+            <CheckCircle2 size={14} />
+          ) : (
+            <AlertCircle size={14} />
+          )}
+          <span>{saveStatus.message}</span>
         </div>
       )}
     </div>

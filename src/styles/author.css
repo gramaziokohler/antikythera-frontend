@@ -175,6 +175,27 @@
   text-overflow: ellipsis;
 }
 
+/* Save result banner (success) */
+.toolbar-status.success {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-status-success-bg);
+  border: 1px solid var(--color-success);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--color-success);
+  max-width: 400px;
+  overflow: hidden;
+}
+
+.toolbar-status.success span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ---- Main body (canvas + panel) ---- */
 .author-main {
   display: flex;
