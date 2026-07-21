@@ -19,7 +19,10 @@ import type {
   Blueprint,
   BlueprintTask,
 } from './types/blueprint-schema';
+import { blueprintIdExists, uploadBlueprint } from './utils/blueprint-save';
 import './styles/author.css';
+
+const API_BASE_URL = '/api';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -181,6 +184,11 @@ export function AuthorApp() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [isPlacing, setIsPlacing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{
+    kind: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   // ---- React Flow change handlers ----
 
@@ -254,6 +262,48 @@ export function AuthorApp() {
     a.download = `${meta.id || 'blueprint'}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }, [nodes, edges, meta]);
+
+  // ---- Save (post the blueprint to the orchestrator, unmodified) ----
+
+  const handleSave = useCallback(async () => {
+    const errs = validateFlow(nodes);
+    if (errs.length) {
+      setErrors(errs);
+      setSaveStatus(null);
+      return;
+    }
+    setErrors([]);
+
+    const bp = flowToBlueprint(nodes, edges, meta);
+
+    setIsSaving(true);
+    setSaveStatus(null);
+    try {
+      const exists = await blueprintIdExists(API_BASE_URL, bp.id);
+      if (exists) {
+        const overwrite = window.confirm(
+          `A blueprint with id "${bp.id}" already exists. Overwrite it?`,
+        );
+        if (!overwrite) {
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      const result = await uploadBlueprint(API_BASE_URL, bp);
+      setSaveStatus({
+        kind: 'success',
+        message: result.message || `Saved as "${result.blueprint_id}"`,
+      });
+    } catch (err) {
+      setSaveStatus({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Save failed',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   }, [nodes, edges, meta]);
 
   // ---- Add node ----
@@ -340,6 +390,9 @@ export function AuthorApp() {
           onNew={handleNew}
           onOpen={handleOpen}
           onExport={handleExport}
+          onSave={handleSave}
+          isSaving={isSaving}
+          saveStatus={saveStatus}
           onAddNode={handleAddNode}
           isPlacing={isPlacing}
           errors={errors}
