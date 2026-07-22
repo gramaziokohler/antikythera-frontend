@@ -13,13 +13,20 @@ export interface SimulationAgentSnapshot {
   breakOnEveryTask: boolean;
   /** Task ids currently claimed and held, awaiting `continueHeldTask`. */
   heldTaskIds: string[];
+  /** issue-sim-07: artificial per-task delay (ms), applied after claim and before completion. */
+  delayMs: number;
 }
 
 export const EMPTY_SIMULATION_SNAPSHOT: SimulationAgentSnapshot = {
   breakpoints: new Set(),
   breakOnEveryTask: false,
   heldTaskIds: [],
+  delayMs: 0,
 };
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 interface HeldTask {
   resolve: (outputs: Record<string, unknown>) => void;
@@ -51,6 +58,13 @@ interface HeldTask {
  * arrives with. The orchestrator qualifies every task's wire id with its owning blueprint's id
  * (`_create_global_id`: `{blueprint_id}.{task_id}`), so `invokeTool` strips that prefix (given
  * `blueprintId`) before touching any breakpoint/hold state.
+ *
+ * `setDelayMs` (issue-sim-07) applies one artificial per-task delay, for the whole session, to
+ * every task this instance completes without holding — a viewing aid so an unattended
+ * simulation doesn't finish faster than the graph can be read. It is never a prediction of the
+ * task's real duration. The wait happens inside `invokeTool`, i.e. strictly after claiming
+ * (which happens in `AgentLauncher.handleTaskStart` before `invokeTool` is ever called) and
+ * before completion, so a delayed task is never left in `READY` for `RedispatchPoller` to fail.
  */
 export class SimulationAgent implements Agent {
   type = SIMULATION_AGENT_TYPE;
@@ -61,6 +75,7 @@ export class SimulationAgent implements Agent {
   private listeners = new Set<() => void>();
   private snapshot: SimulationAgentSnapshot = EMPTY_SIMULATION_SNAPSHOT;
   private readonly blueprintId?: string;
+  private delayMs = 0;
 
   /**
    * @param blueprintId The derived blueprint id this agent's session was started from (see
@@ -101,8 +116,25 @@ export class SimulationAgent implements Agent {
       breakpoints: new Set(this.breakpoints),
       breakOnEveryTask: this.breakOnEveryTask,
       heldTaskIds: [...this.held.keys()],
+      delayMs: this.delayMs,
     };
     this.listeners.forEach((listener) => listener());
+  }
+
+  /**
+   * Sets the artificial per-task delay (ms) applied to every subsequent task this stand-in
+   * completes without holding. Distinct from a task's real duration, which no simulation
+   * attempts to predict (see ADR-0003 / CONTEXT.md's "Simulation delay" glossary entry).
+   * Adjustable while the session is running — takes effect on the next task claimed, not
+   * retroactively on one already waiting.
+   */
+  setDelayMs(delayMs: number): void {
+    this.delayMs = Math.max(0, delayMs);
+    this.notify();
+  }
+
+  getDelayMs(): number {
+    return this.delayMs;
   }
 
   toggleBreakpoint(taskId: string): void {
@@ -146,6 +178,12 @@ export class SimulationAgent implements Agent {
     const hasAuthoredOutput = Object.keys(authoredOutputs).length > 0;
 
     if (!this.isBreakpointed(graphTaskId) && hasAuthoredOutput) {
+      // Applied after AgentLauncher.handleTaskStart's claim (already happened by the time
+      // invokeTool runs) and before completion — never before the claim, so a delayed task is
+      // never left in READY for RedispatchPoller to fail (issue-sim-07).
+      if (this.delayMs > 0) {
+        await sleep(this.delayMs);
+      }
       return authoredOutputs;
     }
 

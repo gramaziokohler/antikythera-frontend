@@ -207,6 +207,96 @@ describe('SimulationAgent', () => {
     });
   });
 
+  describe('simulation delay (issue-sim-07)', () => {
+    it('defaults to no delay', () => {
+      const agent = new SimulationAgent();
+      expect(agent.getDelayMs()).toBe(0);
+      expect(agent.getSnapshot().delayMs).toBe(0);
+    });
+
+    it('setDelayMs updates getDelayMs and the snapshot, and can be changed repeatedly', () => {
+      const agent = new SimulationAgent();
+      agent.setDelayMs(500);
+      expect(agent.getDelayMs()).toBe(500);
+      expect(agent.getSnapshot().delayMs).toBe(500);
+
+      agent.setDelayMs(2000);
+      expect(agent.getDelayMs()).toBe(2000);
+      expect(agent.getSnapshot().delayMs).toBe(2000);
+    });
+
+    it('clamps a negative delay to zero', () => {
+      const agent = new SimulationAgent();
+      agent.setDelayMs(-100);
+      expect(agent.getDelayMs()).toBe(0);
+    });
+
+    it('notifies subscribers when the delay changes', () => {
+      const agent = new SimulationAgent();
+      const listener = vi.fn();
+      agent.subscribe(listener);
+
+      agent.setDelayMs(1000);
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('delays completion of a non-breakpointed authored-output task by the configured amount, applied after the claim', async () => {
+      vi.useFakeTimers();
+      try {
+        const agent = new SimulationAgent();
+        agent.setDelayMs(5000);
+        const task = taskWithParams({ [simulatedOutputParamName('trajectory')]: { stringValue: 'ok' } });
+
+        let resolved = false;
+        const pending = agent.invokeTool!('compas_fab.plan_trajectory', task).then((r) => {
+          resolved = true;
+          return r;
+        });
+
+        // Nothing was ever put in the `held` map — the task claimed and is merely waiting,
+        // not held at a breakpoint (issue-sim-06's separate mechanism).
+        expect(agent.isHeld('task-1')).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(4999);
+        expect(resolved).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(1);
+        expect(resolved).toBe(true);
+
+        const result = (await pending) as Record<string, unknown>;
+        expect(Object.keys(result)).toEqual(['trajectory']);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not delay a task that holds (breakpointed, or with no authored output) — the hold is already indefinite', async () => {
+      const agent = new SimulationAgent();
+      agent.setDelayMs(10_000);
+      agent.toggleBreakpoint('task-1');
+      const task = taskWithParams({ [simulatedOutputParamName('trajectory')]: { stringValue: 'ok' } });
+
+      let settled = false;
+      agent.invokeTool!('compas_fab.plan_trajectory', task).then(() => {
+        settled = true;
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(settled).toBe(false);
+      expect(agent.isHeld('task-1')).toBe(true);
+    });
+
+    it('a zero delay (the default) completes an authored-output task without waiting', async () => {
+      const agent = new SimulationAgent();
+      const task = taskWithParams({ [simulatedOutputParamName('trajectory')]: { stringValue: 'ok' } });
+
+      const result = (await agent.invokeTool!('compas_fab.plan_trajectory', task)) as Record<string, unknown>;
+
+      expect(Object.keys(result)).toEqual(['trajectory']);
+    });
+  });
+
   describe('subscribe', () => {
     it('notifies listeners on breakpoint toggle, break-on-every-task, and continue', async () => {
       const agent = new SimulationAgent();
