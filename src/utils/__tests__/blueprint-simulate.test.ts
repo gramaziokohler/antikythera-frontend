@@ -10,6 +10,9 @@ import {
   isOptedOutParams,
   isOptedOutOfSimulation,
   setOptedOutOfSimulation,
+  stripSimulationBlueprintId,
+  stripSimulationTypePrefix,
+  stripSimulationDerivation,
 } from '../blueprint-simulate';
 
 const BLUEPRINT: Blueprint = {
@@ -37,6 +40,12 @@ const BLUEPRINT: Blueprint = {
 describe('deriveSimulationBlueprintId', () => {
   it('appends the __sim suffix', () => {
     expect(deriveSimulationBlueprintId('my-blueprint')).toBe('my-blueprint__sim');
+  });
+
+  // Simulate → dashboard → Edit → Simulate is a round trip on one blueprint, not a new
+  // blueprint per lap.
+  it('does not stack suffixes on an already-derived id', () => {
+    expect(deriveSimulationBlueprintId('my-blueprint__sim')).toBe('my-blueprint__sim');
   });
 });
 
@@ -168,6 +177,27 @@ describe('deriveSimulationBlueprint', () => {
     expect(derived.tasks.find((t) => t.id === 'plan')?.type).toBe('compas_fab.plan_trajectory');
   });
 
+  // Opting out only ever happens on the authoring canvas, and a task that has been through a
+  // simulated run arrives back there already carrying the rewritten type — so the flag has to be
+  // able to undo a rewrite, not merely to prevent one.
+  it('honours an opt-out on a task whose type is already rewritten, restoring its real type', () => {
+    const derived = deriveSimulationBlueprint(BLUEPRINT);
+    const optedOutAfterDerive: Blueprint = {
+      ...derived,
+      tasks: derived.tasks.map((task) =>
+        task.id === 'plan'
+          ? { ...task, params: [...(task.params ?? []), { name: SIMULATION_OPT_OUT_PARAM_NAME, value: true }] }
+          : task,
+      ),
+    };
+
+    const reDerived = deriveSimulationBlueprint(optedOutAfterDerive);
+
+    expect(reDerived.tasks.find((t) => t.id === 'plan')?.type).toBe('compas_fab.plan_trajectory');
+    // Every other non-system task is still simulated.
+    expect(reDerived.tasks.find((t) => t.id === 'sleep')?.type).toBe('system.sleep');
+  });
+
   it('does not carry simulated-output params onto an opted-out task', () => {
     const withOptOutAndOutput: Blueprint = {
       ...BLUEPRINT,
@@ -246,5 +276,103 @@ describe('opt-out helpers (issue-sim-05)', () => {
       false,
     );
     expect(params).toEqual([{ name: 'speed', value: 1.5 }]);
+  });
+});
+
+describe('stripSimulationBlueprintId', () => {
+  it('removes the __sim suffix', () => {
+    expect(stripSimulationBlueprintId('my-blueprint__sim')).toBe('my-blueprint');
+  });
+
+  it('unwinds suffixes that stacked up before they stopped stacking', () => {
+    expect(stripSimulationBlueprintId('my-blueprint__sim__sim__sim')).toBe('my-blueprint');
+  });
+
+  it('leaves an id that was never derived alone', () => {
+    expect(stripSimulationBlueprintId('my-blueprint')).toBe('my-blueprint');
+  });
+
+  it('keeps an id that is nothing but the suffix, rather than emptying it', () => {
+    expect(stripSimulationBlueprintId('__sim')).toBe('__sim');
+  });
+});
+
+describe('stripSimulationTypePrefix', () => {
+  it('removes the simulation. prefix', () => {
+    expect(stripSimulationTypePrefix('simulation.compas_fab.plan')).toBe('compas_fab.plan');
+  });
+
+  it('leaves an un-prefixed type alone', () => {
+    expect(stripSimulationTypePrefix('compas_fab.plan')).toBe('compas_fab.plan');
+  });
+});
+
+describe('stripSimulationDerivation', () => {
+  it('round-trips a derived blueprint back to the authored one', () => {
+    const derived = deriveSimulationBlueprint(BLUEPRINT);
+
+    expect(stripSimulationDerivation(derived)).toEqual(BLUEPRINT);
+  });
+
+  it('survives repeated laps of Simulate and Edit', () => {
+    let bp = BLUEPRINT;
+    for (let lap = 0; lap < 3; lap++) {
+      bp = stripSimulationDerivation(deriveSimulationBlueprint(bp));
+    }
+
+    expect(bp).toEqual(BLUEPRINT);
+  });
+
+  it('leaves a blueprint that was never derived unchanged', () => {
+    expect(stripSimulationDerivation(BLUEPRINT)).toEqual(BLUEPRINT);
+  });
+
+  it('does not mutate the blueprint it is given', () => {
+    const derived = deriveSimulationBlueprint(BLUEPRINT);
+
+    stripSimulationDerivation(derived);
+
+    expect(derived.id).toBe('my-blueprint__sim');
+    expect(derived.tasks.find((t) => t.id === 'plan')?.type).toBe(
+      'simulation.compas_fab.plan_trajectory',
+    );
+  });
+
+  it('keeps the opt-out flag, so a task stays opted out across the round trip', () => {
+    const withOptOut: Blueprint = {
+      ...BLUEPRINT,
+      tasks: BLUEPRINT.tasks.map((task) =>
+        task.id === 'plan'
+          ? { ...task, params: [...(task.params ?? []), { name: SIMULATION_OPT_OUT_PARAM_NAME, value: true }] }
+          : task,
+      ),
+    };
+
+    const stripped = stripSimulationDerivation(deriveSimulationBlueprint(withOptOut));
+
+    expect(isOptedOutOfSimulation(stripped.tasks.find((t) => t.id === 'plan')!)).toBe(true);
+    expect(stripped).toEqual(withOptOut);
+  });
+
+  it('drops the reserved __sim_out__ params without losing the authored output values they came from', () => {
+    const withValue: Blueprint = {
+      ...BLUEPRINT,
+      tasks: BLUEPRINT.tasks.map((task) =>
+        task.id === 'plan'
+          ? { ...task, outputs: [{ name: 'trajectory', type: 'str', value: 'authored' }] }
+          : task,
+      ),
+    };
+
+    const stripped = stripSimulationDerivation(deriveSimulationBlueprint(withValue));
+    const plan = stripped.tasks.find((t) => t.id === 'plan');
+
+    expect(plan?.params?.some((p) => p.name.startsWith(SIMULATED_OUTPUT_PARAM_PREFIX))).toBe(false);
+    expect(plan?.outputs).toEqual([{ name: 'trajectory', type: 'str', value: 'authored' }]);
+    // …and re-deriving rebuilds the param from the output value it was derived from.
+    expect(deriveSimulationBlueprint(stripped).tasks.find((t) => t.id === 'plan')?.params).toEqual([
+      { name: 'speed', type: 'float', value: 1.5 },
+      { name: simulatedOutputParamName('trajectory'), value: 'authored' },
+    ]);
   });
 });
