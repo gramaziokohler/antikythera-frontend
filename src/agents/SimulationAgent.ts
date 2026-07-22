@@ -30,7 +30,7 @@ function sleep(ms: number): Promise<void> {
 
 interface HeldTask {
   resolve: (outputs: Record<string, unknown>) => void;
-  /** True if the task has no authored output at all — a prompt, not a dead end (ADR-0003). */
+  /** True if the task declares outputs but none were authored — a prompt, not a dead end (ADR-0003). */
   requiresValue: boolean;
 }
 
@@ -41,9 +41,14 @@ interface HeldTask {
  * `__sim_out__` prefix (see blueprint-simulate.ts) — unless the task carries a breakpoint (see
  * issue-sim-06), in which case it holds regardless of whether it has an authored default.
  *
- * A task with no simulated outputs at all is always held, breakpoint or not, per ADR-0003: "A
- * `simulation.*` task with no authored output halts at a breakpoint rather than completing
- * empty." `continueHeldTask` releases a hold, breakpointed or not, with author-supplied output
+ * A task that declares outputs but has none authored is always held, breakpoint or not, per
+ * ADR-0003: "A `simulation.*` task with no authored output halts at a breakpoint rather than
+ * completing empty." That rule is about an output the author *could* have given a value and
+ * didn't — so it turns on the task's declared outputs (the orchestrator's `output_keys`), not on
+ * the absence of `__sim_out__` params alone. A task declaring no outputs has nothing for an
+ * author to supply and completes with `{}`; holding it would be a prompt with no fields and no
+ * way to answer it, since `continueHeldTask` refuses to release a `requiresValue` hold with
+ * nothing. `continueHeldTask` releases a hold, breakpointed or not, with author-supplied output
  * values.
  *
  * Breakpoints and holds are in-memory and instance-local by design (ADR-0003: "breakpoints are
@@ -161,7 +166,7 @@ export class SimulationAgent implements Agent {
     return this.held.has(taskId);
   }
 
-  /** True if the hold at `taskId` has no authored default and cannot continue with `{}`. */
+  /** True if the hold at `taskId` declares outputs none of which were authored, so it cannot continue with `{}`. */
   requiresValue(taskId: string): boolean {
     return this.held.get(taskId)?.requiresValue ?? false;
   }
@@ -176,8 +181,11 @@ export class SimulationAgent implements Agent {
       }
     }
     const hasAuthoredOutput = Object.keys(authoredOutputs).length > 0;
+    // Only a task that declares an output can be missing an authored value for one. A task
+    // declaring none completes with `{}` rather than holding for a value it has no field for.
+    const awaitsAuthoredValue = task.outputKeys.length > 0 && !hasAuthoredOutput;
 
-    if (!this.isBreakpointed(graphTaskId) && hasAuthoredOutput) {
+    if (!this.isBreakpointed(graphTaskId) && !awaitsAuthoredValue) {
       // Applied after AgentLauncher.handleTaskStart's claim (already happened by the time
       // invokeTool runs) and before completion — never before the claim, so a delayed task is
       // never left in READY for RedispatchPoller to fail (issue-sim-07).
@@ -188,7 +196,7 @@ export class SimulationAgent implements Agent {
     }
 
     return new Promise<Record<string, unknown>>((resolve) => {
-      this.held.set(graphTaskId, { resolve, requiresValue: !hasAuthoredOutput });
+      this.held.set(graphTaskId, { resolve, requiresValue: awaitsAuthoredValue });
       this.notify();
     });
   }

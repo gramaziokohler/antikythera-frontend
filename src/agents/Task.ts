@@ -31,6 +31,16 @@ export class Task {
         return this._message.params ?? {};
     }
 
+    /**
+     * The names of the outputs this task declares in its blueprint (the orchestrator's
+     * `output_keys`, see `outputs_to_keys`). Empty for a task that declares none — which is not
+     * the same thing as a task whose outputs simply have no value yet, a distinction the
+     * simulation stand-in depends on (see SimulationAgent).
+     */
+    get outputKeys(): string[] {
+        return this._message.outputKeys ?? [];
+    }
+
     get inputs(): any {
         return this.extractMap(this._message.inputs);
     }
