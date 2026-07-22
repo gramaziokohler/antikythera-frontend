@@ -76,6 +76,42 @@
     border-left: 4px solid var(--color-border-strong);
 }
 
+/* ADR-0003 / issue-sim-06: breakpoint + held-at-breakpoint markers. A held task is still
+   `running` as far as the orchestrator is concerned (see SimulationAgent.ts) — this marker is
+   what actually distinguishes "waiting on the author" from "just taking a while". */
+.node-breakpoint-marker {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    z-index: var(--z-dropdown);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-card);
+    color: var(--color-error);
+    border: 2px solid var(--color-bg-card);
+    box-shadow: var(--shadow-xs);
+}
+
+.task-node.held {
+    border-left-color: var(--color-error) !important;
+    box-shadow: 0 0 0 2px var(--color-status-error-bg);
+}
+
+.task-node.held .node-breakpoint-marker {
+    color: var(--color-white);
+    background: var(--color-error);
+    animation: breakpointPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes breakpointPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+}
+
 .node-header {
     padding: 0.75rem;
     display: flex;

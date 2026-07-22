@@ -1,15 +1,17 @@
 import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
-import { 
-  Terminal, 
-  Layers, 
-  Image as ImageIcon, 
+import {
+  Terminal,
+  Layers,
+  Image as ImageIcon,
   FileText,
   CheckCircle2,
   XCircle,
   PlayCircle,
-  Clock
+  Clock,
+  CircleDot,
+  OctagonPause
 } from 'lucide-react';
 import './TaskNode.css';
 
@@ -45,13 +47,19 @@ const getStatusIcon = (status: string) => {
 };
 
 export const TaskNode = memo(({ data, selected }: NodeProps) => {
-  const { label, status, type, description, details, inputs = [], outputs = [], condition, onExpand } = data as any;
+  const { label, status, type, description, details, inputs = [], outputs = [], condition, onExpand, isBreakpointed, isHeld } = data as any;
   const isComposite = (type || '').toLowerCase().includes('composite');
 
   return (
-      <div className={`task-node ${status?.toLowerCase()} ${selected ? 'selected' : ''}`}>
+      <div className={`task-node ${status?.toLowerCase()} ${selected ? 'selected' : ''} ${isHeld ? 'held' : ''}`}>
         <Handle type="target" position={Position.Left} className="task-handle input-handle" isConnectable={false} />
-  
+
+        {(isBreakpointed || isHeld) && (
+          <div className="node-breakpoint-marker" title={isHeld ? 'Held at breakpoint' : 'Breakpoint'}>
+            {isHeld ? <OctagonPause size={13} /> : <CircleDot size={13} />}
+          </div>
+        )}
+
         <div className="node-header">
           <div className="node-icon-wrapper">
             {getIconForType(type)}

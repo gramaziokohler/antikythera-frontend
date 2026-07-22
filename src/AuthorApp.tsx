@@ -346,7 +346,7 @@ export function AuthorApp() {
     try {
       await uploadBlueprint(API_BASE_URL, simBp);
       const { session_id } = await startBlueprintSession(API_BASE_URL, simBp.id);
-      markDrivingSimulationSession(session_id);
+      markDrivingSimulationSession(session_id, simBp.id);
       // Authoring tool and dashboard are separate page entry points (author.html vs
       // index.html) — a full navigation is the only way to hand the tab over.
       window.location.href = `/?session=${encodeURIComponent(session_id)}`;
