@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   ReactFlowProvider,
   applyNodeChanges,
@@ -29,7 +29,11 @@ import {
   uploadBlueprint,
   startBlueprintSession,
 } from './utils/blueprint-save';
-import { deriveSimulationBlueprint } from './utils/blueprint-simulate';
+import { fetchBlueprint } from './utils/blueprint-load';
+import {
+  deriveSimulationBlueprint,
+  stripSimulationDerivation,
+} from './utils/blueprint-simulate';
 import { markDrivingSimulationSession } from './utils/simulation-session';
 import './styles/author.css';
 
@@ -235,25 +239,68 @@ export function AuthorApp() {
 
   // ---- Open / import ----
 
-  const handleOpen = useCallback(async (file: File) => {
-    try {
-      const text = await file.text();
-      const bp: Blueprint = JSON.parse(text);
-      const { nodes: n, edges: e } = blueprintToFlow(bp);
-      setNodes(n);
-      setEdges(e);
-      setMeta({
-        id: bp.id,
-        name: bp.name,
-        version: bp.version,
-        description: bp.description ?? '',
-      });
-      setSelectedNodeId(null);
-      setErrors([]);
-    } catch {
-      setErrors(['Failed to parse blueprint file — make sure it is valid JSON.']);
-    }
+  /**
+   * Replaces the canvas with `bp`, whatever it was opened from — a file, or the orchestrator.
+   *
+   * Always presents the authored form: a blueprint that came back from a simulated run carries
+   * the derivation (`__sim` id, `simulation.`-prefixed types, `__sim_out__` params), and editing
+   * that as-is would compound it on the next Simulate. Simulate re-derives from what's on the
+   * canvas, so the round trip is lossless.
+   */
+  const openBlueprint = useCallback((raw: Blueprint) => {
+    const bp = stripSimulationDerivation(raw);
+    const { nodes: n, edges: e } = blueprintToFlow(bp);
+    setNodes(n);
+    setEdges(e);
+    setMeta({
+      id: bp.id,
+      name: bp.name,
+      version: bp.version,
+      description: bp.description ?? '',
+    });
+    setSelectedNodeId(null);
+    setErrors([]);
   }, []);
+
+  const handleOpen = useCallback(
+    async (file: File) => {
+      try {
+        const text = await file.text();
+        openBlueprint(JSON.parse(text) as Blueprint);
+      } catch {
+        setErrors(['Failed to parse blueprint file — make sure it is valid JSON.']);
+      }
+    },
+    [openBlueprint],
+  );
+
+  // ---- Edit a stored blueprint (`/author.html?blueprint=<id>`) ----
+  //
+  // The dashboard's Edit action hands the tab over by full navigation, the mirror of Simulate
+  // going the other way — the two are separate page entry points with no shared in-app router.
+  // The id stays in the URL, so a reload reopens the stored blueprint rather than dropping the
+  // tab back to an empty canvas.
+  const [editingBlueprintId] = useState(
+    () => new URLSearchParams(window.location.search).get('blueprint'),
+  );
+
+  useEffect(() => {
+    if (!editingBlueprintId) return;
+
+    let cancelled = false;
+    fetchBlueprint(API_BASE_URL, editingBlueprintId)
+      .then((bp) => {
+        if (!cancelled) openBlueprint(bp);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setErrors([err instanceof Error ? err.message : 'Failed to load blueprint']);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editingBlueprintId, openBlueprint]);
 
   // ---- Export ----
 
