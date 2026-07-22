@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { notifications } from '../services/NotificationStore'
 import type { UploadBlueprintResponse } from '../types'
 
 interface UploadBlueprintProps {
@@ -9,7 +10,6 @@ interface UploadBlueprintProps {
 export function UploadBlueprint({ apiBaseUrl, onUploadSuccess }: UploadBlueprintProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [uploadMessage, setUploadMessage] = useState<string>('')
-  const [warnings, setWarnings] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFile = async (file: File) => {
@@ -28,11 +28,18 @@ export function UploadBlueprint({ apiBaseUrl, onUploadSuccess }: UploadBlueprint
       const data: UploadBlueprintResponse = await response.json()
       setUploadMessage(data.message)
 
-      // The upload succeeds despite warnings, so they need their own surface:
-      // they stay until dismissed rather than disappearing with the toast.
-      if (data.warnings?.length) {
-        setWarnings(prev => [...prev, ...data.warnings!.map(w => `${file.name}: ${w}`)])
-      }
+      // The upload succeeds despite warnings, so they go to the notification
+      // overlay -- the same surface session failures use -- rather than
+      // disappearing with the status toast below the drop zone.
+      // Keying by blueprint refreshes them in place when the file is re-uploaded.
+      data.warnings?.forEach((warning, i) => {
+        notifications.notify({
+          id: `blueprint-warning-${data.blueprint_id}-${i}`,
+          title: file.name,
+          message: warning,
+          level: 'warning',
+        })
+      })
 
       // Clear message after 3 seconds
       setTimeout(() => setUploadMessage(''), 3000)
@@ -100,15 +107,6 @@ export function UploadBlueprint({ apiBaseUrl, onUploadSuccess }: UploadBlueprint
         <span className="upload-text">Upload Blueprint</span>
       </div>
       {uploadMessage && <div className={`upload-status-toast ${uploadMessage.includes('failed') ? 'error' : ''}`}>{uploadMessage}</div>}
-      {warnings.length > 0 && (
-        <div
-          className="upload-status-toast warning"
-          onClick={(e) => { e.stopPropagation(); setWarnings([]) }}
-          title="Click to dismiss"
-        >
-          {warnings.map((warning, i) => <div key={i} className="upload-warning-item">{warning}</div>)}
-        </div>
-      )}
     </div>
   )
 }

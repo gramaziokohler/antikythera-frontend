@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Blueprint upload surfaces dataflow warnings returned by the API (e.g. a condition reading a name no task produces). Warnings stay on screen until dismissed, since the upload itself succeeds.
+- Blueprint upload surfaces dataflow warnings returned by the API (e.g. a condition reading a name no task produces) in the notification overlay, alongside session failures. Warnings stay until dismissed, since the upload itself succeeds.
 - Notification messages longer than 140 characters are collapsed to a word-boundary preview with a "show more.." toggle; expanded messages scroll instead of growing the toast without limit.
 - Session failures are reported through the notification overlay instead of the inline error line, titled with the error code (e.g. "Session failed: SCOPE_CONDITION_ERROR"). The banner previously rendered `[object Object]`, since the error is COMPAS-serialized and its fields live under `data`.
 - `SessionMonitor` replaced its 500ms polling loop with `useSessionStream`; only a single long-lived SSE connection is opened per session.

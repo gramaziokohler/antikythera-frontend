@@ -455,24 +455,6 @@
   border-color: var(--color-status-error-bg);
 }
 
-/* Warnings are longer than a status line and stay until dismissed, so they get
-   room to wrap instead of the single centered line used for status messages. */
-.upload-status-toast.warning {
-  border-left: 3px solid #eab308;
-  text-align: left;
-  min-width: 320px;
-  max-width: 480px;
-  max-height: 240px;
-  overflow-y: auto;
-  cursor: pointer;
-}
-
-.upload-warning-item + .upload-warning-item {
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid var(--color-border-default);
-}
-
 /* ========================================
    USER PROMPT DIALOG
    ======================================== */
