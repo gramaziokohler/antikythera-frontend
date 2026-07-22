@@ -169,3 +169,18 @@ lands in the datastore. A task with no authored default at all shows the same pa
 disabled until every output has a value. Reloading the driving tab drops all breakpoints and any
 in-flight hold — the task it was holding stays stuck `running` forever and must be recovered with
 *Reset task* from the graph's context menu, the same recovery path any other stuck task uses.
+
+**Simulation delay and the driving/watching indicator**: the session monitor shows a
+"Driving simulation" / "Watching simulation" badge next to the session state whenever the open
+session is a simulation at all (detected from the live graph's `simulation.*` task types, so it
+appears on every tab, not just the driving one). Only the driving tab — the one that registered
+the stand-in — also gets the *ms delay* control next to *Step-through*: a single artificial
+per-task delay, applied by the stand-in after a task is claimed and before it completes, so an
+unattended simulation with no breakpoints doesn't finish faster than the graph can be read. It is
+never a prediction of the task's real duration, and it can be changed at any point while the
+session is running — the new value applies to the next task claimed, not retroactively to one
+already waiting. Because the wait happens strictly after the claim, a delayed task is never left
+in `READY` for the orchestrator's re-dispatch poller to fail (confirmed live with a 6s delay,
+comfortably past the 2s re-dispatch base delay — see progress.txt's issue-sim-07 entry). A
+watching tab never registers a stand-in and never shows the step-through toggle or the delay
+control, regardless of how many tabs are open on the same simulated session.

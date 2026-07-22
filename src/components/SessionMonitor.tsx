@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight, StepForward } from 'lucide-react'
+import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight, StepForward, Timer } from 'lucide-react'
 import { useSessionStream } from '../hooks/useSessionStream'
 import { useSimulationStandIn } from '../hooks/useSimulationStandIn'
 import { useSimulationAgentState } from '../hooks/useSimulationAgentState'
 import { transformBlueprintToGraph } from '../utils/transform-blueprint'
+import { SIMULATION_TYPE_PREFIX } from '../utils/blueprint-simulate'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
 import { StartSessionDialog } from './StartSessionDialog'
@@ -87,6 +88,15 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   // a watching tab gets `null` back and renders none of the breakpoint UI below (issue-sim-06).
   const simulationAgent = useSimulationStandIn(sessionId)
   const simState = useSimulationAgentState(simulationAgent)
+
+  // True on *both* the driving and a watching tab — derived from the live graph's task types
+  // (rewritten by ADR-0003's Simulate action), not from the driving-tab-only marker `simulationAgent`
+  // comes from. This is what lets a watching tab (issue-sim-07) know it's watching a simulation
+  // at all, and lets a non-simulated session show none of the controls gated on `simulationAgent`.
+  const isSimulationSession = useMemo(
+    () => (graphData?.nodes ?? []).some(n => n.type?.startsWith(SIMULATION_TYPE_PREFIX)),
+    [graphData]
+  )
 
   const breakpointedTaskIds = useMemo(() => {
     if (!simulationAgent) return undefined
@@ -632,6 +642,18 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
             <span className={`state-badge ${sessionState?.toLowerCase() || 'preview'}`}>
               {sessionState || 'PREVIEW'}
             </span>
+            {isSimulationSession && (
+              <span
+                className={`sim-mode-badge ${simulationAgent ? 'driving' : 'watching'}`}
+                title={
+                  simulationAgent
+                    ? 'This tab registered the stand-in agent and is driving the simulation.'
+                    : 'Another tab is driving this simulation; this tab only observes the graph and datastore.'
+                }
+              >
+                {simulationAgent ? 'Driving simulation' : 'Watching simulation'}
+              </span>
+            )}
           </div>
 
           <div className="session-controls" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
@@ -644,6 +666,26 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
               >
                 <StepForward size={16} /> <span>{simState.breakOnEveryTask ? 'Stepping: On' : 'Step-through'}</span>
               </button>
+            )}
+
+            {simulationAgent && (
+              <label
+                className="sim-delay-control"
+                title="Artificial per-task delay, applied after each task is claimed and before it completes, so an unattended simulation stays slow enough to watch. Not a prediction of the task's real duration."
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Timer size={16} />
+                <input
+                  type="number"
+                  min={0}
+                  step={100}
+                  value={simState.delayMs}
+                  onChange={(e) => simulationAgent.setDelayMs(Number(e.target.value))}
+                  aria-label="Simulation delay in milliseconds"
+                  className="sim-delay-input"
+                />
+                <span>ms delay</span>
+              </label>
             )}
 
             {blueprintStack.length > 0 && (

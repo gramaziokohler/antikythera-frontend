@@ -8,7 +8,7 @@ describe('useSimulationAgentState', () => {
   it('returns a stable empty snapshot when agent is null', () => {
     const { result, rerender } = renderHook(() => useSimulationAgentState(null));
 
-    expect(result.current).toEqual({ breakpoints: new Set(), breakOnEveryTask: false, heldTaskIds: [] });
+    expect(result.current).toEqual({ breakpoints: new Set(), breakOnEveryTask: false, heldTaskIds: [], delayMs: 0 });
     const first = result.current;
     rerender();
     expect(result.current).toBe(first);
