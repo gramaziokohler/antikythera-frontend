@@ -751,7 +751,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
         </div>
 
         {/* Resize Handle */}
-        {!isCollapsed && (
+        {sessionId && !isCollapsed && (
           <div
             onMouseDown={startResizing}
             style={{
@@ -769,49 +769,47 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           />
         )}
 
-        {/* Data Store Section */}
-        <div className="monitor-section" style={{ height: isCollapsed ? 'auto' : datastoreHeight, flexShrink: 0, borderTop: isCollapsed ? '1px solid var(--color-stone-soft)' : 'none', width: '100%' }}>
-          <div className="monitor-section-header">
-            <h3>
-              <button
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: 'inherit'
-                }}
-              >
-                {isCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        {/* Data Store Section — sessions only. A blueprint preview has no data
+            store of its own; one only exists once the blueprint is run. */}
+        {sessionId && (
+          <div className="monitor-section" style={{ height: isCollapsed ? 'auto' : datastoreHeight, flexShrink: 0, borderTop: isCollapsed ? '1px solid var(--color-stone-soft)' : 'none', width: '100%' }}>
+            <div className="monitor-section-header">
+              <h3>
+                <button
+                  onClick={() => setIsCollapsed(!isCollapsed)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: 'inherit'
+                  }}
+                >
+                  {isCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+                Data Store
+              </h3>
+              <button className="download-data-btn" onClick={handleDownloadData} title="Download Data Store">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
               </button>
-              Data Store
-            </h3>
-            <button className="download-data-btn" onClick={handleDownloadData} title="Download Data Store">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-            </button>
-          </div>
-          {!isCollapsed && (
-            <div className="data-container">
-              {sessionData ? (
+            </div>
+            {!isCollapsed && (
+              <div className="data-container">
+                {/* No spinner here: a session that has not run yet simply has an
+                    empty store, which the explorer states outright. */}
                 <div className="data-viewer-wrapper" style={{ height: '100%' }}>
                   <DataStoreExplorer data={parsedSessionData || {}} mainBlueprintId={mainBlueprintId} params={sessionParams} />
                 </div>
-              ) : (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>Loading data...</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {showStartDialog && blueprintId && (
