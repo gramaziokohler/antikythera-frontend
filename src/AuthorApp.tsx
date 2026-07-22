@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   ReactFlowProvider,
   applyNodeChanges,
@@ -9,7 +9,7 @@ import type { Node, Edge, NodeChange, EdgeChange } from '@xyflow/react';
 import { BlueprintCanvas } from './components/author/BlueprintCanvas';
 import { AuthorToolbar } from './components/author/AuthorToolbar';
 import { TaskEditPanel, BlueprintMetaPanel } from './components/author/TaskEditPanel';
-import type { AuthorNodeData, BlueprintMeta } from './types/blueprint-schema';
+import type { AuthorNodeData, BlueprintMeta, Blueprint } from './types/blueprint-schema';
 import {
   SYSTEM_START_TASK_TYPE,
   SYSTEM_END_TASK_TYPE,
@@ -26,7 +26,11 @@ import {
   uploadBlueprint,
   startBlueprintSession,
 } from './utils/blueprint-save';
-import { deriveSimulationBlueprint } from './utils/blueprint-simulate';
+import { fetchBlueprint } from './utils/blueprint-load';
+import {
+  deriveSimulationBlueprint,
+  stripSimulationDerivation,
+} from './utils/blueprint-simulate';
 import { markDrivingSimulationSession } from './utils/simulation-session';
 import './styles/author.css';
 
@@ -154,28 +158,23 @@ export function AuthorApp() {
 
   // ---- Open / import ----
 
-  const handleOpen = useCallback(async (file: File) => {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(await file.text());
-    } catch {
-      setErrors(['Failed to parse blueprint file — make sure it is valid JSON.']);
-      return;
-    }
-
-    // Enforce the shared contract before importing. Rejecting an invalid
-    // blueprint here is what prevents the editor from loading fields it does
-    // not understand and then dropping them on export.
-    const result = validateBlueprint(parsed);
+  /**
+   * Replaces the canvas with a blueprint, whatever it was opened from — a file, or the orchestrator.
+   *
+   * Validates against the shared schema first, so malformed input is rejected at the editor
+   * boundary regardless of source, rather than being loaded with unknown fields and then dropped
+   * on export. Then always presents the authored form: a blueprint that came back from a simulated
+   * run carries the derivation (`__sim` id, `simulation.`-prefixed types, `__sim_out__` params),
+   * and editing that as-is would compound it on the next Simulate. Simulate re-derives from what's
+   * on the canvas, so the round trip is lossless.
+   */
+  const openBlueprint = useCallback((raw: unknown) => {
+    const result = validateBlueprint(raw);
     if (!result.blueprint) {
-      setErrors([
-        'Blueprint does not match the schema:',
-        ...result.errors,
-      ]);
+      setErrors(['Blueprint does not match the schema:', ...result.errors]);
       return;
     }
-
-    const bp = result.blueprint;
+    const bp = stripSimulationDerivation(result.blueprint);
     const { nodes: n, edges: e } = blueprintToFlow(bp);
     setNodes(n);
     setEdges(e);
@@ -188,6 +187,46 @@ export function AuthorApp() {
     setSelectedNodeId(null);
     setErrors([]);
   }, []);
+
+  const handleOpen = useCallback(
+    async (file: File) => {
+      try {
+        const text = await file.text();
+        openBlueprint(JSON.parse(text));
+      } catch {
+        setErrors(['Failed to parse blueprint file — make sure it is valid JSON.']);
+      }
+    },
+    [openBlueprint],
+  );
+
+  // ---- Edit a stored blueprint (`/author.html?blueprint=<id>`) ----
+  //
+  // The dashboard's Edit action hands the tab over by full navigation, the mirror of Simulate
+  // going the other way — the two are separate page entry points with no shared in-app router.
+  // The id stays in the URL, so a reload reopens the stored blueprint rather than dropping the
+  // tab back to an empty canvas.
+  const [editingBlueprintId] = useState(
+    () => new URLSearchParams(window.location.search).get('blueprint'),
+  );
+
+  useEffect(() => {
+    if (!editingBlueprintId) return;
+
+    let cancelled = false;
+    fetchBlueprint(API_BASE_URL, editingBlueprintId)
+      .then((bp) => {
+        if (!cancelled) openBlueprint(bp);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setErrors([err instanceof Error ? err.message : 'Failed to load blueprint']);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editingBlueprintId, openBlueprint]);
 
   // ---- Export ----
 

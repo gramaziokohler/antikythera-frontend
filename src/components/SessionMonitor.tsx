@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight, StepForward, Timer } from 'lucide-react'
+import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight, StepForward, Timer, SquarePen } from 'lucide-react'
 import { useSessionStream } from '../hooks/useSessionStream'
 import { useSimulationStandIn } from '../hooks/useSimulationStandIn'
 import { useSimulationAgentState } from '../hooks/useSimulationAgentState'
@@ -618,6 +618,15 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     setShowStartDialog(true);
   };
 
+  // Opens the blueprint being previewed in the authoring tool. Authoring tool and dashboard are
+  // separate page entry points (author.html vs index.html), so — as with Simulate handing the
+  // tab the other way — a full navigation is how the handover happens.
+  const handleEditBlueprint = () => {
+    const editableBlueprintId = visibleBlueprintId || blueprintId;
+    if (!editableBlueprintId) return;
+    window.location.href = `/author.html?blueprint=${encodeURIComponent(editableBlueprintId)}`;
+  };
+
   const onDialogSessionStarted = (newSessionId: string) => {
     setShowStartDialog(false);
     if (onSessionCreated) {
@@ -711,9 +720,14 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
                 )}
               </>
             ) : (
-              <button onClick={handleStartSession} className="control-button start-preview-btn" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Plus size={16} /> <span>New Session</span>
-              </button>
+              <>
+                <button onClick={handleEditBlueprint} className="control-button edit-blueprint-btn" title="Open this blueprint in the authoring tool" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <SquarePen size={16} /> <span>Edit</span>
+                </button>
+                <button onClick={handleStartSession} className="control-button start-preview-btn" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Plus size={16} /> <span>New Session</span>
+                </button>
+              </>
             )}
           </div>
         </div>
