@@ -53,6 +53,17 @@
   color: var(--color-terracotta-500);
 }
 
+/* ADR-0003 / issue-sim-06: step-through (break on every task) toggle, driving tab only. */
+.step-through-btn.active {
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+}
+
+.step-through-btn.active:hover {
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+}
+
 .start-preview-btn {
   background: var(--color-terracotta-500);
   color: var(--color-text-inverse);

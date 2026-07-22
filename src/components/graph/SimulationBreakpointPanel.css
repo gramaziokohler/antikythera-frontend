@@ -1,0 +1,136 @@
+.sbp-root {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    z-index: var(--z-dropdown);
+    width: 320px;
+    max-height: calc(100% - 24px);
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-error);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+}
+
+.sbp-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-error);
+    background: var(--color-status-error-bg);
+    flex-shrink: 0;
+}
+
+.sbp-list {
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sbp-card {
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 6px;
+    padding: 8px 10px;
+    background: var(--color-bg-card);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sbp-card-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--color-error);
+}
+
+.sbp-task-id {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sbp-task-type {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    margin-left: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sbp-hint {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+    margin: 0;
+}
+
+.sbp-outputs {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sbp-output-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.sbp-output-label {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.sbp-output-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    font-family: var(--font-mono);
+}
+
+.sbp-output-type {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+}
+
+.sbp-continue-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--color-terracotta-500);
+    color: var(--color-text-inverse);
+    border: none;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition-base);
+}
+
+.sbp-continue-btn:hover:not(:disabled) {
+    background: var(--color-terracotta-600);
+}
+
+.sbp-continue-btn:disabled {
+    background: var(--color-border-strong);
+    cursor: not-allowed;
+}

@@ -21,6 +21,10 @@ interface SessionGraphProps {
   onNodeSwap?: (sourceId: string, targetId: string) => void;
   activeBlueprintId?: string;
   onNodeContextMenu?: (event: MouseEvent, node: Node) => void;
+  /** ADR-0003 / issue-sim-06: task ids currently marked with a breakpoint, driving-tab only. */
+  breakpointedTaskIds?: Set<string>;
+  /** Task ids currently claimed and held by the stand-in, awaiting Continue. */
+  heldTaskIds?: Set<string>;
 }
 
 const nodeWidth = 280; // Match TaskNode CSS
@@ -89,7 +93,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[]) => {
 
   return { nodes: layoutedNodes, edges };
 };
-export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, onNodeContextMenu, activeBlueprintId }: SessionGraphProps & { onNodeDoubleClick?: (event: MouseEvent, node: Node) => void }) {
+export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, onNodeContextMenu, activeBlueprintId, breakpointedTaskIds, heldTaskIds }: SessionGraphProps & { onNodeDoubleClick?: (event: MouseEvent, node: Node) => void }) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [isInteractive, setIsInteractive] = useState(false); // Start locked
@@ -123,7 +127,9 @@ export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, onNodeContex
           inputs: node.inputs,
           outputs: node.outputs,
           internalBlueprintId: node.internalBlueprintId,
-          onExpand: onNodeDoubleClick // Pass expand handler
+          onExpand: onNodeDoubleClick, // Pass expand handler
+          isBreakpointed: breakpointedTaskIds?.has(node.id) ?? false,
+          isHeld: heldTaskIds?.has(node.id) ?? false,
         },
         position: { x: 0, y: 0 },
         style: { width: nodeWidth, height: 'auto' }, // Force wrapper dimensions
@@ -209,7 +215,7 @@ export function SessionGraph({ data, onNodeSwap, onNodeDoubleClick, onNodeContex
     // Scope groups go first so they render behind task nodes
     setNodes([...scopeNodes, ...layoutedNodes]);
     setEdges(layoutedEdges);
-  }, [data, setNodes, setEdges]);
+  }, [data, setNodes, setEdges, breakpointedTaskIds, heldTaskIds]);
 
   // Handle Viewport Restore/Fit when blueprint changes
   useEffect(() => {

@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
+import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight, StepForward } from 'lucide-react'
 import { useSessionStream } from '../hooks/useSessionStream'
 import { useSimulationStandIn } from '../hooks/useSimulationStandIn'
+import { useSimulationAgentState } from '../hooks/useSimulationAgentState'
 import { transformBlueprintToGraph } from '../utils/transform-blueprint'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
 import { StartSessionDialog } from './StartSessionDialog'
 import { DataStoreExplorer } from './datastore/DataStoreExplorer'
 import { NodeContextMenu } from './graph/NodeContextMenu'
+import { SimulationBreakpointPanel } from './graph/SimulationBreakpointPanel'
 
 interface SessionMonitorProps {
   apiBaseUrl: string
@@ -81,8 +83,18 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     { onDatastoreUpdate: sessionId ? handleDatastoreUpdate : undefined }
   )
 
-  // Only the tab that pressed Simulate registers the ADR-0003 stand-in agent for this session.
-  useSimulationStandIn(sessionId)
+  // Only the tab that pressed Simulate registers the ADR-0003 stand-in agent for this session;
+  // a watching tab gets `null` back and renders none of the breakpoint UI below (issue-sim-06).
+  const simulationAgent = useSimulationStandIn(sessionId)
+  const simState = useSimulationAgentState(simulationAgent)
+
+  const breakpointedTaskIds = useMemo(() => {
+    if (!simulationAgent) return undefined
+    if (simState.breakOnEveryTask) return new Set((graphData?.nodes ?? []).map(n => n.id))
+    return simState.breakpoints
+  }, [simulationAgent, simState.breakOnEveryTask, simState.breakpoints, graphData])
+
+  const heldTaskIdSet = useMemo(() => new Set(simState.heldTaskIds), [simState.heldTaskIds])
 
   // Sync sessionState from SSE hook (session mode only; preview mode sets it separately)
   useEffect(() => {
@@ -394,6 +406,11 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
     });
   }, [graphData]);
 
+  const handleToggleBreakpoint = useCallback((taskId: string) => {
+    simulationAgent?.toggleBreakpoint(taskId);
+    setContextMenu(null);
+  }, [simulationAgent]);
+
   const handleResetTask = useCallback(async (taskId: string, includeDownstream: boolean) => {
     setContextMenu(null);
 
@@ -618,6 +635,17 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           </div>
 
           <div className="session-controls" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', position: 'relative' }}>
+            {simulationAgent && (
+              <button
+                onClick={() => simulationAgent.setBreakOnEveryTask(!simState.breakOnEveryTask)}
+                className={`control-button step-through-btn${simState.breakOnEveryTask ? ' active' : ''}`}
+                title="Break on every task, so every task holds for inspection (step-through)"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <StepForward size={16} /> <span>{simState.breakOnEveryTask ? 'Stepping: On' : 'Step-through'}</span>
+              </button>
+            )}
+
             {blueprintStack.length > 0 && (
               <button onClick={handleNavigateBack} className="control-button back-btn" style={{ marginRight: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span>← Back</span>
@@ -704,12 +732,21 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
                 onNodeSwap={localBlueprint ? handleNodeSwap : undefined}
                 onNodeDoubleClick={handleNodeDoubleClick}
                 onNodeContextMenu={handleNodeContextMenu}
-                activeBlueprintId={localBlueprint?.id || localBlueprint?.data?.id || blueprintId || mainBlueprintId} />
+                activeBlueprintId={localBlueprint?.id || localBlueprint?.data?.id || blueprintId || mainBlueprintId}
+                breakpointedTaskIds={breakpointedTaskIds}
+                heldTaskIds={heldTaskIdSet} />
             ) : (
               <div className="loading-container">
                 <div className="loading-spinner"></div>
                 <p>Loading graph...</p>
               </div>
+            )}
+            {simulationAgent && simState.heldTaskIds.length > 0 && (
+              <SimulationBreakpointPanel
+                agent={simulationAgent}
+                heldTaskIds={simState.heldTaskIds}
+                graphNodes={graphData?.nodes ?? []}
+              />
             )}
           </div>
         </div>
@@ -797,9 +834,13 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           nodeType={contextMenu.nodeType}
           scopeName={contextMenu.scopeName}
           hasSession={!!sessionId}
+          canBreakpoint={!!simulationAgent}
+          isBreakpointed={simState.breakpoints.has(contextMenu.nodeId)}
+          breakOnEveryTask={simState.breakOnEveryTask}
           onResetTask={handleResetTask}
           onSkipTask={handleSkipTask}
           onResetScope={handleResetScope}
+          onToggleBreakpoint={handleToggleBreakpoint}
           onClose={() => setContextMenu(null)}
         />
       )}

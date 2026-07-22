@@ -157,3 +157,15 @@ it complete), press *Simulate*, and watch the dashboard tab that navigated there
 one that registered the stand-in (see `useSimulationStandIn`) and will claim and complete (or
 hold) the `simulation.*` task. Opening the same session URL in a second tab renders the graph
 without claiming anything.
+
+**Stepping through a simulation with breakpoints**: on the driving tab, right-click a task node
+in the graph (working or not-yet-started) and choose *Add breakpoint*, or use the toolbar's
+*Step-through* toggle to break on every task. A breakpointed task is claimed immediately and then
+held — it stays `running` in the orchestrator the whole time, never redispatched — and shows up
+both as a marker on its node and as a card in the breakpoint panel (bottom-right of the graph).
+Edit the value there with the same tier-1/2/3 editors the authoring tool uses, then press
+*Continue*; the edited value, not the authored default, is what the task completes with and what
+lands in the datastore. A task with no authored default at all shows the same panel with Continue
+disabled until every output has a value. Reloading the driving tab drops all breakpoints and any
+in-flight hold — the task it was holding stays stuck `running` forever and must be recovered with
+*Reset task* from the graph's context menu, the same recovery path any other stuck task uses.
