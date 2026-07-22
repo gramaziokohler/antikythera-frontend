@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Play, Pause, Plus, RotateCcw, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
 import { useSessionStream } from '../hooks/useSessionStream'
 import { transformBlueprintToGraph } from '../utils/transform-blueprint'
+import { notifications } from '../services/NotificationStore'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
 import { StartSessionDialog } from './StartSessionDialog'
@@ -26,16 +27,20 @@ interface TaskErrorPayload {
 }
 
 /**
- * Render the session's last_task_error for display.
+ * Split the session's last_task_error into a notification title and body.
  * The API returns it COMPAS-serialized, so the fields live under `data`.
  */
-function formatTaskError(raw: unknown): string | null {
+function formatTaskError(raw: unknown): { title: string; message: string } | null {
   if (!raw || typeof raw !== 'object') return null
   const wrapper = raw as { data?: TaskErrorPayload }
   const error: TaskErrorPayload = wrapper.data ?? (raw as TaskErrorPayload)
   if (!error.message && !error.code) return null
+
   const details = error.details ? ` (${error.details})` : ''
-  return error.code ? `${error.code}: ${error.message ?? ''}${details}` : `${error.message}${details}`
+  return {
+    title: error.code ? `Session failed: ${error.code}` : 'Session failed',
+    message: `${error.message ?? ''}${details}`,
+  }
 }
 
 // Command Pattern: Store operations to allow undo/sync
@@ -300,7 +305,13 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   // completed before the client connected (the reconnect hydration path covers
   // this case via __snapshot__, but this guard catches any timing gaps).
   useEffect(() => {
-    if (!sessionId || (sessionState !== 'completed' && sessionState !== 'failed')) return
+    if (!sessionId) return
+
+    // Resuming clears the recorded reason on the backend; drop the toast to match,
+    // so a previous failure never hangs over a session that is running again.
+    if (sessionState === 'running') notifications.dismiss(`session-failed-${sessionId}`)
+
+    if (sessionState !== 'completed' && sessionState !== 'failed') return
 
     fetch(`${apiBaseUrl}/sessions/${sessionId}/data`)
       .then(r => r.ok ? r.json() : null)
@@ -314,7 +325,16 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           if (!d) return
           const lastTaskError = d.data?.last_task_error || d.last_task_error
           const formatted = formatTaskError(lastTaskError)
-          if (formatted) setError(formatted)
+          if (!formatted) return
+          // A session failure is an event to be told about, not a validation
+          // message about the control you just touched, so it goes to the
+          // notification overlay rather than the inline error line.
+          notifications.notify({
+            id: `session-failed-${sessionId}`,
+            title: formatted.title,
+            message: formatted.message,
+            level: 'error',
+          })
         })
         .catch(console.error)
     }

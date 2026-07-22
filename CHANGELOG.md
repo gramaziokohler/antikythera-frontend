@@ -9,13 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `NotificationStore` singleton backing the notification overlay, so any component can raise a notification without being wired through `NotificationManager`.
 - `useSessionStream` hook owning the full SSE lifecycle: blueprint snapshot fetch, incremental `task_state_changed` / `session_state_changed` patching, auto-reconnect with back-off, and teardown on unmount.
 - Datastore panel hydrates on connect/reconnect and updates incrementally via `datastore_updated` SSE events as tasks complete.
 
 ### Changed
 
 - Blueprint upload surfaces dataflow warnings returned by the API (e.g. a condition reading a name no task produces). Warnings stay on screen until dismissed, since the upload itself succeeds.
-- The session failure banner renders `last_task_error` properly instead of `[object Object]`; the error is COMPAS-serialized, so its fields live under `data`.
+- Session failures are reported through the notification overlay instead of the inline error line, titled with the error code (e.g. "Session failed: SCOPE_CONDITION_ERROR"). The banner previously rendered `[object Object]`, since the error is COMPAS-serialized and its fields live under `data`.
 - `SessionMonitor` replaced its 500ms polling loop with `useSessionStream`; only a single long-lived SSE connection is opened per session.
 - Pause and resume apply optimistic state updates immediately; the stream confirms or corrects them.
 - `task_state_changed` events are filtered by `visibleBlueprintId` so drilling into a composite task's inner blueprint does not apply outer events to the displayed graph.
