@@ -22,6 +22,8 @@ export interface StartBlueprintResponse {
 export interface UploadBlueprintResponse {
   blueprint_id: string;
   message: string;
+  /** Non-blocking authoring warnings, e.g. a condition reading a name no task produces. */
+  warnings?: string[];
 }
 
 export interface UploadModelResponse {

@@ -19,6 +19,25 @@ interface SessionMonitorProps {
 
 // Removed old DataViewer and ValueRenderer components as they are replaced by DataStoreExplorer
 
+interface TaskErrorPayload {
+  code?: string
+  message?: string
+  details?: string
+}
+
+/**
+ * Render the session's last_task_error for display.
+ * The API returns it COMPAS-serialized, so the fields live under `data`.
+ */
+function formatTaskError(raw: unknown): string | null {
+  if (!raw || typeof raw !== 'object') return null
+  const wrapper = raw as { data?: TaskErrorPayload }
+  const error: TaskErrorPayload = wrapper.data ?? (raw as TaskErrorPayload)
+  if (!error.message && !error.code) return null
+  const details = error.details ? ` (${error.details})` : ''
+  return error.code ? `${error.code}: ${error.message ?? ''}${details}` : `${error.message}${details}`
+}
+
 // Command Pattern: Store operations to allow undo/sync
 interface GraphCommand {
   type: 'SWAP_TASKS';
@@ -294,7 +313,8 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
         .then(d => {
           if (!d) return
           const lastTaskError = d.data?.last_task_error || d.last_task_error
-          if (lastTaskError) setError(`Task failed: ${lastTaskError}`)
+          const formatted = formatTaskError(lastTaskError)
+          if (formatted) setError(formatted)
         })
         .catch(console.error)
     }
