@@ -6,7 +6,15 @@ import type { Agent } from '../Agent';
 import { Task } from '../Task';
 import { antikythera, compas_pb } from '../../proto/bundle';
 
-function taskWithParams(params: Record<string, { stringValue?: string; numberValue?: number; boolValue?: boolean }>) {
+/**
+ * `outputKeys` mirrors the orchestrator's `output_keys` — the names of the outputs the task
+ * declares in its blueprint, sent on every assignment (see `outputs_to_keys`). It defaults to
+ * the trajectory output these tasks are modelled on; pass `[]` for a task that declares none.
+ */
+function taskWithParams(
+  params: Record<string, { stringValue?: string; numberValue?: number; boolValue?: boolean }>,
+  outputKeys: string[] = ['trajectory'],
+) {
   const encoded: { [k: string]: compas_pb.data.IAnyData } = {};
   for (const [key, value] of Object.entries(params)) {
     encoded[key] = { value };
@@ -15,6 +23,7 @@ function taskWithParams(params: Record<string, { stringValue?: string; numberVal
     id: 'task-1',
     type: 'simulation.compas_fab.plan_trajectory',
     params: encoded,
+    outputKeys,
   };
   return new Task(message);
 }
@@ -131,7 +140,7 @@ describe('SimulationAgent', () => {
       expect(agent.isHeld('task-1')).toBe(false);
     });
 
-    it('reports requiresValue for a task held with no authored output', async () => {
+    it('reports requiresValue for a task held with a declared output and no authored value', async () => {
       const agent = new SimulationAgent();
       const task = taskWithParams({ speed: { numberValue: 1.5 } });
 
@@ -140,6 +149,34 @@ describe('SimulationAgent', () => {
 
       expect(agent.isHeld('task-1')).toBe(true);
       expect(agent.requiresValue('task-1')).toBe(true);
+    });
+
+    // A task declaring no outputs has nothing for an author to supply, so the "no authored
+    // output halts" rule does not apply to it: holding it would strand the whole simulation on
+    // a prompt with no fields, which `continueHeldTask` then refuses to release with `{}`.
+    it('completes a task that declares no outputs rather than holding it', async () => {
+      const agent = new SimulationAgent();
+      const task = taskWithParams({ speed: { numberValue: 1.5 } }, []);
+
+      expect(await agent.invokeTool!('compas_fab.plan_trajectory', task)).toEqual({});
+      expect(agent.isHeld('task-1')).toBe(false);
+    });
+
+    it('holds a breakpointed task that declares no outputs, and continues it with nothing', async () => {
+      const agent = new SimulationAgent();
+      agent.toggleBreakpoint('task-1');
+      const task = taskWithParams({ speed: { numberValue: 1.5 } }, []);
+
+      const pending = agent.invokeTool!('compas_fab.plan_trajectory', task);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(agent.isHeld('task-1')).toBe(true);
+      expect(agent.requiresValue('task-1')).toBe(false);
+
+      agent.continueHeldTask('task-1', {});
+
+      expect(await pending).toEqual({});
+      expect(agent.isHeld('task-1')).toBe(false);
     });
   });
 
@@ -319,11 +356,14 @@ describe('SimulationAgent', () => {
     // progress.txt. Breakpoints and the held-task bookkeeping must operate on the plain id the
     // graph and the breakpoint UI use, not the wire id, or a breakpoint set from the UI would
     // never match a claimed task.
+    // Declares an output with no authored value, so it holds on its own merits and these cases
+    // turn purely on which id the hold is keyed by.
     function taskWithWireId(id: string) {
       const message: antikythera.v1.ITaskAssignmentMessage = {
         id,
         type: 'simulation.demo.tool',
         params: {},
+        outputKeys: ['result'],
       };
       return new Task(message);
     }
