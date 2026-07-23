@@ -43,6 +43,21 @@ function formatTaskError(raw: unknown): { title: string; message: string } | nul
   }
 }
 
+/**
+ * Pull the reason out of a failed session action, so a rejection like "this
+ * session already completed" reaches the user instead of a generic message.
+ */
+async function readErrorDetail(response: Response, fallback: string): Promise<string> {
+  try {
+    const { detail } = await response.json()
+    if (typeof detail === 'string') return detail
+    if (typeof detail?.message === 'string') return detail.message
+  } catch {
+    // Not a JSON body — the status line is all we have.
+  }
+  return fallback
+}
+
 // Command Pattern: Store operations to allow undo/sync
 interface GraphCommand {
   type: 'SWAP_TASKS';
@@ -370,10 +385,27 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           "broker_port": parseInt(import.meta.env.VITE_MQTT_BROKER_PORT || '1883'),
         }),
       })
-      if (!response.ok) throw new Error('Failed to resume session')
+      if (!response.ok) throw new Error(await readErrorDetail(response, 'Failed to resume session'))
     } catch (err) {
       setSessionState(previousSessionState)
       setError(err instanceof Error ? err.message : 'Failed to resume session')
+    }
+  }
+
+  /**
+   * A completed session is a record of a run, so it is never rewound: the
+   * backend re-runs its blueprint as a new session and we follow that ID,
+   * leaving the finished one behind with its results intact.
+   */
+  const handleRestart = async () => {
+    if (!sessionId) return
+    try {
+      const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/restart`, { method: 'POST' })
+      if (!response.ok) throw new Error(await readErrorDetail(response, 'Failed to restart session'))
+      const { session_id: restartedSessionId } = await response.json()
+      onDialogSessionStarted(restartedSessionId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to restart session')
     }
   }
 
@@ -638,7 +670,9 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   }
 
   const isRunning = sessionState?.toLowerCase() === 'running';
-  const isFinished = ['completed', 'failed', 'cancelled'].includes(sessionState?.toLowerCase() || '');
+  // Only a completed session restarts. A failed one resumes instead, which
+  // retries the task that failed and keeps the work that already succeeded.
+  const isCompleted = sessionState?.toLowerCase() === 'completed';
 
   return (
     <div className="session-monitor">
@@ -666,8 +700,8 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
                   <button onClick={handlePause} className="control-button start-preview-btn" title="Pause Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Pause size={16} /> <span>Pause</span>
                   </button>
-                ) : isFinished ? (
-                  <button onClick={handleResume} className="control-button start-preview-btn" title="Restart Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                ) : isCompleted ? (
+                  <button onClick={handleRestart} className="control-button start-preview-btn" title="Run this blueprint again as a new session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <RotateCcw size={16} /> <span>Restart Session</span>
                   </button>
                 ) : (
