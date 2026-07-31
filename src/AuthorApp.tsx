@@ -4,30 +4,23 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
   Position,
-  MarkerType,
 } from '@xyflow/react';
 import type { Node, Edge, NodeChange, EdgeChange } from '@xyflow/react';
-import {
-  BlueprintCanvas,
-  getLayoutedElements,
-} from './components/author/BlueprintCanvas';
+import { BlueprintCanvas } from './components/author/BlueprintCanvas';
 import { AuthorToolbar } from './components/author/AuthorToolbar';
 import { TaskEditPanel, BlueprintMetaPanel } from './components/author/TaskEditPanel';
-import type {
-  AuthorNodeData,
-  BlueprintMeta,
-  Blueprint,
-  BlueprintTask,
-} from './types/blueprint-schema';
+import type { AuthorNodeData, BlueprintMeta } from './types/blueprint-schema';
+import { validateBlueprint } from './utils/blueprint-validation';
+import {
+  makeEdgeId,
+  blueprintToFlow,
+  flowToBlueprint,
+} from './utils/blueprint-flow';
 import './styles/author.css';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
-
-function makeEdgeId(source: string, target: string) {
-  return `${source}->${target}`;
-}
 
 function buildDefaultBlueprint(): { nodes: Node[]; edges: Edge[] } {
   const startNode: Node = {
@@ -65,80 +58,6 @@ function buildDefaultBlueprint(): { nodes: Node[]; edges: Edge[] } {
   };
 
   return { nodes: [startNode, endNode], edges: [] };
-}
-
-function blueprintToFlow(bp: Blueprint): { nodes: Node[]; edges: Edge[] } {
-  const nodes: Node[] = bp.tasks.map((task) => ({
-    id: task.id,
-    type: 'authorTask',
-    position: { x: 0, y: 0 },
-    data: {
-      taskType: task.type,
-      description: task.description ?? '',
-      condition: task.condition ?? '',
-      inputs: task.inputs ?? [],
-      outputs: task.outputs ?? [],
-      params: task.params ?? [],
-    } satisfies AuthorNodeData,
-    sourcePosition: Position.Right,
-    targetPosition: Position.Left,
-    deletable: task.type !== 'system.start' && task.type !== 'system.end',
-  }));
-
-  const edges: Edge[] = [];
-  bp.tasks.forEach((task) => {
-    (task.depends_on ?? []).forEach((dep) => {
-      edges.push({
-        id: makeEdgeId(dep.id, task.id),
-        source: dep.id,
-        target: task.id,
-        type: 'deletable',
-        markerEnd: { type: MarkerType.ArrowClosed },
-        style: { strokeWidth: 2 },
-      });
-    });
-  });
-
-  // Apply Dagre layout so imported blueprints render cleanly
-  return getLayoutedElements(nodes, edges);
-}
-
-function flowToBlueprint(
-  nodes: Node[],
-  edges: Edge[],
-  meta: BlueprintMeta,
-): Blueprint {
-  const tasks: BlueprintTask[] = nodes.map((node) => {
-    const d = node.data as AuthorNodeData;
-
-    const depends_on = edges
-      .filter((e) => e.target === node.id)
-      .map((e) => ({ id: e.source }));
-
-    const task: BlueprintTask = { id: node.id, type: d.taskType };
-    if (d.description) task.description = d.description;
-    if (d.condition) task.condition = d.condition;
-
-    const inputs = d.inputs.filter((f) => f.name.trim());
-    const outputs = d.outputs.filter((f) => f.name.trim());
-    const params = d.params.filter((f) => f.name.trim());
-
-    if (inputs.length) task.inputs = inputs;
-    if (outputs.length) task.outputs = outputs;
-    if (params.length) task.params = params;
-    if (depends_on.length) task.depends_on = depends_on;
-
-    return task;
-  });
-
-  const bp: Blueprint = {
-    version: meta.version || '1.0',
-    id: meta.id,
-    name: meta.name,
-    tasks,
-  };
-  if (meta.description) bp.description = meta.description;
-  return bp;
 }
 
 function validateFlow(nodes: Node[]): string[] {
@@ -216,23 +135,38 @@ export function AuthorApp() {
   // ---- Open / import ----
 
   const handleOpen = useCallback(async (file: File) => {
+    let parsed: unknown;
     try {
-      const text = await file.text();
-      const bp: Blueprint = JSON.parse(text);
-      const { nodes: n, edges: e } = blueprintToFlow(bp);
-      setNodes(n);
-      setEdges(e);
-      setMeta({
-        id: bp.id,
-        name: bp.name,
-        version: bp.version,
-        description: bp.description ?? '',
-      });
-      setSelectedNodeId(null);
-      setErrors([]);
+      parsed = JSON.parse(await file.text());
     } catch {
       setErrors(['Failed to parse blueprint file — make sure it is valid JSON.']);
+      return;
     }
+
+    // Enforce the shared contract before importing. Rejecting an invalid
+    // blueprint here is what prevents the editor from loading fields it does
+    // not understand and then dropping them on export.
+    const result = validateBlueprint(parsed);
+    if (!result.blueprint) {
+      setErrors([
+        'Blueprint does not match the schema:',
+        ...result.errors,
+      ]);
+      return;
+    }
+
+    const bp = result.blueprint;
+    const { nodes: n, edges: e } = blueprintToFlow(bp);
+    setNodes(n);
+    setEdges(e);
+    setMeta({
+      id: bp.id,
+      name: bp.name,
+      version: bp.version,
+      description: bp.description ?? '',
+    });
+    setSelectedNodeId(null);
+    setErrors([]);
   }, []);
 
   // ---- Export ----
