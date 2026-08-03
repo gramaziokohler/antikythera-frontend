@@ -15,7 +15,7 @@ import {
   stripSimulationDerivation,
 } from '../blueprint-simulate';
 
-const BLUEPRINT: Blueprint = {
+const BLUEPRINT = {
   version: '1.0',
   id: 'my-blueprint',
   name: 'My Blueprint',
@@ -35,7 +35,7 @@ const BLUEPRINT: Blueprint = {
     { id: 'sleep', type: 'system.sleep', depends_on: [{ id: 'plan' }] },
     { id: 'end', type: 'system.end', depends_on: [{ id: 'sleep' }] },
   ],
-};
+} satisfies Blueprint;
 
 describe('deriveSimulationBlueprintId', () => {
   it('appends the __sim suffix', () => {
@@ -315,7 +315,7 @@ describe('stripSimulationDerivation', () => {
   });
 
   it('survives repeated laps of Simulate and Edit', () => {
-    let bp = BLUEPRINT;
+    let bp: Blueprint = BLUEPRINT;
     for (let lap = 0; lap < 3; lap++) {
       bp = stripSimulationDerivation(deriveSimulationBlueprint(bp));
     }

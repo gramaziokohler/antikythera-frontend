@@ -1,6 +1,6 @@
 import type {
   Blueprint,
-  BlueprintTask,
+  Task,
   Dependency,
   TaskInput,
   TaskOutput,
@@ -76,8 +76,8 @@ function toDependency(raw: Record<string, unknown>): Dependency {
   return withoutNulls({ id: String(raw.id ?? ''), type: raw.type }) as Dependency;
 }
 
-function toTask(raw: Record<string, unknown>): BlueprintTask {
-  const task: BlueprintTask = { id: String(raw.id ?? ''), type: String(raw.type ?? '') };
+function toTask(raw: Record<string, unknown>): Task {
+  const task: Task = { id: String(raw.id ?? ''), type: String(raw.type ?? '') };
 
   const description = asString(raw.description);
   const condition = asString(raw.condition);
@@ -100,14 +100,14 @@ function toTask(raw: Record<string, unknown>): BlueprintTask {
 }
 
 /** Normalises a stored blueprint — COMPAS-wrapped or already flat — into an authoring `Blueprint`. */
-export function normalizeBlueprint(raw: unknown): Blueprint {
+export function normalizeBlueprint(raw: unknown): Blueprint & { tasks: Task[] } {
   const data = unwrap(raw);
   const id = asString(data.id);
   if (!id) {
     throw new Error('Blueprint is missing an id');
   }
 
-  const blueprint: Blueprint = {
+  const blueprint: Blueprint & { tasks: Task[] } = {
     version: asString(data.version) ?? '1.0',
     id,
     name: asString(data.name) ?? id,
@@ -121,7 +121,7 @@ export function normalizeBlueprint(raw: unknown): Blueprint {
 }
 
 /** Fetches a stored blueprint by id, ready to open in the authoring tool. */
-export async function fetchBlueprint(apiBaseUrl: string, id: string): Promise<Blueprint> {
+export async function fetchBlueprint(apiBaseUrl: string, id: string): Promise<Blueprint & { tasks: Task[] }> {
   const response = await fetch(`${apiBaseUrl}/blueprints/${encodeURIComponent(id)}`);
   if (!response.ok) {
     throw new Error(

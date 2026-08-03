@@ -1,4 +1,4 @@
-import type { Blueprint, BlueprintTask, TaskOutput, TaskParam } from '../types/blueprint-schema';
+import type { Blueprint, Task, TaskOutput, TaskParam } from '../types/blueprint-schema';
 import {
   isSystemTaskType,
   SYSTEM_COMPOSITE_TASK_TYPE,
@@ -31,14 +31,14 @@ export const SIMULATION_OPT_OUT_PARAM_NAME = '__sim_use_real_agent__';
 
 /** True if `params` carries the opt-out flag. Operates on a bare param list so both the
  * derive-time rewrite and the authoring-tool panel (which only has `AuthorNodeData.params`,
- * not a full `BlueprintTask`) can share one check. */
+ * not a full `Task`) can share one check. */
 export function isOptedOutParams(params: TaskParam[] | undefined): boolean {
   return (params ?? []).some(
     (p) => p.name === SIMULATION_OPT_OUT_PARAM_NAME && p.value === true,
   );
 }
 
-export function isOptedOutOfSimulation(task: BlueprintTask): boolean {
+export function isOptedOutOfSimulation(task: Task): boolean {
   return isOptedOutParams(task.params);
 }
 
@@ -90,7 +90,7 @@ export class CompositeTaskNotSupportedError extends Error {
   }
 }
 
-function rewriteTaskType(task: BlueprintTask): string {
+function rewriteTaskType(task: Task): string {
   const { type } = task;
   if (isSystemTaskType(type)) {
     return type;
@@ -121,15 +121,16 @@ function simulatedOutputParams(outputs: TaskOutput[] | undefined): TaskParam[] {
  * Throws CompositeTaskNotSupportedError, naming the offending tasks, if the
  * blueprint contains any `system.composite` task.
  */
-export function deriveSimulationBlueprint(bp: Blueprint): Blueprint {
-  const compositeTaskIds = bp.tasks
+export function deriveSimulationBlueprint(bp: Blueprint): Blueprint & { tasks: Task[] } {
+  const sourceTasks = bp.tasks ?? [];
+  const compositeTaskIds = sourceTasks
     .filter((task) => task.type === SYSTEM_COMPOSITE_TASK_TYPE)
     .map((task) => task.id);
   if (compositeTaskIds.length) {
     throw new CompositeTaskNotSupportedError(compositeTaskIds);
   }
 
-  const tasks: BlueprintTask[] = bp.tasks.map((task) => {
+  const tasks: Task[] = sourceTasks.map((task) => {
     const type = rewriteTaskType(task);
     // Only tasks actually rewritten to simulation.* need their outputs carried as params —
     // this also keeps the rewrite idempotent (re-deriving an already-derived task, whose type
@@ -166,14 +167,14 @@ export function deriveSimulationBlueprint(bp: Blueprint): Blueprint {
  * `__sim_out__` params from. Safe on a blueprint that was never derived — nothing matches, and
  * it passes through unchanged.
  */
-export function stripSimulationDerivation(bp: Blueprint): Blueprint {
-  const tasks: BlueprintTask[] = bp.tasks.map((task) => {
+export function stripSimulationDerivation(bp: Blueprint): Blueprint & { tasks: Task[] } {
+  const tasks: Task[] = (bp.tasks ?? []).map((task) => {
     const type = stripSimulationTypePrefix(task.type);
     const params = (task.params ?? []).filter(
       (param) => !param.name.startsWith(SIMULATED_OUTPUT_PARAM_PREFIX),
     );
 
-    const stripped: BlueprintTask = { ...task, type };
+    const stripped: Task = { ...task, type };
     if (params.length) {
       stripped.params = params;
     } else {
