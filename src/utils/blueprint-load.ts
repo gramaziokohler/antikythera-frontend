@@ -51,10 +51,23 @@ function withoutNulls<T extends object>(obj: T): T {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== null && v !== undefined)) as T;
 }
 
+/**
+ * Reads the declared type off a stored IO item.
+ *
+ * `type_hint` is the field the model actually carries; `type` is a deprecated
+ * alias kept for blueprints written before the rename (the backend still accepts
+ * it on upload). Reading only one of the two loses the declared type of every
+ * task that used the other, so both are accepted here and only `type_hint` is
+ * produced from this point on.
+ */
+function toTypeHint(raw: Record<string, unknown>): unknown {
+  return raw.type_hint ?? raw.type;
+}
+
 function toTaskField(raw: Record<string, unknown>) {
   return withoutNulls({
     name: String(raw.name ?? ''),
-    type: raw.type,
+    type_hint: toTypeHint(raw),
     value: raw.value,
     description: raw.description,
   });

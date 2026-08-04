@@ -6,6 +6,7 @@ import type {
   Blueprint,
   BlueprintMeta,
   Task,
+  TaskIO,
 } from '../types/blueprint-schema';
 import {
   SYSTEM_START_TASK_TYPE,
@@ -26,6 +27,21 @@ export function makeEdgeId(source: string, target: string) {
   return `${source}->${target}`;
 }
 
+/**
+ * Moves a declared type onto `type_hint`, the field the data model actually
+ * carries, and drops the deprecated `type` alias.
+ *
+ * Every blueprint reaching the editor passes through here — opened from a file,
+ * fetched from the orchestrator (already normalised by blueprint-load), or
+ * hand-written — so the editor works with exactly one type field from this point
+ * on, rather than having to guess which of the two a given task used.
+ */
+function canonicalizeTypeHint<T extends TaskIO>(field: T): T {
+  const { type, ...rest } = field;
+  const type_hint = field.type_hint ?? type;
+  return (type_hint ? { ...rest, type_hint } : rest) as T;
+}
+
 export function blueprintToFlow(bp: Blueprint): { nodes: Node[]; edges: Edge[] } {
   const tasks = bp.tasks ?? [];
   const nodes: Node[] = tasks.map((task) => ({
@@ -36,9 +52,9 @@ export function blueprintToFlow(bp: Blueprint): { nodes: Node[]; edges: Edge[] }
       taskType: task.type,
       description: task.description ?? '',
       condition: task.condition ?? '',
-      inputs: task.inputs ?? [],
-      outputs: task.outputs ?? [],
-      params: task.params ?? [],
+      inputs: (task.inputs ?? []).map(canonicalizeTypeHint),
+      outputs: (task.outputs ?? []).map(canonicalizeTypeHint),
+      params: (task.params ?? []).map(canonicalizeTypeHint),
       // Preserve scope membership so it survives an import → export round-trip.
       ...(task.scope_start !== undefined ? { scopeStart: task.scope_start } : {}),
       ...(task.scope_end !== undefined ? { scopeEnd: task.scope_end } : {}),

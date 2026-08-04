@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Plus,
   Play,
+  Group,
 } from 'lucide-react';
 import type { BlueprintMeta } from '../../types/blueprint-schema';
 
@@ -30,6 +31,9 @@ interface AuthorToolbarProps {
   isSimulating?: boolean;
   onAddNode: () => void;
   isPlacing?: boolean;
+  onGroupIntoScope: () => void;
+  /** How many task nodes are selected — a scope needs at least two. */
+  selectionCount?: number;
   errors: string[];
 }
 
@@ -46,8 +50,11 @@ export function AuthorToolbar({
   isSimulating = false,
   onAddNode,
   isPlacing = false,
+  onGroupIntoScope,
+  selectionCount = 0,
   errors,
 }: AuthorToolbarProps) {
+  const canGroup = selectionCount >= 2;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -127,6 +134,21 @@ export function AuthorToolbar({
       >
         <Plus size={14} />
         {isPlacing ? 'Placing… (Esc)' : 'Add Task'}
+      </button>
+
+      {/* Group a selection into a scope */}
+      <button
+        className="toolbar-btn"
+        onClick={onGroupIntoScope}
+        disabled={!canGroup}
+        title={
+          canGroup
+            ? `Wrap the ${selectionCount} selected tasks in a scope (retry / while / skip)`
+            : 'Select two or more connected tasks — Shift+drag, or Ctrl/⌘+click — to group them into a scope'
+        }
+      >
+        <Group size={14} />
+        {canGroup ? `Group ${selectionCount} into Scope` : 'Group into Scope'}
       </button>
 
       <div className="toolbar-spacer" />

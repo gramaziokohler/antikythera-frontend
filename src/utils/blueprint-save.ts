@@ -20,6 +20,46 @@ export function blueprintToFormData(bp: Blueprint): FormData {
   return formData;
 }
 
+/**
+ * Turns a failed orchestrator response into a message that says what is wrong.
+ *
+ * `/blueprints/upload` rejects a blueprint whose conditions read names no task
+ * produces, and puts the specific problems in `detail.problems` — the only place
+ * the author can find out which task and which expression. Reporting just the
+ * status code (as this did) left an author staring at "Save failed (400)" with no
+ * way to tell a malformed condition from an unreachable server.
+ */
+async function describeFailure(response: Response, fallback: string): Promise<string[]> {
+  let detail: unknown;
+  try {
+    detail = (await response.json())?.detail;
+  } catch {
+    // Not a JSON body (a proxy error page, say) — the status is all there is.
+  }
+
+  if (typeof detail === 'string' && detail) return [detail];
+
+  if (detail && typeof detail === 'object') {
+    const { message, problems } = detail as { message?: string; problems?: unknown };
+    const lines = typeof message === 'string' && message ? [message] : [];
+    if (Array.isArray(problems)) lines.push(...problems.map(String));
+    if (lines.length) return lines;
+  }
+
+  return [`${fallback} (${response.status})`];
+}
+
+/** Raised when the orchestrator rejects a blueprint, carrying its per-problem detail. */
+export class OrchestratorError extends Error {
+  problems: string[];
+
+  constructor(problems: string[]) {
+    super(problems.join(' · '));
+    this.name = 'OrchestratorError';
+    this.problems = problems;
+  }
+}
+
 /** Checks whether a blueprint id is already stored, to guard against silent overwrite. */
 export async function blueprintIdExists(
   apiBaseUrl: string,
@@ -43,7 +83,7 @@ export async function uploadBlueprint(
     body: blueprintToFormData(bp),
   });
   if (!response.ok) {
-    throw new Error(`Save failed (${response.status})`);
+    throw new OrchestratorError(await describeFailure(response, 'Save failed'));
   }
   return response.json();
 }
@@ -65,7 +105,7 @@ export async function startBlueprintSession(
     }),
   });
   if (!response.ok) {
-    throw new Error(`Failed to start session (${response.status})`);
+    throw new OrchestratorError(await describeFailure(response, 'Failed to start session'));
   }
   return response.json();
 }

@@ -9,6 +9,7 @@ import type {
   BlueprintMeta,
 } from '../../types/blueprint-schema';
 import {
+  KNOWN_IO_TYPES,
   KNOWN_TASK_TYPES,
   SYSTEM_START_TASK_TYPE,
   SYSTEM_END_TASK_TYPE,
@@ -76,6 +77,11 @@ export function BlueprintMetaPanel({ meta, onMetaChange }: BlueprintMetaPanelPro
           parameters. Connect nodes by dragging from the right handle of one
           task to the left handle of another.
         </p>
+        <p className="bmp-hint">
+          To make a region of the graph retry or loop, select the tasks
+          (Shift+drag, or Ctrl/&#8984;+click) and hit <strong>Group into Scope</strong>.
+          Click a scope&rsquo;s label on the canvas to edit its policy.
+        </p>
       </div>
     </div>
   );
@@ -85,7 +91,78 @@ export function BlueprintMetaPanel({ meta, onMetaChange }: BlueprintMetaPanelPro
 /*  FieldList – reusable table editor for inputs / outputs / params    */
 /* ------------------------------------------------------------------ */
 
-type GenericField = { name: string; type?: string; value?: unknown };
+type GenericField = { name: string; type_hint?: string; value?: unknown };
+
+/** Sentinel option that switches the cell to free text. Not a type anyone can declare. */
+const CUSTOM_TYPE_OPTION = '__custom__';
+
+/**
+ * Picks an IO item's declared type from the known list, or takes any other type
+ * as free text.
+ *
+ * A `<select>` rather than an `<input list>`: a datalist filters its options
+ * against what the input already contains, so once a type was chosen the list
+ * collapsed to that one entry and stopped being a picker. The set of legal types
+ * is still open — any dotted Python path is valid — so "Custom…" switches the
+ * cell to a text input, and a type that came from a blueprint but is not in the
+ * list opens as text without the author having to ask for it.
+ */
+function TypeHintField({
+  value,
+  onChange,
+}: {
+  value: string | undefined;
+  onChange: (type: string | undefined) => void;
+}) {
+  const [customRequested, setCustomRequested] = useState(false);
+  const isListed = !value || KNOWN_IO_TYPES.includes(value);
+
+  if (customRequested || !isListed) {
+    return (
+      <div className="tep-type-cell">
+        <input
+          className="tep-input field-type"
+          placeholder="my_package.MyClass"
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value || undefined)}
+        />
+        <button
+          className="tep-add-btn tep-type-back"
+          onClick={() => {
+            setCustomRequested(false);
+            onChange(undefined);
+          }}
+          title="Clear and choose from the list"
+        >
+          ↩
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      className="tep-select field-type"
+      value={value ?? ''}
+      onChange={(e) => {
+        if (e.target.value === CUSTOM_TYPE_OPTION) {
+          setCustomRequested(true);
+          onChange(undefined);
+        } else {
+          onChange(e.target.value || undefined);
+        }
+      }}
+    >
+      <option value="">untyped</option>
+      {KNOWN_IO_TYPES.map((t) => (
+        <option key={t} value={t}>
+          {t}
+        </option>
+      ))}
+      <option value={CUSTOM_TYPE_OPTION}>Custom…</option>
+    </select>
+  );
+}
 
 interface FieldListProps<T extends GenericField> {
   fields: T[];
@@ -147,13 +224,9 @@ function FieldList<T extends GenericField>({
             value={f.name}
             onChange={(e) => update(i, { name: e.target.value } as Partial<T>)}
           />
-          <input
-            className="tep-input field-type"
-            placeholder="type"
-            value={f.type ?? ''}
-            onChange={(e) =>
-              update(i, { type: e.target.value || undefined } as Partial<T>)
-            }
+          <TypeHintField
+            value={f.type_hint}
+            onChange={(type_hint) => update(i, { type_hint } as Partial<T>)}
           />
           {showValue && (
             renderValue ? (
@@ -189,7 +262,7 @@ function FieldList<T extends GenericField>({
 /* ------------------------------------------------------------------ */
 
 function renderOutputValueEditor(field: TaskOutput, onChange: (value: unknown) => void): ReactNode {
-  return <TypedValueEditor type={field.type} value={field.value} onChange={onChange} />;
+  return <TypedValueEditor type={field.type_hint} value={field.value} onChange={onChange} />;
 }
 
 /** A task opted out of simulation is claimed by its real agent, so an authored output value is

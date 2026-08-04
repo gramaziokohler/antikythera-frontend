@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   ReactFlowProvider,
   applyNodeChanges,
@@ -7,9 +7,27 @@ import {
 } from '@xyflow/react';
 import type { Node, Edge, NodeChange, EdgeChange } from '@xyflow/react';
 import { BlueprintCanvas } from './components/author/BlueprintCanvas';
+import { NODE_WIDTH, NODE_HEIGHT } from './utils/flow-layout';
 import { AuthorToolbar } from './components/author/AuthorToolbar';
 import { TaskEditPanel, BlueprintMetaPanel } from './components/author/TaskEditPanel';
-import type { AuthorNodeData, BlueprintMeta, Blueprint } from './types/blueprint-schema';
+import { ScopeEditPanel } from './components/author/ScopeEditPanel';
+import type {
+  AuthorNodeData,
+  BlueprintMeta,
+  Blueprint,
+  ScopeStart,
+} from './types/blueprint-schema';
+import {
+  SCOPE_NODE_PREFIX,
+  isScopeNodeId,
+  deriveScopes,
+  deriveScopeBoundary,
+  describePolicy,
+  findScope,
+  scopeFrames,
+  validateScopes,
+  withoutTasks,
+} from './utils/blueprint-scopes';
 import {
   SYSTEM_START_TASK_TYPE,
   SYSTEM_END_TASK_TYPE,
@@ -25,6 +43,7 @@ import {
   blueprintIdExists,
   uploadBlueprint,
   startBlueprintSession,
+  OrchestratorError,
 } from './utils/blueprint-save';
 import { fetchBlueprint } from './utils/blueprint-load';
 import {
@@ -50,7 +69,7 @@ function buildDefaultBlueprint(): { nodes: Node[]; edges: Edge[] } {
       description: '',
       condition: '',
       inputs: [],
-      outputs: [{ name: 'process_start_time', type: 'timestamp' }],
+      outputs: [{ name: 'process_start_time', type_hint: 'timestamp' }],
       params: [],
     } satisfies AuthorNodeData,
     sourcePosition: Position.Right,
@@ -67,7 +86,7 @@ function buildDefaultBlueprint(): { nodes: Node[]; edges: Edge[] } {
       description: '',
       condition: '',
       inputs: [],
-      outputs: [{ name: 'process_end_time', type: 'timestamp' }],
+      outputs: [{ name: 'process_end_time', type_hint: 'timestamp' }],
       params: [],
     } satisfies AuthorNodeData,
     sourcePosition: Position.Right,
@@ -78,7 +97,7 @@ function buildDefaultBlueprint(): { nodes: Node[]; edges: Edge[] } {
   return { nodes: [startNode, endNode], edges: [] };
 }
 
-function validateFlow(nodes: Node[]): string[] {
+function validateFlow(nodes: Node[], edges: Edge[]): string[] {
   const errors: string[] = [];
   const data = nodes.map((n) => n.data as AuthorNodeData);
 
@@ -96,6 +115,10 @@ function validateFlow(nodes: Node[]): string[] {
   const ids = nodes.map((n) => n.id);
   const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
   if (dupes.length) errors.push(`Duplicate task IDs: ${[...new Set(dupes)].join(', ')}`);
+
+  // Scope pairing and nesting, checked here so an unpairable or interlaced scope
+  // is caught in the editor rather than by the orchestrator on upload.
+  errors.push(...validateScopes(nodes, edges));
 
   return errors;
 }
@@ -115,7 +138,8 @@ export function AuthorApp() {
   const [nodes, setNodes] = useState<Node[]>(() => buildDefaultBlueprint().nodes);
   const [edges, setEdges] = useState<Edge[]>(() => buildDefaultBlueprint().edges);
   const [meta, setMeta] = useState<BlueprintMeta>(DEFAULT_META);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const [selectedScopeId, setSelectedScopeId] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [isPlacing, setIsPlacing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -127,8 +151,26 @@ export function AuthorApp() {
 
   // ---- React Flow change handlers ----
 
+  // Scope frames are derived from the task nodes on every render, never stored, so
+  // changes React Flow reports for them (dimensions, selection) are dropped rather
+  // than applied to the task list they were computed from.
   const onNodesChange = useCallback((changes: NodeChange[]) => {
-    setNodes((nds) => applyNodeChanges(changes, nds));
+    const taskChanges = changes.filter((c) => !('id' in c) || !isScopeNodeId(c.id));
+    if (!taskChanges.length) return;
+
+    // Deletions are routed through withoutTasks so that removing a task with the
+    // Delete key cleans up its scope markers, exactly as the edit panel does.
+    const removedIds = taskChanges.filter((c) => c.type === 'remove').map((c) => c.id);
+    setNodes((nds) => {
+      const next = applyNodeChanges(
+        taskChanges.filter((c) => c.type !== 'remove'),
+        nds,
+      );
+      return removedIds.length ? withoutTasks(next, removedIds) : next;
+    });
+    if (removedIds.length) {
+      setSelectedScopeId((current) => (current && removedIds.includes(current) ? null : current));
+    }
   }, []);
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
@@ -139,10 +181,32 @@ export function AuthorApp() {
     setEdges(updater);
   }, []);
 
-  // ---- Node selection ----
+  // ---- Selection ----
 
-  const handleNodeSelect = useCallback((id: string | null) => {
-    setSelectedNodeId(id);
+  const handleSelectionChange = useCallback((ids: string[]) => {
+    setSelectedNodeIds(ids);
+    // A task and a scope are edited in the same panel slot; selecting either one
+    // takes the panel over.
+    if (ids.length) setSelectedScopeId(null);
+  }, []);
+
+  /** Select a single task from outside the canvas, e.g. the scope's member list. */
+  const selectTask = useCallback((taskId: string) => {
+    setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === taskId })));
+    setSelectedNodeIds([taskId]);
+    setSelectedScopeId(null);
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setNodes((nds) => nds.map((n) => (n.selected ? { ...n, selected: false } : n)));
+    setSelectedNodeIds([]);
+    setSelectedScopeId(null);
+  }, []);
+
+  const handleSelectScope = useCallback((scopeId: string) => {
+    setNodes((nds) => nds.map((n) => (n.selected ? { ...n, selected: false } : n)));
+    setSelectedNodeIds([]);
+    setSelectedScopeId(scopeId);
   }, []);
 
   // ---- New blueprint ----
@@ -152,7 +216,8 @@ export function AuthorApp() {
     setNodes(n);
     setEdges(e);
     setMeta(DEFAULT_META);
-    setSelectedNodeId(null);
+    setSelectedNodeIds([]);
+    setSelectedScopeId(null);
     setErrors([]);
   }, []);
 
@@ -184,7 +249,8 @@ export function AuthorApp() {
       version: bp.version,
       description: bp.description ?? '',
     });
-    setSelectedNodeId(null);
+    setSelectedNodeIds([]);
+    setSelectedScopeId(null);
     setErrors([]);
   }, []);
 
@@ -231,7 +297,7 @@ export function AuthorApp() {
   // ---- Export ----
 
   const handleExport = useCallback(() => {
-    const errs = validateFlow(nodes);
+    const errs = validateFlow(nodes, edges);
     if (errs.length) {
       setErrors(errs);
       return;
@@ -252,7 +318,7 @@ export function AuthorApp() {
   // ---- Save (post the blueprint to the orchestrator, unmodified) ----
 
   const handleSave = useCallback(async () => {
-    const errs = validateFlow(nodes);
+    const errs = validateFlow(nodes, edges);
     if (errs.length) {
       setErrors(errs);
       setSaveStatus(null);
@@ -282,10 +348,16 @@ export function AuthorApp() {
         message: result.message || `Saved as "${result.blueprint_id}"`,
       });
     } catch (err) {
-      setSaveStatus({
-        kind: 'error',
-        message: err instanceof Error ? err.message : 'Save failed',
-      });
+      if (err instanceof OrchestratorError) {
+        // The rejection detail is per-problem; the errors banner lists them.
+        setErrors(err.problems);
+        setSaveStatus(null);
+      } else {
+        setSaveStatus({
+          kind: 'error',
+          message: err instanceof Error ? err.message : 'Save failed',
+        });
+      }
     } finally {
       setIsSaving(false);
     }
@@ -294,7 +366,7 @@ export function AuthorApp() {
   // ---- Simulate (rewrite task types, upload under `{id}__sim`, start a session) ----
 
   const handleSimulate = useCallback(async () => {
-    const errs = validateFlow(nodes);
+    const errs = validateFlow(nodes, edges);
     if (errs.length) {
       setErrors(errs);
       setSaveStatus(null);
@@ -324,7 +396,13 @@ export function AuthorApp() {
       // index.html) — a full navigation is the only way to hand the tab over.
       window.location.href = `/?session=${encodeURIComponent(session_id)}`;
     } catch (err) {
-      setErrors([err instanceof Error ? err.message : 'Simulate failed']);
+      // An orchestrator rejection names the offending task and expression; show
+      // each problem rather than folding them into one line.
+      setErrors(
+        err instanceof OrchestratorError
+          ? err.problems
+          : [err instanceof Error ? err.message : 'Simulate failed'],
+      );
       setIsSimulating(false);
     }
   }, [nodes, edges, meta]);
@@ -352,8 +430,9 @@ export function AuthorApp() {
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
     };
-    setNodes((nds) => [...nds, newNode]);
-    setSelectedNodeId(id);
+    setNodes((nds) => [...nds.map((n) => ({ ...n, selected: false })), { ...newNode, selected: true }]);
+    setSelectedNodeIds([id]);
+    setSelectedScopeId(null);
     setIsPlacing(false);
   }, []);
 
@@ -364,9 +443,10 @@ export function AuthorApp() {
   // ---- Delete node ----
 
   const handleDeleteNode = useCallback((nodeId: string) => {
-    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setNodes((nds) => withoutTasks(nds, [nodeId]));
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
-    setSelectedNodeId(null);
+    setSelectedNodeIds([]);
+    setSelectedScopeId((current) => (current === nodeId ? null : current));
   }, []);
 
   // ---- Update node data (from TaskEditPanel) ----
@@ -375,11 +455,18 @@ export function AuthorApp() {
     (currentId: string, newId: string, newData: AuthorNodeData) => {
       setNodes((nds) =>
         nds.map((n) => {
-          if (n.id !== currentId) return n;
-          return { ...n, id: newId, data: newData };
+          if (n.id === currentId) return { ...n, id: newId, data: newData };
+          // scope_end is a task-id reference, so a rename has to be followed
+          // through or the scope silently loses its closing task.
+          const data = n.data as AuthorNodeData;
+          if (newId !== currentId && data.scopeEnd === currentId) {
+            return { ...n, data: { ...data, scopeEnd: newId } };
+          }
+          return n;
         }),
       );
       if (newId !== currentId) {
+        setSelectedScopeId((current) => (current === currentId ? newId : current));
         // Also update any edges referencing the old id
         setEdges((eds) =>
           eds.map((e) => ({
@@ -394,15 +481,132 @@ export function AuthorApp() {
             target: e.target === currentId ? newId : e.target,
           })),
         );
-        setSelectedNodeId(newId);
+        setSelectedNodeIds([newId]);
       }
     },
     [],
   );
 
-  // ---- Selected node data ----
+  // ---- Scopes ----
+  //
+  // A scope lives on its tasks (a `scope_start` policy on the entry task, a
+  // `scope_end` back-reference on the exit task) and its membership is implied by
+  // the DAG, so the editor stores nothing extra: the frames below are recomputed
+  // from the current nodes and edges, which is also what the orchestrator does.
 
-  const selectedNode = nodes.find((n) => n.id === selectedNodeId) ?? null;
+  const scopes = useMemo(() => deriveScopes(nodes, edges), [nodes, edges]);
+
+  const scopeNodes = useMemo(
+    () =>
+      scopeFrames(scopes, nodes, { width: NODE_WIDTH, height: NODE_HEIGHT }).map(
+        (frame, index) => ({
+          id: `${SCOPE_NODE_PREFIX}${frame.scope.id}`,
+          type: 'scopeGroup',
+          position: { x: frame.x, y: frame.y },
+          style: { width: frame.width, height: frame.height },
+          data: {
+            label: frame.scope.label,
+            policyType: frame.scope.policyType,
+            policySummary: describePolicy(frame.scope.policy),
+            selected: frame.scope.id === selectedScopeId,
+            onSelect: () => handleSelectScope(frame.scope.id),
+          },
+          selectable: false,
+          draggable: false,
+          deletable: false,
+          // Behind the task nodes, outermost scope furthest back.
+          zIndex: -100 + index,
+        }),
+      ),
+    [scopes, nodes, selectedScopeId, handleSelectScope],
+  );
+
+  const canvasNodes = useMemo(() => [...scopeNodes, ...nodes], [scopeNodes, nodes]);
+
+  /**
+   * Turns the selected tasks into a scope.
+   *
+   * The author picks a region; which task opens and which closes it falls out of
+   * the graph (see `deriveScopeBoundary`), so there is no id to type and no way to
+   * name a task that is not actually at the boundary.
+   */
+  const handleGroupIntoScope = useCallback(() => {
+    const { boundary, error } = deriveScopeBoundary(selectedNodeIds, nodes, edges);
+    if (!boundary) {
+      setErrors([error]);
+      setSaveStatus(null);
+      return;
+    }
+
+    const { startId, endId, implied } = boundary;
+    setErrors([]);
+    setNodes((nds) =>
+      nds.map((n) => {
+        const data = n.data as AuthorNodeData;
+        if (n.id === startId) {
+          // An empty policy is the skip scope — it runs once, gated on the entry
+          // task's condition. Retry/while are chosen afterwards in the panel.
+          return { ...n, selected: false, data: { ...data, scopeStart: {} } };
+        }
+        if (n.id === endId) return { ...n, selected: false, data: { ...data, scopeEnd: startId } };
+        return n.selected ? { ...n, selected: false } : n;
+      }),
+    );
+    setSelectedNodeIds([]);
+    setSelectedScopeId(startId);
+    setSaveStatus(
+      implied.length
+        ? {
+            kind: 'success',
+            message: `Scope also covers ${implied.join(', ')} — every task between '${startId}' and '${endId}' is in it.`,
+          }
+        : null,
+    );
+  }, [selectedNodeIds, nodes, edges]);
+
+  const handleScopePolicyChange = useCallback((scopeId: string, policy: ScopeStart) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === scopeId ? { ...n, data: { ...(n.data as AuthorNodeData), scopeStart: policy } } : n,
+      ),
+    );
+  }, []);
+
+  const handleScopeConditionChange = useCallback((taskId: string, condition: string) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === taskId ? { ...n, data: { ...(n.data as AuthorNodeData), condition } } : n,
+      ),
+    );
+  }, []);
+
+  const handleUngroupScope = useCallback((scopeId: string) => {
+    setNodes((nds) =>
+      nds.map((n) => {
+        const data = n.data as AuthorNodeData;
+        if (n.id === scopeId) {
+          const next = { ...data };
+          delete next.scopeStart;
+          return { ...n, data: next };
+        }
+        if (data.scopeEnd === scopeId) {
+          const next = { ...data };
+          delete next.scopeEnd;
+          return { ...n, data: next };
+        }
+        return n;
+      }),
+    );
+    setSelectedScopeId(null);
+  }, []);
+
+  // ---- Panel target ----
+
+  const selectedScope = findScope(scopes, selectedScopeId);
+  const selectedNode =
+    selectedNodeIds.length === 1
+      ? (nodes.find((n) => n.id === selectedNodeIds[0]) ?? null)
+      : null;
 
   return (
     <ReactFlowProvider>
@@ -420,6 +624,8 @@ export function AuthorApp() {
           isSimulating={isSimulating}
           onAddNode={handleAddNode}
           isPlacing={isPlacing}
+          onGroupIntoScope={handleGroupIntoScope}
+          selectionCount={selectedNodeIds.length}
           errors={errors}
         />
 
@@ -427,12 +633,12 @@ export function AuthorApp() {
           {/* Canvas */}
           <div className="author-canvas">
             <BlueprintCanvas
-              nodes={nodes}
+              nodes={canvasNodes}
               edges={edges}
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onSetEdges={onSetEdges}
-              onNodeSelect={handleNodeSelect}
+              onSelectionChange={handleSelectionChange}
               isPlacing={isPlacing}
               onPlaceNode={handlePlaceNode}
               onCancelPlace={handleCancelPlace}
@@ -441,13 +647,31 @@ export function AuthorApp() {
 
           {/* Right panel */}
           <div className="author-panel">
-            {selectedNode ? (
+            {selectedScope ? (
+              <ScopeEditPanel
+                // Remount per scope so the panel's memory of a discarded policy
+                // never carries over to a different scope.
+                key={selectedScope.id}
+                scope={selectedScope}
+                startCondition={
+                  (nodes.find((n) => n.id === selectedScope.startId)?.data as AuthorNodeData)
+                    ?.condition ?? ''
+                }
+                onPolicyChange={(policy) => handleScopePolicyChange(selectedScope.id, policy)}
+                onStartConditionChange={(condition) =>
+                  handleScopeConditionChange(selectedScope.startId, condition)
+                }
+                onSelectTask={selectTask}
+                onUngroup={() => handleUngroupScope(selectedScope.id)}
+                onClose={() => setSelectedScopeId(null)}
+              />
+            ) : selectedNode ? (
               <TaskEditPanel
                 nodeId={selectedNode.id}
                 data={selectedNode.data as AuthorNodeData}
                 onUpdate={handleUpdateNode}
                 onDelete={handleDeleteNode}
-                onClose={() => setSelectedNodeId(null)}
+                onClose={clearSelection}
               />
             ) : (
               <BlueprintMetaPanel meta={meta} onMetaChange={setMeta} />

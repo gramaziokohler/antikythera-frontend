@@ -18,6 +18,17 @@ interface HeldTaskCardProps {
 }
 
 /**
+ * The declared type of an output, from either field the model may carry it in.
+ *
+ * The orchestrator serialises `type_hint`; `type` is a deprecated alias older
+ * blueprints still use. Reading only `type` made every output here render as
+ * `untyped` and fall back to the raw-JSON editor, whatever the author declared.
+ */
+function typeHintOf(output: TaskOutput): string | undefined {
+  return output.type_hint ?? output.type;
+}
+
+/**
  * One held task: its declared outputs (from the running blueprint's own task definition — the
  * authoritative source per ADR-0003, not anything decoded off the wire), each editable with the
  * same type-driven editors TaskEditPanel uses to author them in the first place. Continue is
@@ -62,11 +73,11 @@ function HeldTaskCard({ agent, taskId, node }: HeldTaskCardProps) {
             <div className="sbp-output-row" key={output.name}>
               <div className="sbp-output-label">
                 <span className="sbp-output-name">{output.name}</span>
-                <span className="sbp-output-type">{output.type ?? 'untyped'}</span>
+                <span className="sbp-output-type">{typeHintOf(output) ?? 'untyped'}</span>
               </div>
               <div className="sbp-output-value">
                 <TypedValueEditor
-                  type={output.type}
+                  type={typeHintOf(output)}
                   value={values[output.name]}
                   onChange={(value) => updateOutput(output.name, value)}
                 />
