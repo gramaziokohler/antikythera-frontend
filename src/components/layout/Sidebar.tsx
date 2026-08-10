@@ -12,6 +12,7 @@ import {
 import './Sidebar.css';
 import type { BlueprintInfo, SessionInfo } from '../../types';
 import { timeAgo } from '../../utils';
+import { UserBadge } from './UserBadge';
 
 interface SidebarProps {
   apiBaseUrl: string;
@@ -173,6 +174,9 @@ export function Sidebar({ apiBaseUrl, onSelectionChange, collapsed, onToggleColl
           </button>
         </div>
       </div>
+
+      {/* Shown only when the auth layer is active; hidden in no-auth mode. */}
+      <UserBadge collapsed={collapsed} />
 
       <div className="sidebar-content">
         {/* New Item Actions */}
