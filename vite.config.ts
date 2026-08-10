@@ -24,6 +24,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       },
+      '/mqtt': {
+        target: 'ws://localhost:8083',
+        ws: true,
+        changeOrigin: true,
+      },
     },
   },
   test: {
