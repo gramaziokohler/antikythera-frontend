@@ -22,12 +22,9 @@ import type {
   OnSelectionChangeParams,
   EdgeProps,
 } from '@xyflow/react';
-import dagre from '@dagrejs/dagre';
 import '@xyflow/react/dist/style.css';
 import { AuthorTaskNode } from './AuthorTaskNode';
-
-export const NODE_WIDTH = 240;
-export const NODE_HEIGHT = 100;
+import { NODE_WIDTH } from '../../utils/flow-layout';
 
 const nodeTypes = { authorTask: AuthorTaskNode };
 
@@ -107,32 +104,6 @@ function DeletableEdge({
 }
 
 const edgeTypes = { deletable: DeletableEdge };
-
-export function getLayoutedElements(nodes: Node[], edges: Edge[]) {
-  const g = new dagre.graphlib.Graph();
-  g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: 'LR', ranksep: 160, nodesep: 60 });
-
-  nodes.forEach((n) => g.setNode(n.id, { width: NODE_WIDTH, height: NODE_HEIGHT }));
-  edges.forEach((e) => g.setEdge(e.source, e.target));
-  dagre.layout(g);
-
-  return {
-    nodes: nodes.map((n) => {
-      const pos = g.node(n.id);
-      return {
-        ...n,
-        targetPosition: Position.Left,
-        sourcePosition: Position.Right,
-        position: {
-          x: pos.x - NODE_WIDTH / 2,
-          y: pos.y - NODE_HEIGHT / 2,
-        },
-      };
-    }),
-    edges,
-  };
-}
 
 interface BlueprintCanvasProps {
   nodes: Node[];

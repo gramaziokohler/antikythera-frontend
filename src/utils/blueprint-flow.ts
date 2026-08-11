@@ -1,6 +1,6 @@
 import { Position, MarkerType } from '@xyflow/react';
 import type { Node, Edge } from '@xyflow/react';
-import { getLayoutedElements } from '../components/author/BlueprintCanvas';
+import { getLayoutedElements } from './flow-layout';
 import type {
   AuthorNodeData,
   Blueprint,
@@ -87,10 +87,12 @@ export function flowToBlueprint(
     if (params.length) task.params = params;
     if (depends_on.length) task.depends_on = depends_on;
 
-    // Round-trip scope boundaries. scope_start may legitimately be an empty
-    // object (a skip-policy scope), so preserve it whenever it is defined.
+    // Round-trip scope boundaries. Both are preserved whenever defined rather
+    // than when truthy: scope_start may legitimately be an empty object (a
+    // skip-policy scope), and an empty scope_end is a value the schema accepts,
+    // so dropping either would break the round-trip guarantee above.
     if (d.scopeStart !== undefined) task.scope_start = d.scopeStart;
-    if (d.scopeEnd) task.scope_end = d.scopeEnd;
+    if (d.scopeEnd !== undefined) task.scope_end = d.scopeEnd;
 
     return task;
   });

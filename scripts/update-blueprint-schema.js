@@ -31,31 +31,51 @@ if (!fs.existsSync(SCHEMA_DIR)) {
     fs.mkdirSync(SCHEMA_DIR, { recursive: true });
 }
 
+// Downloads to a temporary file and only moves it into place once the transfer
+// has completed. A failed download must never clobber the committed schema —
+// that copy is the fallback the build relies on when the remote is unreachable.
 const downloadUrl = (url, destPath) => {
     return new Promise((resolve, reject) => {
-        const file = fs.createWriteStream(destPath);
+        const tmpPath = `${destPath}.download`;
         const options = { headers: { 'User-Agent': 'Node.js' } };
         if (process.env.GITHUB_TOKEN) {
             options.headers['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
         }
+
+        const failWith = (err, file) => {
+            if (file) {
+                file.destroy();
+                fs.unlink(tmpPath, () => { });
+            }
+            reject(err);
+        };
+
         https
             .get(url, options, (response) => {
                 if (response.statusCode !== 200) {
-                    fs.unlink(destPath, () => { });
-                    reject(new Error(`Failed to download ${url}: ${response.statusCode}`));
+                    response.resume();
+                    failWith(new Error(`Failed to download ${url}: ${response.statusCode}`));
                     return;
                 }
+
+                const file = fs.createWriteStream(tmpPath);
+                file.on('error', (err) => failWith(err, file));
+                response.on('error', (err) => failWith(err, file));
+
                 response.pipe(file);
                 file.on('finish', () => {
-                    file.close();
-                    console.log(`Downloaded ${path.basename(destPath)}`);
-                    resolve();
+                    file.close((err) => {
+                        if (err) {
+                            failWith(err, file);
+                            return;
+                        }
+                        fs.renameSync(tmpPath, destPath);
+                        console.log(`Downloaded ${path.basename(destPath)}`);
+                        resolve();
+                    });
                 });
             })
-            .on('error', (err) => {
-                fs.unlink(destPath, () => { });
-                reject(err);
-            });
+            .on('error', (err) => failWith(err));
     });
 };
 
