@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SimulationAgent, SIMULATION_AGENT_TYPE } from '../SimulationAgent';
 import { simulatedOutputParamName } from '../../utils/blueprint-simulate';
-import { isAnyDataPassthrough } from '../anyDataCodec';
+import { isAnyDataPassthrough } from '../compasPb';
 import type { Agent } from '../Agent';
 import { Task } from '../Task';
 import { antikythera, compas_pb } from '../../proto/bundle';
@@ -49,7 +49,7 @@ describe('SimulationAgent', () => {
     const result = (await agent.invokeTool!('compas_fab.plan_trajectory', task)) as Record<string, unknown>;
 
     expect(Object.keys(result)).toEqual(['trajectory']);
-    // Forwarded as a raw-AnyData passthrough (see anyDataCodec.ts), not decoded — the param may
+    // Forwarded as a raw-AnyData passthrough (see compasPb.ts), not decoded — the param may
     // have arrived using a wire shape the frontend has no reason to understand.
     expect(isAnyDataPassthrough(result.trajectory)).toBe(true);
     expect((result.trajectory as { anyData: unknown }).anyData).toEqual({ value: { stringValue: 'ok' } });

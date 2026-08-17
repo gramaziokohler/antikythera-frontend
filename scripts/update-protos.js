@@ -12,6 +12,7 @@ const COMPAS_PB_DIR = path.join(PROTO_DIR, 'compas_pb', 'generated');
 const ANTIKYTHERA_SOURCE_LOCAL = path.resolve(process.cwd(), '../antikythera/src/antikythera/proto/antikythera.proto');
 const ANTIKYTHERA_SOURCE_REMOTE = 'https://raw.githubusercontent.com/gramaziokohler/antikythera/main/src/antikythera/proto/antikythera.proto';
 const ANTIKYTHERA_DEST = path.join(PROTO_DIR, 'antikythera.proto');
+const COMPAS_PB_VERSION = 'v1.1.4';
 
 // Ensure directories exist
 if (!fs.existsSync(COMPAS_PB_DIR)) {
@@ -52,7 +53,7 @@ const downloadUrl = (url, destPath) => {
 
 // 2. Download compas_pb files
 const COMPAS_FILES = ['geometry.proto', 'datastructures.proto', 'message.proto'];
-const BASE_URL = 'https://raw.githubusercontent.com/gramaziokohler/compas_pb/main/src/compas_pb/protobuf_defs/compas_pb/generated/';
+const BASE_URL = `https://raw.githubusercontent.com/compas-dev/compas_pb/${COMPAS_PB_VERSION}/src/compas_pb/protobuf_defs/compas_pb/generated/`;
 
 async function main() {
     // 1. Fetch antikythera.proto
@@ -81,7 +82,7 @@ async function main() {
         }
     }
 
-    console.log('Downloading compas_pb files...');
+    console.log(`Downloading compas_pb ${COMPAS_PB_VERSION} files...`);
     try {
         await Promise.all(COMPAS_FILES.map(f => downloadUrl(`${BASE_URL}${f}`, path.join(COMPAS_PB_DIR, f))));
     } catch (e) {
@@ -109,4 +110,3 @@ async function main() {
 }
 
 main();
-

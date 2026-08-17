@@ -1,7 +1,7 @@
 import type { Agent } from './Agent';
 import { Task } from './Task';
 import { SIMULATED_OUTPUT_PARAM_PREFIX } from '../utils/blueprint-simulate';
-import { passthroughAnyData } from './anyDataCodec';
+import { passthroughAnyData } from './compasPb';
 
 /** ADR-0003: the stand-in agent type. Claims `simulation.*` tasks and nothing else. */
 export const SIMULATION_AGENT_TYPE = 'simulation';

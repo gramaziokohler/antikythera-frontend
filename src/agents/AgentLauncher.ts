@@ -1,10 +1,10 @@
 import { MqttService } from '../services/MqttService';
 import { uniqueNamesGenerator, adjectives, animals, colors, countries } from 'unique-names-generator';
-import { antikythera, google, compas_pb } from '../proto/bundle';
+import { antikythera, compas_pb } from '../proto/bundle';
 import type { Agent } from './Agent';
 import { Task } from './Task';
 import { ExecutionContext } from './ExecutionContext';
-import { encodeAnyData, isAnyDataPassthrough } from './anyDataCodec';
+import { encodeAnyData, isAnyDataPassthrough, unwrapMessage, wrapMessage } from './compasPb';
 
 // Type aliases for convenience
 type TaskAssignmentMessage = antikythera.v1.ITaskAssignmentMessage;
@@ -85,8 +85,7 @@ export class AgentLauncher {
             if (topic === 'antikythera/task/start') {
                 let task: TaskAssignmentMessage | null = null;
 
-                // Try to unwrap MessageData -> AnyData -> Any -> TaskAssignmentMessage
-                const anyMsg = this.unwrapMessage(uint8Message);
+                const anyMsg = unwrapMessage(uint8Message);
                 if (anyMsg) {
                     if (anyMsg.type_url === 'type.googleapis.com/antikythera.v1.TaskAssignmentMessage') {
                         task = antikythera.v1.TaskAssignmentMessage.decode(anyMsg.value as Uint8Array);
@@ -109,7 +108,7 @@ export class AgentLauncher {
             } else if (topic === 'antikythera/task/allocation') {
                 let allocation: TaskAllocationMessage | null = null;
 
-                const anyMsg = this.unwrapMessage(uint8Message);
+                const anyMsg = unwrapMessage(uint8Message);
                 if (anyMsg) {
                     if (anyMsg.type_url === 'type.googleapis.com/antikythera.v1.TaskAllocationMessage') {
                         allocation = antikythera.v1.TaskAllocationMessage.decode(anyMsg.value as Uint8Array);
@@ -129,7 +128,7 @@ export class AgentLauncher {
                 }
             } else if (topic === 'antikythera/task/ack') {
                 let ack: antikythera.v1.TaskCompletionAckMessage | null = null;
-                const anyMsg = this.unwrapMessage(uint8Message);
+                const anyMsg = unwrapMessage(uint8Message);
                 if (anyMsg) {
                     if (anyMsg.type_url === 'type.googleapis.com/antikythera.v1.TaskCompletionAckMessage') {
                         ack = antikythera.v1.TaskCompletionAckMessage.decode(anyMsg.value as Uint8Array);
@@ -154,51 +153,6 @@ export class AgentLauncher {
         }
     }
 
-    private unwrapMessage(uint8Message: Uint8Array): google.protobuf.IAny | null {
-        // 1. Try compas_pb.data.MessageData
-        try {
-            const msgData = compas_pb.data.MessageData.decode(uint8Message);
-            if (msgData.version || msgData.data) {
-                if (msgData.data && msgData.data.message) {
-                    return msgData.data.message;
-                }
-            }
-        } catch (e) { /* Not MessageData */ }
-
-        // 2. Try compas_pb.data.AnyData
-        try {
-            const anyData = compas_pb.data.AnyData.decode(uint8Message);
-            if (anyData.message) {
-                return anyData.message;
-            }
-        } catch (e) { /* Not AnyData */ }
-
-        // 3. Try google.protobuf.Any
-        try {
-            const anyMsg = google.protobuf.Any.decode(uint8Message);
-            if (anyMsg.type_url && anyMsg.type_url.startsWith('type.googleapis.com/')) {
-                return anyMsg;
-            }
-        } catch (e) { /* Not Any */ }
-
-        return null;
-    }
-
-    private wrapMessage(messageBytes: Uint8Array, typeUrl: string): Uint8Array {
-        const anyMsg = google.protobuf.Any.create({
-            type_url: typeUrl,
-            value: messageBytes
-        });
-        const anyData = compas_pb.data.AnyData.create({
-            message: anyMsg
-        });
-        const msgData = compas_pb.data.MessageData.create({
-            version: '0.4.6',
-            data: anyData
-        });
-        return compas_pb.data.MessageData.encode(msgData).finish();
-    }
-
     protected handleTaskStart(task: TaskAssignmentMessage) {
         if (!task.type || !task.id) return;
 
@@ -216,7 +170,7 @@ export class AgentLauncher {
             };
 
             const innerBuffer = antikythera.v1.TaskClaimRequest.encode(claim).finish();
-            const buffer = this.wrapMessage(innerBuffer, 'type.googleapis.com/antikythera.v1.TaskClaimRequest');
+            const buffer = wrapMessage(innerBuffer, 'type.googleapis.com/antikythera.v1.TaskClaimRequest');
 
             this.mqttService.publish('antikythera/task/claim', buffer);
         }
@@ -327,7 +281,7 @@ export class AgentLauncher {
         };
 
         const innerBuffer = antikythera.v1.TaskCompletionMessage.encode(completion).finish();
-        const buffer = this.wrapMessage(innerBuffer, 'type.googleapis.com/antikythera.v1.TaskCompletionMessage');
+        const buffer = wrapMessage(innerBuffer, 'type.googleapis.com/antikythera.v1.TaskCompletionMessage');
 
         this.mqttService.publish('antikythera/task/completed', buffer);
         this.activeTasks.delete(taskId);

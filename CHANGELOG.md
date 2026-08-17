@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Blueprint uploads rejected by the API report each reason in the notification overlay, alongside session failures, instead of a bare "Upload failed" status line.
 - Notification messages longer than 140 characters are collapsed to a word-boundary preview with a "show more.." toggle; expanded messages scroll instead of growing the toast without limit.
 - Session failures are reported through the notification overlay instead of the inline error line, titled with the error code (e.g. "Session failed: SCOPE_CONDITION_ERROR"). The banner previously rendered `[object Object]`, since the error is COMPAS-serialized and its fields live under `data`.
+- **Breaking:** Browser agents now read and write the `compas_pb` v1 wire format, including its versioned root envelope, explicit integer/float fields, and native nested list/dictionary fields.
+- Protobuf generation now downloads the official `compas-dev/compas_pb` definitions pinned to v1.1.4 instead of following the legacy repository's `main` branch.
 - `SessionMonitor` replaced its 500ms polling loop with `useSessionStream`; only a single long-lived SSE connection is opened per session.
 - Pause and resume apply optimistic state updates immediately; the stream confirms or corrects them.
 - `task_state_changed` events are filtered by `visibleBlueprintId` so drilling into a composite task's inner blueprint does not apply outer events to the displayed graph.

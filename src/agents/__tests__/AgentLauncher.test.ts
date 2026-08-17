@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { AgentLauncher } from '../AgentLauncher';
 import type { Agent } from '../Agent';
 import type { MqttService } from '../../services/MqttService';
-import { passthroughAnyData } from '../anyDataCodec';
+import { passthroughAnyData } from '../compasPb';
 import { antikythera, compas_pb } from '../../proto/bundle';
 
 /** Decodes a published completion-message buffer back to its outputs map, mirroring
