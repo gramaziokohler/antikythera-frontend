@@ -47,7 +47,7 @@ const COMPAS_BLUEPRINT = {
               dtype: 'antikythera.models/TaskInput',
               guid: 'in-guid',
               name: 'mesh',
-              data: { name: 'mesh', type: null, value: null, description: null, get_from: 'geo' },
+              data: { name: 'mesh', type_hint: null, value: null, description: null, get_from: 'geo' },
             },
           ],
           outputs: [
@@ -55,7 +55,7 @@ const COMPAS_BLUEPRINT = {
               dtype: 'antikythera.models/TaskOutput',
               guid: 'out-guid',
               name: 'trajectory',
-              data: { name: 'trajectory', type: 'str', value: 'v', description: null, set_to: null },
+              data: { name: 'trajectory', type_hint: 'str', value: 'v', description: null, set_to: null },
             },
           ],
           params: [
@@ -63,7 +63,7 @@ const COMPAS_BLUEPRINT = {
               dtype: 'antikythera.models/TaskParam',
               guid: 'param-guid',
               name: 'speed',
-              data: { name: 'speed', type: null, value: 1.5, description: null },
+              data: { name: 'speed', type_hint: null, value: 1.5, description: null },
             },
           ],
           depends_on: [
@@ -98,7 +98,7 @@ describe('normalizeBlueprint', () => {
           type: 'compas_fab.plan',
           description: 'd',
           inputs: [{ name: 'mesh', get_from: 'geo' }],
-          outputs: [{ name: 'trajectory', type: 'str', value: 'v' }],
+          outputs: [{ name: 'trajectory', type_hint: 'str', value: 'v' }],
           params: [{ name: 'speed', value: 1.5 }],
           depends_on: [{ id: 'start', type: 'FS' }],
         },
@@ -118,6 +118,29 @@ describe('normalizeBlueprint', () => {
     };
 
     expect(normalizeBlueprint(structuredClone(flat))).toEqual(flat);
+  });
+
+  it('reads a declared type from the deprecated `type` alias too', () => {
+    // The orchestrator serialises `type_hint`; blueprints written before the
+    // rename carry `type`. Reading only one loses every type declared with the
+    // other, which is invisible until an author reopens the blueprint.
+    const bp = normalizeBlueprint({
+      data: {
+        id: 'legacy',
+        name: 'Legacy',
+        tasks: [
+          {
+            data: {
+              id: 'plan',
+              type: 'compas_fab.plan',
+              outputs: [{ data: { name: 'trajectory', type: 'str' } }],
+            },
+          },
+        ],
+      },
+    });
+
+    expect(bp.tasks[0].outputs).toEqual([{ name: 'trajectory', type_hint: 'str' }]);
   });
 
   it('round-trips: a normalised blueprint normalises to itself', () => {

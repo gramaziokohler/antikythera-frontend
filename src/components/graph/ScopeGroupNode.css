@@ -26,6 +26,26 @@
     z-index: 1;
 }
 
+.scope-group-node .scope-label.clickable {
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.scope-group-node .scope-label.clickable:hover {
+    border-color: var(--color-border-hover);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Selected in the authoring canvas */
+.scope-group-node.selected {
+    border-style: solid;
+}
+
+.scope-group-node.selected .scope-label {
+    border-color: var(--color-terracotta-500);
+    box-shadow: 0 0 0 2px var(--color-terracotta-100);
+}
+
 .scope-group-node .scope-icon {
     display: flex;
     align-items: center;

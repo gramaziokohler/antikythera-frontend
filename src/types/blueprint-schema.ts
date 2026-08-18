@@ -49,6 +49,35 @@ export interface BlueprintMeta {
   description: string;
 }
 
+/**
+ * Suggested values for an IO item's `type_hint`, offered as a dropdown in the
+ * editor.
+ *
+ * A type hint is a Python type as a string, so the set is open — any dotted class
+ * path is legal and the field stays free-text. The list covers the types the
+ * value editor renders natively (see TypedValueEditor's tier 1) plus the COMPAS
+ * types that show up across the example blueprints, which is most of what an
+ * author types by hand.
+ */
+export const KNOWN_IO_TYPES: string[] = [
+  'str',
+  'int',
+  'float',
+  'bool',
+  'timestamp',
+  'dict',
+  'list',
+  'Any',
+  'list[str]',
+  'list[float]',
+  'compas.geometry.Frame',
+  'compas.geometry.Point',
+  'compas.geometry.Transformation',
+  'list[compas.geometry.Frame]',
+  'compas_fab.robots.Trajectory',
+  'list[compas_fab.robots.Trajectory]',
+];
+
 export const KNOWN_TASK_TYPES: string[] = [
   'system.start',
   'system.end',

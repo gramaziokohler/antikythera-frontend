@@ -107,4 +107,62 @@ describe('uploadBlueprint', () => {
 
     await expect(uploadBlueprint('/api', BLUEPRINT)).rejects.toThrow();
   });
+
+  it('reports the problems the orchestrator rejected the blueprint for', async () => {
+    // A rejection names the offending task and expression. Reporting only the
+    // status code left an author with "Save failed (400)" and nothing to act on.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 400,
+        json: async () => ({
+          detail: {
+            message: "Blueprint 'demo' has 1 dataflow problem(s).",
+            problems: ["Task 'a': while condition '' is not a valid expression (invalid syntax)."],
+          },
+        }),
+      })),
+    );
+
+    await expect(uploadBlueprint('/api', BLUEPRINT)).rejects.toMatchObject({
+      name: 'OrchestratorError',
+      problems: [
+        "Blueprint 'demo' has 1 dataflow problem(s).",
+        "Task 'a': while condition '' is not a valid expression (invalid syntax).",
+      ],
+    });
+  });
+
+  it('reports a plain-string detail as-is', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 400,
+        json: async () => ({ detail: 'Only JSON files are accepted.' }),
+      })),
+    );
+
+    await expect(uploadBlueprint('/api', BLUEPRINT)).rejects.toMatchObject({
+      problems: ['Only JSON files are accepted.'],
+    });
+  });
+
+  it('falls back to the status code when the body is not JSON', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 502,
+        json: async () => {
+          throw new SyntaxError('Unexpected token <');
+        },
+      })),
+    );
+
+    await expect(uploadBlueprint('/api', BLUEPRINT)).rejects.toMatchObject({
+      problems: ['Save failed (502)'],
+    });
+  });
 });

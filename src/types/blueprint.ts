@@ -84,7 +84,11 @@ export interface TaskIO {
    */
   value?: unknown;
   /**
-   * Type of the IO item
+   * Python type hint of the IO item
+   */
+  type_hint?: string;
+  /**
+   * Deprecated alias for 'type_hint'. Use 'type_hint' instead.
    */
   type?: string;
   /**

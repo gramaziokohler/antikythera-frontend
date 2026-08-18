@@ -24,9 +24,10 @@ import type {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { AuthorTaskNode } from './AuthorTaskNode';
+import { ScopeGroupNode } from '../graph/ScopeGroupNode';
 import { NODE_WIDTH } from '../../utils/flow-layout';
 
-const nodeTypes = { authorTask: AuthorTaskNode };
+const nodeTypes = { authorTask: AuthorTaskNode, scopeGroup: ScopeGroupNode };
 
 function DeletableEdge({
   id,
@@ -111,7 +112,8 @@ interface BlueprintCanvasProps {
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
   onSetEdges: (updater: (eds: Edge[]) => Edge[]) => void;
-  onNodeSelect: (nodeId: string | null) => void;
+  /** Every selected task node, so the toolbar can offer to group them into a scope. */
+  onSelectionChange: (nodeIds: string[]) => void;
   isPlacing?: boolean;
   onPlaceNode?: (position: { x: number; y: number }) => void;
   onCancelPlace?: () => void;
@@ -123,7 +125,7 @@ export function BlueprintCanvas({
   onNodesChange,
   onEdgesChange,
   onSetEdges,
-  onNodeSelect,
+  onSelectionChange: onSelectionChanged,
   isPlacing = false,
   onPlaceNode,
   onCancelPlace,
@@ -158,9 +160,9 @@ export function BlueprintCanvas({
 
   const onSelectionChange = useCallback(
     ({ nodes: selectedNodes }: OnSelectionChangeParams) => {
-      onNodeSelect(selectedNodes.length > 0 ? selectedNodes[0].id : null);
+      onSelectionChanged(selectedNodes.map((n) => n.id));
     },
-    [onNodeSelect],
+    [onSelectionChanged],
   );
 
   const handlePaneClick = useCallback(
@@ -205,6 +207,7 @@ export function BlueprintCanvas({
         <Controls />
         <MiniMap
           nodeColor={(n) => {
+            if (n.type === 'scopeGroup') return 'transparent';
             const taskType = (n.data as any)?.taskType ?? '';
             if (taskType === 'system.start') return '#22c55e';
             if (taskType === 'system.end') return '#ef4444';
