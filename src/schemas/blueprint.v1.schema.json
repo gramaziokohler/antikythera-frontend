@@ -1,0 +1,258 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://raw.githubusercontent.com/gramaziokohler/antikythera/refs/heads/main/src/antikythera/models/blueprint.v1.schema.json",
+    "title": "Antikythera Blueprint",
+    "description": "Schema for Antikythera Blueprint files",
+    "type": "object",
+    "required": [
+        "id",
+        "name",
+        "version"
+    ],
+    "properties": {
+        "id": {
+            "type": "string",
+            "description": "Unique identifier for the blueprint"
+        },
+        "name": {
+            "type": "string",
+            "description": "A human-readable name for the blueprint"
+        },
+        "version": {
+            "type": "string",
+            "description": "The version of the blueprint schema"
+        },
+        "description": {
+            "type": "string",
+            "description": "A human-readable description of the blueprint"
+        },
+        "tasks": {
+            "type": "array",
+            "description": "A list of tasks that make up the blueprint",
+            "items": {
+                "$ref": "#/definitions/Task"
+            }
+        }
+    },
+    "definitions": {
+        "Task": {
+            "type": "object",
+            "required": [
+                "id",
+                "type"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Unique identifier for the task"
+                },
+                "type": {
+                    "type": "string",
+                    "description": "The type of the task"
+                },
+                "description": {
+                    "type": "string",
+                    "description": "A human-readable description of the task"
+                },
+                "condition": {
+                    "type": "string",
+                    "description": "A condition expression for the task execution"
+                },
+                "inputs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/TaskInput"
+                    }
+                },
+                "outputs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/TaskOutput"
+                    }
+                },
+                "params": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/TaskParam"
+                    }
+                },
+                "depends_on": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Dependency"
+                    }
+                },
+                "state": {
+                    "$ref": "#/definitions/TaskState"
+                },
+                "scope_start": {
+                    "$ref": "#/definitions/ScopeStart"
+                },
+                "scope_end": {
+                    "type": "string",
+                    "description": "Task ID of the scope_start task that this task closes. Marks the end of a scope region."
+                }
+            }
+        },
+        "TaskInput": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/TaskIO"
+                },
+                {
+                    "properties": {
+                        "get_from": {
+                            "type": "string",
+                            "description": "Key to retrieve the input value from"
+                        }
+                    }
+                }
+            ]
+        },
+        "TaskOutput": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/TaskIO"
+                },
+                {
+                    "properties": {
+                        "set_to": {
+                            "type": "string",
+                            "description": "Key to set the output value to"
+                        }
+                    }
+                }
+            ]
+        },
+        "TaskParam": {
+            "$ref": "#/definitions/TaskIO"
+        },
+        "TaskIO": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name of the IO item"
+                },
+                "value": {
+                    "description": "Value of the IO item (can be any type)"
+                },
+                "type_hint": {
+                    "type": "string",
+                    "description": "Python type hint of the IO item"
+                },
+                "type": {
+                    "type": "string",
+                    "description": "Deprecated alias for 'type_hint'. Use 'type_hint' instead."
+                },
+                "description": {
+                    "type": "string",
+                    "description": "Description of the IO item"
+                }
+            }
+        },
+        "Dependency": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "ID of the task to depend on"
+                },
+                "type": {
+                    "$ref": "#/definitions/DependencyType"
+                }
+            }
+        },
+        "DependencyType": {
+            "type": "string",
+            "enum": [
+                "FS",
+                "FF",
+                "SS",
+                "SF"
+            ],
+            "default": "FS"
+        },
+        "TaskState": {
+            "type": "string",
+            "enum": [
+                "PENDING",
+                "READY",
+                "RUNNING",
+                "SUCCEEDED",
+                "FAILED",
+                "SKIPPED",
+                "UNSPECIFIED"
+            ],
+            "default": "PENDING"
+        },
+        "ScopeStart": {
+            "type": "object",
+            "description": "Marks a task as the opening of a scope region. The scope is identified by this task's ID. An optional name can be provided for display purposes.",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Optional human-readable label for the scope (not used at runtime)."
+                },
+                "retry_policy": {
+                    "$ref": "#/definitions/RetryPolicy"
+                },
+                "while_policy": {
+                    "$ref": "#/definitions/WhilePolicy"
+                }
+            },
+            "additionalProperties": false
+        },
+        "RetryPolicy": {
+            "type": "object",
+            "description": "Re-runs the scope a fixed number of times after the initial execution.",
+            "required": [
+                "retries"
+            ],
+            "properties": {
+                "retries": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Number of additional times to re-run the scope after the initial execution."
+                },
+                "backoff": {
+                    "type": "object",
+                    "description": "Optional backoff configuration between retries (experimental, not yet enforced).",
+                    "properties": {
+                        "constant_ms": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Constant delay in milliseconds between retries."
+                        }
+                    }
+                }
+            },
+            "additionalProperties": false
+        },
+        "WhilePolicy": {
+            "type": "object",
+            "description": "Re-runs the scope as long as a condition evaluates to True.",
+            "required": [
+                "condition"
+            ],
+            "properties": {
+                "condition": {
+                    "type": "string",
+                    "description": "Expression evaluated against session data after each iteration. Scope loops while this is True."
+                },
+                "max_iterations": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "Optional cap on the total number of iterations (including the initial run)."
+                }
+            },
+            "additionalProperties": false
+        }
+    }
+}

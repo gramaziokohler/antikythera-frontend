@@ -137,6 +137,14 @@
     color: var(--color-terracotta-600);
 }
 
+.context-menu-item svg.breakpoint-active {
+    color: var(--color-error);
+}
+
+.context-menu-item:hover:not(:disabled) svg.breakpoint-active {
+    color: var(--color-error);
+}
+
 /* Hint text at the bottom */
 .context-menu-hint {
     font-size: 0.72rem;

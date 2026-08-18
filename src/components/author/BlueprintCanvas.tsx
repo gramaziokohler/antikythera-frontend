@@ -22,14 +22,12 @@ import type {
   OnSelectionChangeParams,
   EdgeProps,
 } from '@xyflow/react';
-import dagre from '@dagrejs/dagre';
 import '@xyflow/react/dist/style.css';
 import { AuthorTaskNode } from './AuthorTaskNode';
+import { ScopeGroupNode } from '../graph/ScopeGroupNode';
+import { NODE_WIDTH } from '../../utils/flow-layout';
 
-export const NODE_WIDTH = 240;
-export const NODE_HEIGHT = 100;
-
-const nodeTypes = { authorTask: AuthorTaskNode };
+const nodeTypes = { authorTask: AuthorTaskNode, scopeGroup: ScopeGroupNode };
 
 function DeletableEdge({
   id,
@@ -108,39 +106,14 @@ function DeletableEdge({
 
 const edgeTypes = { deletable: DeletableEdge };
 
-export function getLayoutedElements(nodes: Node[], edges: Edge[]) {
-  const g = new dagre.graphlib.Graph();
-  g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: 'LR', ranksep: 160, nodesep: 60 });
-
-  nodes.forEach((n) => g.setNode(n.id, { width: NODE_WIDTH, height: NODE_HEIGHT }));
-  edges.forEach((e) => g.setEdge(e.source, e.target));
-  dagre.layout(g);
-
-  return {
-    nodes: nodes.map((n) => {
-      const pos = g.node(n.id);
-      return {
-        ...n,
-        targetPosition: Position.Left,
-        sourcePosition: Position.Right,
-        position: {
-          x: pos.x - NODE_WIDTH / 2,
-          y: pos.y - NODE_HEIGHT / 2,
-        },
-      };
-    }),
-    edges,
-  };
-}
-
 interface BlueprintCanvasProps {
   nodes: Node[];
   edges: Edge[];
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
   onSetEdges: (updater: (eds: Edge[]) => Edge[]) => void;
-  onNodeSelect: (nodeId: string | null) => void;
+  /** Every selected task node, so the toolbar can offer to group them into a scope. */
+  onSelectionChange: (nodeIds: string[]) => void;
   isPlacing?: boolean;
   onPlaceNode?: (position: { x: number; y: number }) => void;
   onCancelPlace?: () => void;
@@ -152,7 +125,7 @@ export function BlueprintCanvas({
   onNodesChange,
   onEdgesChange,
   onSetEdges,
-  onNodeSelect,
+  onSelectionChange: onSelectionChanged,
   isPlacing = false,
   onPlaceNode,
   onCancelPlace,
@@ -187,9 +160,9 @@ export function BlueprintCanvas({
 
   const onSelectionChange = useCallback(
     ({ nodes: selectedNodes }: OnSelectionChangeParams) => {
-      onNodeSelect(selectedNodes.length > 0 ? selectedNodes[0].id : null);
+      onSelectionChanged(selectedNodes.map((n) => n.id));
     },
-    [onNodeSelect],
+    [onSelectionChanged],
   );
 
   const handlePaneClick = useCallback(
@@ -234,6 +207,7 @@ export function BlueprintCanvas({
         <Controls />
         <MiniMap
           nodeColor={(n) => {
+            if (n.type === 'scopeGroup') return 'transparent';
             const taskType = (n.data as any)?.taskType ?? '';
             if (taskType === 'system.start') return '#22c55e';
             if (taskType === 'system.end') return '#ef4444';

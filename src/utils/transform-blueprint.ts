@@ -1,5 +1,19 @@
 import type { GraphData } from '../types'
 
+/**
+ * Task IO as a flat `{name, type, value, ...}` record, whichever way it arrived.
+ *
+ * The session API serves blueprints through COMPAS `json_dumps`, which wraps every Data object
+ * as `{dtype, guid, data}` — so a task's declared inputs and outputs arrive nested, while the
+ * authoring tool's own in-memory blueprints carry them flat. Unwrapping here (as this function
+ * already does for the blueprint, its tasks and their params) keeps GraphNode.inputs/outputs one
+ * shape for every consumer, rather than each one re-deriving `io.data || io` — and each one
+ * being a place to forget it.
+ */
+function unwrapTaskIO(io: unknown[] | undefined): unknown[] | undefined {
+  return io?.map((entry) => (entry as { data?: unknown } | null)?.data ?? entry)
+}
+
 export function transformBlueprintToGraph(blueprint: unknown): GraphData {
   const blueprintData = (blueprint as any).data || blueprint
   const tasks: any[] = blueprintData.tasks || []
@@ -62,8 +76,8 @@ export function transformBlueprintToGraph(blueprint: unknown): GraphData {
       type: taskData.type,
       description: taskData.description,
       condition: taskData.condition,
-      inputs: taskData.inputs,
-      outputs: taskData.outputs,
+      inputs: unwrapTaskIO(taskData.inputs),
+      outputs: unwrapTaskIO(taskData.outputs),
       internalBlueprintId,
     }
   })

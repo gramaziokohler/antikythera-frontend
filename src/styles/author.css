@@ -77,6 +77,16 @@
   border-color: var(--color-border-hover);
 }
 
+.toolbar-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.toolbar-btn:disabled:hover {
+  background: var(--color-bg-card);
+  border-color: var(--color-border-strong);
+}
+
 .toolbar-btn.primary {
   background: var(--color-terracotta-600);
   border-color: var(--color-terracotta-600);
@@ -170,6 +180,27 @@
 }
 
 .toolbar-errors span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Save result banner (success) */
+.toolbar-status.success {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-status-success-bg);
+  border: 1px solid var(--color-success);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--color-success);
+  max-width: 400px;
+  overflow: hidden;
+}
+
+.toolbar-status.success span {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -367,12 +398,117 @@
   flex: 1.4;
 }
 
-.tep-field-row .tep-input.field-type {
+.tep-field-row .tep-input.field-type,
+.tep-field-row .tep-select.field-type,
+.tep-field-row .tep-type-cell {
   flex: 1;
+  min-width: 0;
+}
+
+/* Free-text type plus the button back to the list */
+.tep-type-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.tep-type-cell .tep-input.field-type {
+  flex: 1;
+  min-width: 0;
+}
+
+.tep-type-back {
+  flex-shrink: 0;
+  padding: 4px 6px;
+}
+
+.tep-field-row .tep-select.field-type {
+  height: 30px;
+  padding: 4px 4px;
+  font-size: 12px;
 }
 
 .tep-field-row .tep-input.field-value {
   flex: 1.2;
+}
+
+.tep-field-row .tep-field-value-cell {
+  flex: 1.2;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.tep-field-value-cell .tep-input.field-value {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Simulation opt-out toggle */
+.tep-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.tep-hint {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 6px 0 10px;
+}
+
+.tep-value-opted-out {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+/* Tier 3 output editor: raw COMPAS JSON textarea */
+.tep-json-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  min-width: 0;
+}
+
+.tep-json-textarea {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  min-height: 46px;
+  resize: vertical;
+}
+
+.tep-json-textarea.tep-json-invalid {
+  border-color: #ef4444;
+}
+
+.tep-json-error {
+  font-size: 11px;
+  color: #ef4444;
+}
+
+/* Tier 2 output editor: list[T] */
+.tep-list-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.tep-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.tep-list-item-value {
+  flex: 1;
+  min-width: 0;
 }
 
 .tep-field-row-labels {
@@ -518,6 +654,119 @@
   padding: 10px 12px;
   background: var(--color-bg-subtle);
   border-radius: 6px;
+}
+
+/* ============================================================
+   Scope Edit Panel
+   ============================================================ */
+
+/* Segmented policy picker — the three policies are mutually exclusive */
+.sep-policy-picker {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.sep-policy-option {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  border-right: 1px solid var(--color-border-strong);
+  background: var(--color-bg-page);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  box-shadow: none;
+}
+
+.sep-policy-option:last-child {
+  border-right: none;
+}
+
+.sep-policy-option:hover {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-primary);
+}
+
+.sep-policy-option.active {
+  color: #fff;
+  background: var(--color-text-muted);
+}
+
+/* Match the frame colours used on the canvas, so the picker reads as the
+   same thing the scope box is showing. */
+.sep-policy-option.scope-retry.active {
+  background: var(--color-terracotta-600);
+}
+
+.sep-policy-option.scope-while.active {
+  background: var(--color-copper-600);
+}
+
+.sep-policy-option.scope-skip.active {
+  background: var(--color-status-skipped);
+}
+
+/* Member task list */
+.sep-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.sep-member {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 5px;
+  background: var(--color-bg-page);
+  cursor: pointer;
+  text-align: left;
+  box-shadow: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.sep-member:hover {
+  border-color: var(--color-terracotta-500);
+  background: var(--color-terracotta-100);
+}
+
+.sep-member-id {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sep-member-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  padding: 1px 4px;
 }
 
 /* Type selector (dropdown + optional custom input) */

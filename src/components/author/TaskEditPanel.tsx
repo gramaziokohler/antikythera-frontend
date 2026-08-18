@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 import type {
   AuthorNodeData,
@@ -7,7 +8,19 @@ import type {
   TaskParam,
   BlueprintMeta,
 } from '../../types/blueprint-schema';
-import { KNOWN_TASK_TYPES } from '../../types/blueprint-schema';
+import {
+  KNOWN_IO_TYPES,
+  KNOWN_TASK_TYPES,
+  SYSTEM_START_TASK_TYPE,
+  SYSTEM_END_TASK_TYPE,
+  isSystemTaskType,
+} from '../../types/blueprint-schema';
+import {
+  isOptedOutParams,
+  setOptedOutOfSimulation,
+  SIMULATION_OPT_OUT_PARAM_NAME,
+} from '../../utils/blueprint-simulate';
+import { TypedValueEditor } from '../TypedValueEditor';
 
 /* ------------------------------------------------------------------ */
 /*  BlueprintMetaPanel – shown when no node is selected                */
@@ -64,6 +77,11 @@ export function BlueprintMetaPanel({ meta, onMetaChange }: BlueprintMetaPanelPro
           parameters. Connect nodes by dragging from the right handle of one
           task to the left handle of another.
         </p>
+        <p className="bmp-hint">
+          To make a region of the graph retry or loop, select the tasks
+          (Shift+drag, or Ctrl/&#8984;+click) and hit <strong>Group into Scope</strong>.
+          Click a scope&rsquo;s label on the canvas to edit its policy.
+        </p>
       </div>
     </div>
   );
@@ -73,7 +91,78 @@ export function BlueprintMetaPanel({ meta, onMetaChange }: BlueprintMetaPanelPro
 /*  FieldList – reusable table editor for inputs / outputs / params    */
 /* ------------------------------------------------------------------ */
 
-type GenericField = { name: string; type?: string; value?: unknown };
+type GenericField = { name: string; type_hint?: string; value?: unknown };
+
+/** Sentinel option that switches the cell to free text. Not a type anyone can declare. */
+const CUSTOM_TYPE_OPTION = '__custom__';
+
+/**
+ * Picks an IO item's declared type from the known list, or takes any other type
+ * as free text.
+ *
+ * A `<select>` rather than an `<input list>`: a datalist filters its options
+ * against what the input already contains, so once a type was chosen the list
+ * collapsed to that one entry and stopped being a picker. The set of legal types
+ * is still open — any dotted Python path is valid — so "Custom…" switches the
+ * cell to a text input, and a type that came from a blueprint but is not in the
+ * list opens as text without the author having to ask for it.
+ */
+function TypeHintField({
+  value,
+  onChange,
+}: {
+  value: string | undefined;
+  onChange: (type: string | undefined) => void;
+}) {
+  const [customRequested, setCustomRequested] = useState(false);
+  const isListed = !value || KNOWN_IO_TYPES.includes(value);
+
+  if (customRequested || !isListed) {
+    return (
+      <div className="tep-type-cell">
+        <input
+          className="tep-input field-type"
+          placeholder="my_package.MyClass"
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value || undefined)}
+        />
+        <button
+          className="tep-add-btn tep-type-back"
+          onClick={() => {
+            setCustomRequested(false);
+            onChange(undefined);
+          }}
+          title="Clear and choose from the list"
+        >
+          ↩
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      className="tep-select field-type"
+      value={value ?? ''}
+      onChange={(e) => {
+        if (e.target.value === CUSTOM_TYPE_OPTION) {
+          setCustomRequested(true);
+          onChange(undefined);
+        } else {
+          onChange(e.target.value || undefined);
+        }
+      }}
+    >
+      <option value="">untyped</option>
+      {KNOWN_IO_TYPES.map((t) => (
+        <option key={t} value={t}>
+          {t}
+        </option>
+      ))}
+      <option value={CUSTOM_TYPE_OPTION}>Custom…</option>
+    </select>
+  );
+}
 
 interface FieldListProps<T extends GenericField> {
   fields: T[];
@@ -81,6 +170,8 @@ interface FieldListProps<T extends GenericField> {
   showValue?: boolean;
   addLabel: string;
   emptyField: () => T;
+  /** Overrides the default free-text value cell, e.g. for a type-appropriate output editor. */
+  renderValue?: (field: T, onChange: (value: unknown) => void) => ReactNode;
 }
 
 function FieldList<T extends GenericField>({
@@ -89,6 +180,7 @@ function FieldList<T extends GenericField>({
   showValue = true,
   addLabel,
   emptyField,
+  renderValue,
 }: FieldListProps<T>) {
   const update = (i: number, patch: Partial<T>) => {
     const next = fields.map((f, idx) => (idx === i ? { ...f, ...patch } : f));
@@ -132,23 +224,25 @@ function FieldList<T extends GenericField>({
             value={f.name}
             onChange={(e) => update(i, { name: e.target.value } as Partial<T>)}
           />
-          <input
-            className="tep-input field-type"
-            placeholder="type"
-            value={f.type ?? ''}
-            onChange={(e) =>
-              update(i, { type: e.target.value || undefined } as Partial<T>)
-            }
+          <TypeHintField
+            value={f.type_hint}
+            onChange={(type_hint) => update(i, { type_hint } as Partial<T>)}
           />
           {showValue && (
-            <input
-              className="tep-input field-value"
-              placeholder="value"
-              value={valueAsString(f.value)}
-              onChange={(e) =>
-                update(i, { value: parseValue(e.target.value) } as Partial<T>)
-              }
-            />
+            renderValue ? (
+              <div className="tep-field-value-cell">
+                {renderValue(f, (value) => update(i, { value } as Partial<T>))}
+              </div>
+            ) : (
+              <input
+                className="tep-input field-value"
+                placeholder="value"
+                value={valueAsString(f.value)}
+                onChange={(e) =>
+                  update(i, { value: parseValue(e.target.value) } as Partial<T>)
+                }
+              />
+            )
           )}
           <button className="tep-del-btn" onClick={() => remove(i)} title="Remove">
             <X size={12} />
@@ -161,6 +255,20 @@ function FieldList<T extends GenericField>({
       </button>
     </div>
   );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Output value editor – ADR-0003's simulation editor, all three tiers */
+/* ------------------------------------------------------------------ */
+
+function renderOutputValueEditor(field: TaskOutput, onChange: (value: unknown) => void): ReactNode {
+  return <TypedValueEditor type={field.type_hint} value={field.value} onChange={onChange} />;
+}
+
+/** A task opted out of simulation is claimed by its real agent, so an authored output value is
+ * never used — surface that instead of an editor that would look meaningful but isn't. */
+function renderOptedOutOutputEditor(): ReactNode {
+  return <span className="tep-value-opted-out">Real agent produces this output</span>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -207,7 +315,9 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: Tas
     commit(localId, next);
   };
 
-  const isSystemNode = data.taskType === 'system.start' || data.taskType === 'system.end';
+  const isSystemNode = data.taskType === SYSTEM_START_TASK_TYPE || data.taskType === SYSTEM_END_TASK_TYPE;
+  const isSystemTask = isSystemTaskType(data.taskType);
+  const optedOut = isOptedOutParams(localData.params);
 
   return (
     <div className="tep-root">
@@ -316,6 +426,28 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: Tas
           </div>
         </div>
 
+        {/* ---- Simulation ---- */}
+        {!isSystemTask && (
+          <div className="tep-section">
+            <div className="tep-section-title">Simulation</div>
+            <label className="tep-checkbox-label">
+              <input
+                type="checkbox"
+                checked={optedOut}
+                onChange={(e) =>
+                  patchData({ params: setOptedOutOfSimulation(localData.params, e.target.checked) })
+                }
+              />
+              Use real agent (opt out of simulation)
+            </label>
+            <p className="tep-hint">
+              Keeps this task&rsquo;s real type in a simulated run, so a real agent must be
+              registered for it on the broker — otherwise the session fails with
+              NO_AGENT_CLAIMED.
+            </p>
+          </div>
+        )}
+
         {/* ---- Inputs ---- */}
         <div className="tep-section">
           <div className="tep-section-title">Inputs</div>
@@ -335,6 +467,7 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: Tas
             onChange={(outputs) => patchData({ outputs })}
             addLabel="Add output"
             emptyField={() => ({ name: '' })}
+            renderValue={optedOut ? renderOptedOutOutputEditor : renderOutputValueEditor}
           />
         </div>
 
@@ -342,8 +475,8 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: Tas
         <div className="tep-section">
           <div className="tep-section-title">Parameters</div>
           <FieldList<TaskParam>
-            fields={localData.params}
-            onChange={(params) => patchData({ params })}
+            fields={localData.params.filter((p) => p.name !== SIMULATION_OPT_OUT_PARAM_NAME)}
+            onChange={(params) => patchData({ params: setOptedOutOfSimulation(params, optedOut) })}
             addLabel="Add param"
             emptyField={() => ({ name: '' })}
           />

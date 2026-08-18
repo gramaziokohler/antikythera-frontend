@@ -53,6 +53,57 @@
   color: var(--color-terracotta-500);
 }
 
+/* ADR-0003 / issue-sim-06: step-through (break on every task) toggle, driving tab only. */
+.step-through-btn.active {
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+}
+
+.step-through-btn.active:hover {
+  background: var(--color-error);
+  color: var(--color-text-inverse);
+}
+
+/* ADR-0003 / issue-sim-07: driving-vs-watching indicator, shown on any simulated session. */
+.sim-mode-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: none;
+}
+
+.sim-mode-badge.driving {
+  background: var(--color-terracotta-500);
+  color: var(--color-text-inverse);
+  border: 1px solid transparent;
+}
+
+.sim-mode-badge.watching {
+  background: transparent;
+  color: var(--color-graphite);
+  border: 1px solid var(--color-stone-soft);
+}
+
+/* ADR-0003 / issue-sim-07: simulation delay control, driving tab only. */
+.sim-delay-control {
+  font-size: 0.85rem;
+  color: var(--color-graphite);
+  cursor: default;
+}
+
+.sim-delay-input {
+  width: 4.5rem;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--color-stone-soft);
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+}
+
 .start-preview-btn {
   background: var(--color-terracotta-500);
   color: var(--color-text-inverse);

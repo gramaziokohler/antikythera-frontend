@@ -4,10 +4,19 @@ import {
   PlusCircle,
   FolderOpen,
   Download,
+  Save,
   AlertCircle,
+  CheckCircle2,
   Plus,
+  Play,
+  Group,
 } from 'lucide-react';
 import type { BlueprintMeta } from '../../types/blueprint-schema';
+
+export interface SaveStatus {
+  kind: 'success' | 'error';
+  message: string;
+}
 
 interface AuthorToolbarProps {
   meta: BlueprintMeta;
@@ -15,8 +24,16 @@ interface AuthorToolbarProps {
   onNew: () => void;
   onOpen: (file: File) => void;
   onExport: () => void;
+  onSave: () => void;
+  isSaving?: boolean;
+  saveStatus?: SaveStatus | null;
+  onSimulate: () => void;
+  isSimulating?: boolean;
   onAddNode: () => void;
   isPlacing?: boolean;
+  onGroupIntoScope: () => void;
+  /** How many task nodes are selected — a scope needs at least two. */
+  selectionCount?: number;
   errors: string[];
 }
 
@@ -26,10 +43,18 @@ export function AuthorToolbar({
   onNew,
   onOpen,
   onExport,
+  onSave,
+  isSaving = false,
+  saveStatus = null,
+  onSimulate,
+  isSimulating = false,
   onAddNode,
   isPlacing = false,
+  onGroupIntoScope,
+  selectionCount = 0,
   errors,
 }: AuthorToolbarProps) {
+  const canGroup = selectionCount >= 2;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -79,6 +104,26 @@ export function AuthorToolbar({
         Export
       </button>
 
+      <button
+        className="toolbar-btn primary"
+        onClick={onSave}
+        disabled={isSaving}
+        title="Save blueprint to the orchestrator"
+      >
+        <Save size={14} />
+        {isSaving ? 'Saving…' : 'Save'}
+      </button>
+
+      <button
+        className="toolbar-btn primary"
+        onClick={onSimulate}
+        disabled={isSimulating}
+        title="Derive a simulation blueprint, upload it, and start a session"
+      >
+        <Play size={14} />
+        {isSimulating ? 'Simulating…' : 'Simulate'}
+      </button>
+
       <div className="toolbar-divider" />
 
       {/* Add task */}
@@ -89,6 +134,21 @@ export function AuthorToolbar({
       >
         <Plus size={14} />
         {isPlacing ? 'Placing… (Esc)' : 'Add Task'}
+      </button>
+
+      {/* Group a selection into a scope */}
+      <button
+        className="toolbar-btn"
+        onClick={onGroupIntoScope}
+        disabled={!canGroup}
+        title={
+          canGroup
+            ? `Wrap the ${selectionCount} selected tasks in a scope (retry / while / skip)`
+            : 'Select two or more connected tasks — Shift+drag, or Ctrl/⌘+click — to group them into a scope'
+        }
+      >
+        <Group size={14} />
+        {canGroup ? `Group ${selectionCount} into Scope` : 'Group into Scope'}
       </button>
 
       <div className="toolbar-spacer" />
@@ -120,6 +180,22 @@ export function AuthorToolbar({
         <div className="toolbar-errors">
           <AlertCircle size={14} />
           <span>{errors.join('  ·  ')}</span>
+        </div>
+      )}
+
+      {/* Save result */}
+      {errors.length === 0 && saveStatus && (
+        <div
+          className={
+            saveStatus.kind === 'success' ? 'toolbar-status success' : 'toolbar-errors'
+          }
+        >
+          {saveStatus.kind === 'success' ? (
+            <CheckCircle2 size={14} />
+          ) : (
+            <AlertCircle size={14} />
+          )}
+          <span>{saveStatus.message}</span>
         </div>
       )}
     </div>
