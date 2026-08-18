@@ -2,7 +2,8 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { useSimulationAgentState } from '../useSimulationAgentState';
 import { SimulationAgent } from '../../agents/SimulationAgent';
-import { Task } from '../../agents/Task';
+import { Task } from "@gramaziokohler/antikythera-ts/agents";
+import { TaskAssignmentMessage } from '@gramaziokohler/antikythera-ts';
 
 describe('useSimulationAgentState', () => {
   it('returns a stable empty snapshot when agent is null', () => {
@@ -36,7 +37,7 @@ describe('useSimulationAgentState', () => {
     });
     expect(result.current.breakOnEveryTask).toBe(true);
 
-    const task = new Task({ id: 'task-1', type: 'simulation.demo.tool', params: {} });
+    const task = new Task(new TaskAssignmentMessage({ id: 'task-1', type: 'simulation.demo.tool', params: {} }));
 
     act(() => {
       // No awaits in invokeTool's body before the hold is registered, so this runs

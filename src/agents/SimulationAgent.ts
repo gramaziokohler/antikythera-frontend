@@ -1,7 +1,6 @@
-import type { Agent } from './Agent';
-import { Task } from './Task';
+import type { Agent } from '@gramaziokohler/antikythera-ts/agents';
+import { Task } from '@gramaziokohler/antikythera-ts/agents';
 import { SIMULATED_OUTPUT_PARAM_PREFIX } from '../utils/blueprint-simulate';
-import { passthroughAnyData } from './compasPb';
 
 /** ADR-0003: the stand-in agent type. Claims `simulation.*` tasks and nothing else. */
 export const SIMULATION_AGENT_TYPE = 'simulation';
@@ -177,7 +176,7 @@ export class SimulationAgent implements Agent {
     const authoredOutputs: Record<string, unknown> = {};
     for (const [key, anyData] of Object.entries(rawParams)) {
       if (key.startsWith(SIMULATED_OUTPUT_PARAM_PREFIX)) {
-        authoredOutputs[key.substring(SIMULATED_OUTPUT_PARAM_PREFIX.length)] = passthroughAnyData(anyData);
+        authoredOutputs[key.substring(SIMULATED_OUTPUT_PARAM_PREFIX.length)] = anyData;
       }
     }
     const hasAuthoredOutput = Object.keys(authoredOutputs).length > 0;
@@ -204,7 +203,7 @@ export class SimulationAgent implements Agent {
   /**
    * Releases a held task, completing it with `outputs` — plain JS values from the breakpoint
    * editor (see SimulationBreakpointPanel.tsx), encoded fresh by `AgentLauncher.completeTask`
-   * rather than forwarded as a passthrough, since there is no longer a single original wire value
+   * rather than forwarded verbatim, since there is no longer a single original wire value
    * to forward once the author may have edited it. A task held for want of an authored output
    * (`requiresValue`) cannot be continued with nothing — the caller must supply at least one
    * output value.

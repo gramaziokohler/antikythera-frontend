@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { MqttService } from '../services/MqttService'
-import { AgentLauncher } from '../agents/AgentLauncher'
+import { MqttService } from "@gramaziokohler/antikythera-ts/agents"
+import { AgentLauncher } from "@gramaziokohler/antikythera-ts/agents"
 import { NotificationAgent } from '../agents/NotificationAgent'
 import { notifications as notificationStore } from '../services/NotificationStore'
 import { NotificationOverlay, type Notification } from './NotificationOverlay'

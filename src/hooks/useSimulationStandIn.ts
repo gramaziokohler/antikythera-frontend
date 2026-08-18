@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
-import { MqttService } from '../services/MqttService';
-import { AgentLauncher } from '../agents/AgentLauncher';
+import { MqttService } from "@gramaziokohler/antikythera-ts/agents";
+import { AgentLauncher } from "@gramaziokohler/antikythera-ts/agents";
 import { SimulationAgent } from '../agents/SimulationAgent';
 import { getDrivingSimulationBlueprintId } from '../utils/simulation-session';
 
