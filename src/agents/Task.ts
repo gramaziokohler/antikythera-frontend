@@ -1,4 +1,5 @@
 import { antikythera, compas_pb } from '../proto/bundle';
+import { decodeAnyData } from './anyDataCodec';
 
 export class Task {
     private _message: antikythera.v1.ITaskAssignmentMessage;
@@ -17,6 +18,27 @@ export class Task {
 
     get params(): any {
         return this.extractMap(this._message.params);
+    }
+
+    /**
+     * The task's params, undecoded. Lets a caller (see SimulationAgent) forward a param's wire
+     * value byte-for-byte instead of decoding and re-encoding it — needed because a param isn't
+     * necessarily FallbackData/DictData/a primitive by the time it arrives; compas_pb may have
+     * serialized it using a native message type this frontend has no reason to understand (see
+     * anyDataCodec.ts's AnyDataPassthrough).
+     */
+    getRawParams(): { [k: string]: compas_pb.data.IAnyData } {
+        return this._message.params ?? {};
+    }
+
+    /**
+     * The names of the outputs this task declares in its blueprint (the orchestrator's
+     * `output_keys`, see `outputs_to_keys`). Empty for a task that declares none — which is not
+     * the same thing as a task whose outputs simply have no value yet, a distinction the
+     * simulation stand-in depends on (see SimulationAgent).
+     */
+    get outputKeys(): string[] {
+        return this._message.outputKeys ?? [];
     }
 
     get inputs(): any {
@@ -50,21 +72,6 @@ export class Task {
     }
 
     private extractValue(anyData: compas_pb.data.IAnyData): any {
-        if (anyData.value) {
-            const v = anyData.value;
-            if (v.stringValue !== undefined && v.stringValue !== null) return v.stringValue;
-            if (v.numberValue !== undefined && v.numberValue !== null) return v.numberValue;
-            if (v.boolValue !== undefined && v.boolValue !== null) return v.boolValue;
-            // TODO: Handle listValue and structValue recursively if needed
-        } else if (anyData.message) {
-            const typeUrl = anyData.message.type_url;
-            const value = anyData.message.value;
-
-            if (typeUrl === 'type.googleapis.com/compas_pb.data.ListData') {
-                const listData = compas_pb.data.ListData.decode(value as Uint8Array);
-                return listData.items?.map(item => this.extractValue(item));
-            }
-        }
-        return null;
+        return decodeAnyData(anyData);
     }
 }

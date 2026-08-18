@@ -4,10 +4,18 @@ import {
   PlusCircle,
   FolderOpen,
   Download,
+  Save,
   AlertCircle,
+  CheckCircle2,
   Plus,
+  Play,
 } from 'lucide-react';
 import type { BlueprintMeta } from '../../types/blueprint-schema';
+
+export interface SaveStatus {
+  kind: 'success' | 'error';
+  message: string;
+}
 
 interface AuthorToolbarProps {
   meta: BlueprintMeta;
@@ -15,6 +23,11 @@ interface AuthorToolbarProps {
   onNew: () => void;
   onOpen: (file: File) => void;
   onExport: () => void;
+  onSave: () => void;
+  isSaving?: boolean;
+  saveStatus?: SaveStatus | null;
+  onSimulate: () => void;
+  isSimulating?: boolean;
   onAddNode: () => void;
   isPlacing?: boolean;
   errors: string[];
@@ -26,6 +39,11 @@ export function AuthorToolbar({
   onNew,
   onOpen,
   onExport,
+  onSave,
+  isSaving = false,
+  saveStatus = null,
+  onSimulate,
+  isSimulating = false,
   onAddNode,
   isPlacing = false,
   errors,
@@ -79,6 +97,26 @@ export function AuthorToolbar({
         Export
       </button>
 
+      <button
+        className="toolbar-btn primary"
+        onClick={onSave}
+        disabled={isSaving}
+        title="Save blueprint to the orchestrator"
+      >
+        <Save size={14} />
+        {isSaving ? 'Saving…' : 'Save'}
+      </button>
+
+      <button
+        className="toolbar-btn primary"
+        onClick={onSimulate}
+        disabled={isSimulating}
+        title="Derive a simulation blueprint, upload it, and start a session"
+      >
+        <Play size={14} />
+        {isSimulating ? 'Simulating…' : 'Simulate'}
+      </button>
+
       <div className="toolbar-divider" />
 
       {/* Add task */}
@@ -120,6 +158,22 @@ export function AuthorToolbar({
         <div className="toolbar-errors">
           <AlertCircle size={14} />
           <span>{errors.join('  ·  ')}</span>
+        </div>
+      )}
+
+      {/* Save result */}
+      {errors.length === 0 && saveStatus && (
+        <div
+          className={
+            saveStatus.kind === 'success' ? 'toolbar-status success' : 'toolbar-errors'
+          }
+        >
+          {saveStatus.kind === 'success' ? (
+            <CheckCircle2 size={14} />
+          ) : (
+            <AlertCircle size={14} />
+          )}
+          <span>{saveStatus.message}</span>
         </div>
       )}
     </div>

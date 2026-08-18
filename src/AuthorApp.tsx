@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   ReactFlowProvider,
   applyNodeChanges,
@@ -9,14 +9,32 @@ import type { Node, Edge, NodeChange, EdgeChange } from '@xyflow/react';
 import { BlueprintCanvas } from './components/author/BlueprintCanvas';
 import { AuthorToolbar } from './components/author/AuthorToolbar';
 import { TaskEditPanel, BlueprintMetaPanel } from './components/author/TaskEditPanel';
-import type { AuthorNodeData, BlueprintMeta } from './types/blueprint-schema';
+import type { AuthorNodeData, BlueprintMeta, Blueprint } from './types/blueprint-schema';
+import {
+  SYSTEM_START_TASK_TYPE,
+  SYSTEM_END_TASK_TYPE,
+  SYSTEM_SLEEP_TASK_TYPE,
+} from './types/blueprint-schema';
 import { validateBlueprint } from './utils/blueprint-validation';
 import {
   makeEdgeId,
   blueprintToFlow,
   flowToBlueprint,
 } from './utils/blueprint-flow';
+import {
+  blueprintIdExists,
+  uploadBlueprint,
+  startBlueprintSession,
+} from './utils/blueprint-save';
+import { fetchBlueprint } from './utils/blueprint-load';
+import {
+  deriveSimulationBlueprint,
+  stripSimulationDerivation,
+} from './utils/blueprint-simulate';
+import { markDrivingSimulationSession } from './utils/simulation-session';
 import './styles/author.css';
+
+const API_BASE_URL = '/api';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -28,7 +46,7 @@ function buildDefaultBlueprint(): { nodes: Node[]; edges: Edge[] } {
     type: 'authorTask',
     position: { x: 80, y: 200 },
     data: {
-      taskType: 'system.start',
+      taskType: SYSTEM_START_TASK_TYPE,
       description: '',
       condition: '',
       inputs: [],
@@ -45,7 +63,7 @@ function buildDefaultBlueprint(): { nodes: Node[]; edges: Edge[] } {
     type: 'authorTask',
     position: { x: 480, y: 200 },
     data: {
-      taskType: 'system.end',
+      taskType: SYSTEM_END_TASK_TYPE,
       description: '',
       condition: '',
       inputs: [],
@@ -64,8 +82,8 @@ function validateFlow(nodes: Node[]): string[] {
   const errors: string[] = [];
   const data = nodes.map((n) => n.data as AuthorNodeData);
 
-  const starts = data.filter((d) => d.taskType === 'system.start');
-  const ends = data.filter((d) => d.taskType === 'system.end');
+  const starts = data.filter((d) => d.taskType === SYSTEM_START_TASK_TYPE);
+  const ends = data.filter((d) => d.taskType === SYSTEM_END_TASK_TYPE);
 
   if (starts.length === 0) errors.push('Missing system.start task');
   else if (starts.length > 1) errors.push('Multiple system.start tasks');
@@ -100,6 +118,12 @@ export function AuthorApp() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [isPlacing, setIsPlacing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{
+    kind: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   // ---- React Flow change handlers ----
 
@@ -134,28 +158,23 @@ export function AuthorApp() {
 
   // ---- Open / import ----
 
-  const handleOpen = useCallback(async (file: File) => {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(await file.text());
-    } catch {
-      setErrors(['Failed to parse blueprint file — make sure it is valid JSON.']);
-      return;
-    }
-
-    // Enforce the shared contract before importing. Rejecting an invalid
-    // blueprint here is what prevents the editor from loading fields it does
-    // not understand and then dropping them on export.
-    const result = validateBlueprint(parsed);
+  /**
+   * Replaces the canvas with a blueprint, whatever it was opened from — a file, or the orchestrator.
+   *
+   * Validates against the shared schema first, so malformed input is rejected at the editor
+   * boundary regardless of source, rather than being loaded with unknown fields and then dropped
+   * on export. Then always presents the authored form: a blueprint that came back from a simulated
+   * run carries the derivation (`__sim` id, `simulation.`-prefixed types, `__sim_out__` params),
+   * and editing that as-is would compound it on the next Simulate. Simulate re-derives from what's
+   * on the canvas, so the round trip is lossless.
+   */
+  const openBlueprint = useCallback((raw: unknown) => {
+    const result = validateBlueprint(raw);
     if (!result.blueprint) {
-      setErrors([
-        'Blueprint does not match the schema:',
-        ...result.errors,
-      ]);
+      setErrors(['Blueprint does not match the schema:', ...result.errors]);
       return;
     }
-
-    const bp = result.blueprint;
+    const bp = stripSimulationDerivation(result.blueprint);
     const { nodes: n, edges: e } = blueprintToFlow(bp);
     setNodes(n);
     setEdges(e);
@@ -168,6 +187,46 @@ export function AuthorApp() {
     setSelectedNodeId(null);
     setErrors([]);
   }, []);
+
+  const handleOpen = useCallback(
+    async (file: File) => {
+      try {
+        const text = await file.text();
+        openBlueprint(JSON.parse(text));
+      } catch {
+        setErrors(['Failed to parse blueprint file — make sure it is valid JSON.']);
+      }
+    },
+    [openBlueprint],
+  );
+
+  // ---- Edit a stored blueprint (`/author.html?blueprint=<id>`) ----
+  //
+  // The dashboard's Edit action hands the tab over by full navigation, the mirror of Simulate
+  // going the other way — the two are separate page entry points with no shared in-app router.
+  // The id stays in the URL, so a reload reopens the stored blueprint rather than dropping the
+  // tab back to an empty canvas.
+  const [editingBlueprintId] = useState(
+    () => new URLSearchParams(window.location.search).get('blueprint'),
+  );
+
+  useEffect(() => {
+    if (!editingBlueprintId) return;
+
+    let cancelled = false;
+    fetchBlueprint(API_BASE_URL, editingBlueprintId)
+      .then((bp) => {
+        if (!cancelled) openBlueprint(bp);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setErrors([err instanceof Error ? err.message : 'Failed to load blueprint']);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editingBlueprintId, openBlueprint]);
 
   // ---- Export ----
 
@@ -190,6 +249,86 @@ export function AuthorApp() {
     URL.revokeObjectURL(url);
   }, [nodes, edges, meta]);
 
+  // ---- Save (post the blueprint to the orchestrator, unmodified) ----
+
+  const handleSave = useCallback(async () => {
+    const errs = validateFlow(nodes);
+    if (errs.length) {
+      setErrors(errs);
+      setSaveStatus(null);
+      return;
+    }
+    setErrors([]);
+
+    const bp = flowToBlueprint(nodes, edges, meta);
+
+    setIsSaving(true);
+    setSaveStatus(null);
+    try {
+      const exists = await blueprintIdExists(API_BASE_URL, bp.id);
+      if (exists) {
+        const overwrite = window.confirm(
+          `A blueprint with id "${bp.id}" already exists. Overwrite it?`,
+        );
+        if (!overwrite) {
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      const result = await uploadBlueprint(API_BASE_URL, bp);
+      setSaveStatus({
+        kind: 'success',
+        message: result.message || `Saved as "${result.blueprint_id}"`,
+      });
+    } catch (err) {
+      setSaveStatus({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Save failed',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [nodes, edges, meta]);
+
+  // ---- Simulate (rewrite task types, upload under `{id}__sim`, start a session) ----
+
+  const handleSimulate = useCallback(async () => {
+    const errs = validateFlow(nodes);
+    if (errs.length) {
+      setErrors(errs);
+      setSaveStatus(null);
+      return;
+    }
+    setErrors([]);
+    setSaveStatus(null);
+
+    const bp = flowToBlueprint(nodes, edges, meta);
+
+    let simBp: Blueprint;
+    try {
+      simBp = deriveSimulationBlueprint(bp);
+    } catch (err) {
+      setErrors([
+        err instanceof Error ? err.message : 'Failed to prepare simulation',
+      ]);
+      return;
+    }
+
+    setIsSimulating(true);
+    try {
+      await uploadBlueprint(API_BASE_URL, simBp);
+      const { session_id } = await startBlueprintSession(API_BASE_URL, simBp.id);
+      markDrivingSimulationSession(session_id, simBp.id);
+      // Authoring tool and dashboard are separate page entry points (author.html vs
+      // index.html) — a full navigation is the only way to hand the tab over.
+      window.location.href = `/?session=${encodeURIComponent(session_id)}`;
+    } catch (err) {
+      setErrors([err instanceof Error ? err.message : 'Simulate failed']);
+      setIsSimulating(false);
+    }
+  }, [nodes, edges, meta]);
+
   // ---- Add node ----
 
   const handleAddNode = useCallback(() => {
@@ -203,7 +342,7 @@ export function AuthorApp() {
       type: 'authorTask',
       position,
       data: {
-        taskType: 'system.sleep',
+        taskType: SYSTEM_SLEEP_TASK_TYPE,
         description: '',
         condition: '',
         inputs: [],
@@ -274,6 +413,11 @@ export function AuthorApp() {
           onNew={handleNew}
           onOpen={handleOpen}
           onExport={handleExport}
+          onSave={handleSave}
+          isSaving={isSaving}
+          saveStatus={saveStatus}
+          onSimulate={handleSimulate}
+          isSimulating={isSimulating}
           onAddNode={handleAddNode}
           isPlacing={isPlacing}
           errors={errors}

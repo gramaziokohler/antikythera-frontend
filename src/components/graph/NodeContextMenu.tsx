@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { RotateCcw, CornerDownRight, SkipForward, RefreshCw } from 'lucide-react';
+import { RotateCcw, CornerDownRight, SkipForward, RefreshCw, CircleDot } from 'lucide-react';
 import './NodeContextMenu.css';
 
 export interface NodeContextMenuProps {
@@ -14,10 +14,17 @@ export interface NodeContextMenuProps {
     scopeName: string | null;
     /** Whether the session is active (has a sessionId) */
     hasSession: boolean;
+    /** ADR-0003 / issue-sim-06: whether this tab is driving a simulation, so breakpoints can be
+     * toggled here at all — a watching tab passes `false`. */
+    canBreakpoint?: boolean;
+    isBreakpointed?: boolean;
+    /** "Break on every task" is on, so every task is already implicitly breakpointed. */
+    breakOnEveryTask?: boolean;
     /** Callbacks */
     onResetTask: (nodeId: string, includeDownstream: boolean) => void;
     onSkipTask: (nodeId: string) => void;
     onResetScope: (scopeName: string) => void;
+    onToggleBreakpoint?: (nodeId: string) => void;
     onClose: () => void;
 }
 
@@ -29,9 +36,13 @@ export function NodeContextMenu({
     nodeType,
     scopeName,
     hasSession,
+    canBreakpoint = false,
+    isBreakpointed = false,
+    breakOnEveryTask = false,
     onResetTask,
     onSkipTask,
     onResetScope,
+    onToggleBreakpoint,
     onClose,
 }: NodeContextMenuProps) {
     const menuRef = useRef<HTMLDivElement>(null);
@@ -124,6 +135,23 @@ export function NodeContextMenu({
                 <RefreshCw size={14} />
                 <span>{scopeName ? `Reset scope '${scopeName}'` : 'Reset scope'}</span>
             </button>
+
+            {canBreakpoint && (
+                <>
+                    <div className="context-menu-divider" />
+                    <button
+                        className="context-menu-item"
+                        disabled={breakOnEveryTask}
+                        onClick={() => { onToggleBreakpoint?.(nodeId); }}
+                    >
+                        <CircleDot size={14} className={isBreakpointed ? 'breakpoint-active' : ''} />
+                        <span>{isBreakpointed ? 'Remove breakpoint' : 'Add breakpoint'}</span>
+                    </button>
+                    {breakOnEveryTask && (
+                        <div className="context-menu-hint">Stepping is on — every task already breaks</div>
+                    )}
+                </>
+            )}
 
             {!hasSession && (
                 <>

@@ -7,6 +7,10 @@ import type {
   BlueprintMeta,
   Task,
 } from '../types/blueprint-schema';
+import {
+  SYSTEM_START_TASK_TYPE,
+  SYSTEM_END_TASK_TYPE,
+} from '../types/blueprint-schema';
 
 /**
  * Serialization between the canonical Blueprint data model and the React Flow
@@ -41,7 +45,7 @@ export function blueprintToFlow(bp: Blueprint): { nodes: Node[]; edges: Edge[] }
     } satisfies AuthorNodeData,
     sourcePosition: Position.Right,
     targetPosition: Position.Left,
-    deletable: task.type !== 'system.start' && task.type !== 'system.end',
+    deletable: task.type !== SYSTEM_START_TASK_TYPE && task.type !== SYSTEM_END_TASK_TYPE,
   }));
 
   const edges: Edge[] = [];
