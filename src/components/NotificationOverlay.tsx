@@ -79,6 +79,38 @@ interface NotificationItemProps {
     onDismiss: (id: string) => void;
 }
 
+/** Longest message shown before it is collapsed behind "show more..". */
+const COLLAPSED_MESSAGE_LENGTH = 140;
+
+/** Truncate at the last word boundary so the preview never cuts mid-word. */
+function truncate(message: string): string {
+    const cut = message.slice(0, COLLAPSED_MESSAGE_LENGTH);
+    const lastSpace = cut.lastIndexOf(' ');
+    return `${(lastSpace > COLLAPSED_MESSAGE_LENGTH / 2 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+}
+
+const NotificationMessage = ({ message }: { message: string }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    if (message.length <= COLLAPSED_MESSAGE_LENGTH) {
+        return <p className="notification-message">{message}</p>;
+    }
+
+    return (
+        <>
+            <p className="notification-message">{expanded ? message : truncate(message)}</p>
+            <button
+                className="notification-toggle"
+                onClick={() => setExpanded(prev => !prev)}
+                // The toast itself is drag-to-dismiss; keep the toggle from starting a drag.
+                onPointerDown={(e) => e.stopPropagation()}
+            >
+                {expanded ? 'show less' : 'show more..'}
+            </button>
+        </>
+    );
+};
+
 const NotificationItem = ({ notification, onDismiss }: NotificationItemProps) => {
     const [translateX, setTranslateX] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
@@ -153,7 +185,7 @@ const NotificationItem = ({ notification, onDismiss }: NotificationItemProps) =>
                         {notification.title}
                     </h4>
                 )}
-                <p className="notification-message">{notification.message}</p>
+                <NotificationMessage message={notification.message} />
                 <TimeAgo timestamp={notification.timestamp} />
             </div>
 

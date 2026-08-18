@@ -187,6 +187,19 @@ export function DataStoreExplorer({ data, mainBlueprintId, params }: DataStoreEx
         }
     };
 
+    // Nothing has been written to the store yet — the sidebar/preview split has
+    // nothing to split, so say so plainly instead of showing empty chrome.
+    if (dataItems.length === 0) {
+        return (
+            <div className="data-store-explorer">
+                <div className="data-store-empty">
+                    <p>Nothing in session storage</p>
+                    <span>Values appear here as the session runs.</span>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="data-store-explorer">
             <div className="data-content">
@@ -214,9 +227,9 @@ export function DataStoreExplorer({ data, mainBlueprintId, params }: DataStoreEx
                                 ))}
                             </div>
                         ))}
-                        {dataItems.length === 0 && (
+                        {Object.keys(groupedItems).length === 0 && (
                             <div style={{ padding: '1rem', color: '#999', fontSize: '0.9rem', fontStyle: 'italic' }}>
-                                Data store is empty.
+                                No keys match "{filterText}".
                             </div>
                         )}
                     </div>

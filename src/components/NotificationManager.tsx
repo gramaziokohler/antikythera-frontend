@@ -2,12 +2,17 @@ import { useState, useEffect } from 'react'
 import { MqttService } from '../services/MqttService'
 import { AgentLauncher } from '../agents/AgentLauncher'
 import { NotificationAgent } from '../agents/NotificationAgent'
+import { notifications as notificationStore } from '../services/NotificationStore'
 import { NotificationOverlay, type Notification } from './NotificationOverlay'
 
 import '../styles/NotificationOverlay.css'
 
 export function NotificationManager() {
     const [notifications, setNotifications] = useState<Notification[]>([])
+
+    // Renders everything in the shared store, whether it came from a notification
+    // task over MQTT or from the app itself (e.g. a session failure).
+    useEffect(() => notificationStore.subscribe(setNotifications), [])
 
     useEffect(() => {
         const service = MqttService.getInstance();
@@ -19,28 +24,21 @@ export function NotificationManager() {
             // (e.g. re-running the same blueprint)
             const uniqueId = `${taskId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-            const newNotification: Notification = {
+            notificationStore.notify({
                 id: uniqueId,
                 title: options.title,
                 message: options.message,
                 level: options.level,
-                timestamp: Date.now()
-            };
-
-            setNotifications(prev => [newNotification, ...prev]);
+            });
         });
 
         agentLauncher.registerAgent(notificationAgent);
 
         return () => {
             agentLauncher.unregisterAgent(notificationAgent.type);
-            // notificationAgent doesn't need explicit dispose 
+            // notificationAgent doesn't need explicit dispose
         }
     }, [])
 
-    const dismissNotification = (id: string) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
-    };
-
-    return <NotificationOverlay notifications={notifications} onDismiss={dismissNotification} />
+    return <NotificationOverlay notifications={notifications} onDismiss={(id) => notificationStore.dismiss(id)} />
 }

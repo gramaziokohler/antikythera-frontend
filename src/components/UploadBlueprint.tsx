@@ -1,9 +1,27 @@
 import { useState, useRef } from 'react'
+import { notifications } from '../services/NotificationStore'
 import type { UploadBlueprintResponse } from '../types'
 
 interface UploadBlueprintProps {
   apiBaseUrl: string
   onUploadSuccess?: () => void
+}
+
+/**
+ * Read why an upload was rejected.
+ * A dataflow rejection carries `detail.problems`; everything else is a plain
+ * `detail` string, so fall back to that and then to a generic message.
+ */
+async function rejectionReasons(response: Response): Promise<string[]> {
+  try {
+    const { detail } = await response.json()
+    if (detail?.problems?.length) return detail.problems
+    if (typeof detail === 'string') return [detail]
+    if (typeof detail?.message === 'string') return [detail.message]
+  } catch {
+    // Body was not JSON; fall through to the generic message.
+  }
+  return [`Upload failed (HTTP ${response.status}).`]
 }
 
 export function UploadBlueprint({ apiBaseUrl, onUploadSuccess }: UploadBlueprintProps) {
@@ -21,12 +39,27 @@ export function UploadBlueprint({ apiBaseUrl, onUploadSuccess }: UploadBlueprint
         method: 'POST',
         body: formData,
       })
-      
-      if (!response.ok) throw new Error('Upload failed')
-      
+
+      if (!response.ok) {
+        // A rejection lists what is wrong with the blueprint; the status line
+        // below the drop zone is too small for that, so it goes to the
+        // notification overlay, the same surface session failures use.
+        // Keying by file name refreshes it in place on re-upload.
+        const reasons = await rejectionReasons(response)
+        reasons.forEach((reason, i) => {
+          notifications.notify({
+            id: `blueprint-rejected-${file.name}-${i}`,
+            title: `Rejected: ${file.name}`,
+            message: reason,
+            level: 'error',
+          })
+        })
+        throw new Error('Upload failed')
+      }
+
       const data: UploadBlueprintResponse = await response.json()
       setUploadMessage(data.message)
-      
+
       // Clear message after 3 seconds
       setTimeout(() => setUploadMessage(''), 3000)
     } catch (err) {

@@ -4,6 +4,7 @@ import { useSessionStream } from '../hooks/useSessionStream'
 import { useSimulationStandIn } from '../hooks/useSimulationStandIn'
 import { useSimulationAgentState } from '../hooks/useSimulationAgentState'
 import { transformBlueprintToGraph } from '../utils/transform-blueprint'
+import { notifications } from '../services/NotificationStore'
 import { SIMULATION_TYPE_PREFIX } from '../utils/blueprint-simulate'
 import type { SessionDataResponse, GraphData } from '../types'
 import { SessionGraph } from './SessionGraph'
@@ -22,6 +23,44 @@ interface SessionMonitorProps {
 
 
 // Removed old DataViewer and ValueRenderer components as they are replaced by DataStoreExplorer
+
+interface TaskErrorPayload {
+  code?: string
+  message?: string
+  details?: string
+}
+
+/**
+ * Split the session's last_task_error into a notification title and body.
+ * The API returns it COMPAS-serialized, so the fields live under `data`.
+ */
+function formatTaskError(raw: unknown): { title: string; message: string } | null {
+  if (!raw || typeof raw !== 'object') return null
+  const wrapper = raw as { data?: TaskErrorPayload }
+  const error: TaskErrorPayload = wrapper.data ?? (raw as TaskErrorPayload)
+  if (!error.message && !error.code) return null
+
+  const details = error.details ? ` (${error.details})` : ''
+  return {
+    title: error.code ? `Session failed: ${error.code}` : 'Session failed',
+    message: `${error.message ?? ''}${details}`,
+  }
+}
+
+/**
+ * Pull the reason out of a failed session action, so a rejection like "this
+ * session already completed" reaches the user instead of a generic message.
+ */
+async function readErrorDetail(response: Response, fallback: string): Promise<string> {
+  try {
+    const { detail } = await response.json()
+    if (typeof detail === 'string') return detail
+    if (typeof detail?.message === 'string') return detail.message
+  } catch {
+    // Not a JSON body — the status line is all we have.
+  }
+  return fallback
+}
 
 // Command Pattern: Store operations to allow undo/sync
 interface GraphCommand {
@@ -307,7 +346,13 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   // completed before the client connected (the reconnect hydration path covers
   // this case via __snapshot__, but this guard catches any timing gaps).
   useEffect(() => {
-    if (!sessionId || (sessionState !== 'completed' && sessionState !== 'failed')) return
+    if (!sessionId) return
+
+    // Resuming clears the recorded reason on the backend; drop the toast to match,
+    // so a previous failure never hangs over a session that is running again.
+    if (sessionState === 'running') notifications.dismiss(`session-failed-${sessionId}`)
+
+    if (sessionState !== 'completed' && sessionState !== 'failed') return
 
     fetch(`${apiBaseUrl}/sessions/${sessionId}/data`)
       .then(r => r.ok ? r.json() : null)
@@ -320,7 +365,17 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
         .then(d => {
           if (!d) return
           const lastTaskError = d.data?.last_task_error || d.last_task_error
-          if (lastTaskError) setError(`Task failed: ${lastTaskError}`)
+          const formatted = formatTaskError(lastTaskError)
+          if (!formatted) return
+          // A session failure is an event to be told about, not a validation
+          // message about the control you just touched, so it goes to the
+          // notification overlay rather than the inline error line.
+          notifications.notify({
+            id: `session-failed-${sessionId}`,
+            title: formatted.title,
+            message: formatted.message,
+            level: 'error',
+          })
         })
         .catch(console.error)
     }
@@ -356,10 +411,27 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           "broker_port": parseInt(import.meta.env.VITE_MQTT_BROKER_PORT || '1883'),
         }),
       })
-      if (!response.ok) throw new Error('Failed to resume session')
+      if (!response.ok) throw new Error(await readErrorDetail(response, 'Failed to resume session'))
     } catch (err) {
       setSessionState(previousSessionState)
       setError(err instanceof Error ? err.message : 'Failed to resume session')
+    }
+  }
+
+  /**
+   * A completed session is a record of a run, so it is never rewound: the
+   * backend re-runs its blueprint as a new session and we follow that ID,
+   * leaving the finished one behind with its results intact.
+   */
+  const handleRestart = async () => {
+    if (!sessionId) return
+    try {
+      const response = await fetch(`${apiBaseUrl}/sessions/${sessionId}/restart`, { method: 'POST' })
+      if (!response.ok) throw new Error(await readErrorDetail(response, 'Failed to restart session'))
+      const { session_id: restartedSessionId } = await response.json()
+      onDialogSessionStarted(restartedSessionId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to restart session')
     }
   }
 
@@ -638,7 +710,9 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
   }
 
   const isRunning = sessionState?.toLowerCase() === 'running';
-  const isFinished = ['completed', 'failed', 'cancelled'].includes(sessionState?.toLowerCase() || '');
+  // Only a completed session restarts. A failed one resumes instead, which
+  // retries the task that failed and keeps the work that already succeeded.
+  const isCompleted = sessionState?.toLowerCase() === 'completed';
 
   return (
     <div className="session-monitor">
@@ -709,8 +783,8 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
                   <button onClick={handlePause} className="control-button start-preview-btn" title="Pause Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Pause size={16} /> <span>Pause</span>
                   </button>
-                ) : isFinished ? (
-                  <button onClick={handleResume} className="control-button start-preview-btn" title="Restart Session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                ) : isCompleted ? (
+                  <button onClick={handleRestart} className="control-button start-preview-btn" title="Run this blueprint again as a new session" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <RotateCcw size={16} /> <span>Restart Session</span>
                   </button>
                 ) : (
@@ -808,7 +882,7 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
         </div>
 
         {/* Resize Handle */}
-        {!isCollapsed && (
+        {sessionId && !isCollapsed && (
           <div
             onMouseDown={startResizing}
             style={{
@@ -826,49 +900,47 @@ export function SessionMonitor({ apiBaseUrl, sessionId, blueprintId, onClose, on
           />
         )}
 
-        {/* Data Store Section */}
-        <div className="monitor-section" style={{ height: isCollapsed ? 'auto' : datastoreHeight, flexShrink: 0, borderTop: isCollapsed ? '1px solid var(--color-stone-soft)' : 'none', width: '100%' }}>
-          <div className="monitor-section-header">
-            <h3>
-              <button
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: 'inherit'
-                }}
-              >
-                {isCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        {/* Data Store Section — sessions only. A blueprint preview has no data
+            store of its own; one only exists once the blueprint is run. */}
+        {sessionId && (
+          <div className="monitor-section" style={{ height: isCollapsed ? 'auto' : datastoreHeight, flexShrink: 0, borderTop: isCollapsed ? '1px solid var(--color-stone-soft)' : 'none', width: '100%' }}>
+            <div className="monitor-section-header">
+              <h3>
+                <button
+                  onClick={() => setIsCollapsed(!isCollapsed)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: 'inherit'
+                  }}
+                >
+                  {isCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+                Data Store
+              </h3>
+              <button className="download-data-btn" onClick={handleDownloadData} title="Download Data Store">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
               </button>
-              Data Store
-            </h3>
-            <button className="download-data-btn" onClick={handleDownloadData} title="Download Data Store">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-            </button>
-          </div>
-          {!isCollapsed && (
-            <div className="data-container">
-              {sessionData ? (
+            </div>
+            {!isCollapsed && (
+              <div className="data-container">
+                {/* No spinner here: a session that has not run yet simply has an
+                    empty store, which the explorer states outright. */}
                 <div className="data-viewer-wrapper" style={{ height: '100%' }}>
                   <DataStoreExplorer data={parsedSessionData || {}} mainBlueprintId={mainBlueprintId} params={sessionParams} />
                 </div>
-              ) : (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>Loading data...</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {showStartDialog && blueprintId && (

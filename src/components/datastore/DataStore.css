@@ -28,6 +28,27 @@
     letter-spacing: 0.05em;
 }
 
+.data-store-empty {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 0.25rem;
+    text-align: center;
+    color: var(--color-text-muted);
+}
+
+.data-store-empty p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.data-store-empty span {
+    font-size: 0.8rem;
+    opacity: 0.75;
+}
+
 .data-content {
     display: flex;
     flex: 1;
