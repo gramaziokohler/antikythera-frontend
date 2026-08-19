@@ -15,7 +15,7 @@
   "dependencies": {
     "@bufbuild/protobuf": "^2.14.0",
     "@dagrejs/dagre": "^1.1.8",
-    "@gramaziokohler/antikythera-ts": "file:../antikythera_ts",
+    "@gramaziokohler/antikythera-ts": "^0.1.0",
     "@gramaziokohler/compas-pb-ts": "^3.0.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
