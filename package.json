@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/update-blueprint-schema.js && node scripts/update-protos.js && tsc -b && vite build",
-    "proto:update": "node scripts/update-protos.js",
+    "build": "node scripts/update-blueprint-schema.js && tsc -b && vite build",
     "schema:update": "node scripts/update-blueprint-schema.js",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -14,14 +13,16 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.14.0",
     "@dagrejs/dagre": "^1.1.8",
+    "@gramaziokohler/antikythera-ts": "^0.1.0",
+    "@gramaziokohler/compas-pb-ts": "^3.0.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
     "@xyflow/react": "^12.9.3",
     "ajv": "^8.20.0",
     "lucide-react": "^0.563.0",
     "mqtt": "^5.14.1",
-    "protobufjs": "^7.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "three": "^0.182.0",

@@ -199,7 +199,7 @@ describe('useSessionStream', () => {
 
     await waitFor(() => expect(MockEventSource.lastInstance).not.toBeNull())
     const firstEs = MockEventSource.lastInstance!
-    const fetchMock = vi.mocked(global.fetch as ReturnType<typeof vi.fn>)
+    const fetchMock = vi.mocked(globalThis.fetch as ReturnType<typeof vi.fn>)
     const callsBefore = fetchMock.mock.calls.length
 
     act(() => { firstEs.triggerError() })
@@ -252,7 +252,7 @@ describe('useSessionStream', () => {
 
     await waitFor(() => expect(MockEventSource.lastInstance).not.toBeNull())
     const firstEs = MockEventSource.lastInstance!
-    const fetchMock = vi.mocked(global.fetch as ReturnType<typeof vi.fn>)
+    const fetchMock = vi.mocked(globalThis.fetch as ReturnType<typeof vi.fn>)
     const callsBefore = fetchMock.mock.calls.length
 
     act(() => { result.current.reconnect() })

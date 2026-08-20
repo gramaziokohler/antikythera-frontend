@@ -1,10 +1,26 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SimulationAgent, SIMULATION_AGENT_TYPE } from '../SimulationAgent';
 import { simulatedOutputParamName } from '../../utils/blueprint-simulate';
-import { isAnyDataPassthrough } from '../anyDataCodec';
-import type { Agent } from '../Agent';
-import { Task } from '../Task';
-import { antikythera, compas_pb } from '../../proto/bundle';
+import { create } from '@bufbuild/protobuf';
+import { ValueSchema } from '@bufbuild/protobuf/wkt';
+import { CompasMessages } from '@gramaziokohler/compas-pb-ts';
+import type { Agent } from '@gramaziokohler/antikythera-ts/agents';
+import { Task } from '@gramaziokohler/antikythera-ts/agents';
+import { TaskAssignmentMessage } from '@gramaziokohler/antikythera-ts';
+
+const { AnyDataSchema } = CompasMessages;
+
+/** An AnyData holding a google.protobuf.Value, the shape compas_pb writes for primitives. */
+function primitiveAnyData(value: { stringValue?: string; numberValue?: number; boolValue?: boolean }) {
+  const kind = value.stringValue !== undefined
+    ? { case: 'stringValue' as const, value: value.stringValue }
+    : value.numberValue !== undefined
+      ? { case: 'numberValue' as const, value: value.numberValue }
+      : { case: 'boolValue' as const, value: value.boolValue as boolean };
+  return create(AnyDataSchema, {
+    data: { case: 'value', value: create(ValueSchema, { kind }) },
+  });
+}
 
 /**
  * `outputKeys` mirrors the orchestrator's `output_keys` — the names of the outputs the task
@@ -15,17 +31,18 @@ function taskWithParams(
   params: Record<string, { stringValue?: string; numberValue?: number; boolValue?: boolean }>,
   outputKeys: string[] = ['trajectory'],
 ) {
-  const encoded: { [k: string]: compas_pb.data.IAnyData } = {};
+  const rawParams: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(params)) {
-    encoded[key] = { value };
+    rawParams[key] = primitiveAnyData(value);
   }
-  const message: antikythera.v1.ITaskAssignmentMessage = {
-    id: 'task-1',
-    type: 'simulation.compas_fab.plan_trajectory',
-    params: encoded,
-    outputKeys,
-  };
-  return new Task(message);
+  return new Task(
+    new TaskAssignmentMessage({
+      id: 'task-1',
+      type: 'simulation.compas_fab.plan_trajectory',
+      outputKeys,
+      rawParams,
+    }),
+  );
 }
 
 describe('SimulationAgent', () => {
@@ -49,33 +66,36 @@ describe('SimulationAgent', () => {
     const result = (await agent.invokeTool!('compas_fab.plan_trajectory', task)) as Record<string, unknown>;
 
     expect(Object.keys(result)).toEqual(['trajectory']);
-    // Forwarded as a raw-AnyData passthrough (see anyDataCodec.ts), not decoded — the param may
+    // Forwarded as the raw AnyData it arrived as, not decoded — the param may
     // have arrived using a wire shape the frontend has no reason to understand.
-    expect(isAnyDataPassthrough(result.trajectory)).toBe(true);
-    expect((result.trajectory as { anyData: unknown }).anyData).toEqual({ value: { stringValue: 'ok' } });
+    expect((result.trajectory as { $typeName?: string }).$typeName).toBe('compas_pb.data.AnyData');
+    expect(result.trajectory).toEqual(primitiveAnyData({ stringValue: 'ok' }));
   });
 
   it('forwards a param wrapped in an AnyData shape the frontend does not decode (e.g. a native COMPAS geometry message) unchanged', async () => {
     const agent = new SimulationAgent();
-    const message: antikythera.v1.ITaskAssignmentMessage = {
-      id: 'task-2',
-      type: 'simulation.demo.make_frame',
-      params: {
-        [simulatedOutputParamName('frame')]: {
-          message: {
-            type_url: 'type.googleapis.com/compas_pb.data.FrameData',
-            value: new Uint8Array([1, 2, 3]),
-          },
+    const nativeFrame = create(AnyDataSchema, {
+      data: {
+        case: 'message',
+        value: {
+          typeUrl: 'type.googleapis.com/compas_pb.data.FrameData',
+          value: new Uint8Array([1, 2, 3]),
         },
       },
-    };
-    const task = new Task(message);
+    });
+    const task = new Task(
+      new TaskAssignmentMessage({
+        id: 'task-2',
+        type: 'simulation.demo.make_frame',
+        rawParams: { [simulatedOutputParamName('frame')]: nativeFrame },
+      }),
+    );
 
     const result = (await agent.invokeTool!('demo.make_frame', task)) as Record<string, unknown>;
 
-    expect((result.frame as { anyData: unknown }).anyData).toEqual({
-      message: { type_url: 'type.googleapis.com/compas_pb.data.FrameData', value: new Uint8Array([1, 2, 3]) },
-    });
+    // Forwarded as the very AnyData it arrived as: a native geometry message would not
+    // survive being decoded and re-encoded by a side that does not model it.
+    expect(result.frame).toBe(nativeFrame);
   });
 
   it('holds (never resolves) when no simulated output param is present', async () => {
@@ -359,13 +379,13 @@ describe('SimulationAgent', () => {
     // Declares an output with no authored value, so it holds on its own merits and these cases
     // turn purely on which id the hold is keyed by.
     function taskWithWireId(id: string) {
-      const message: antikythera.v1.ITaskAssignmentMessage = {
-        id,
-        type: 'simulation.demo.tool',
-        params: {},
-        outputKeys: ['result'],
-      };
-      return new Task(message);
+      return new Task(
+        new TaskAssignmentMessage({
+          id,
+          type: 'simulation.demo.tool',
+          outputKeys: ['result'],
+        }),
+      );
     }
 
     it('holds a task breakpointed by its plain id even though its wire id is blueprint-qualified', async () => {

@@ -1,6 +1,6 @@
-import type { Agent } from './Agent';
-import { ExecutionContext } from './ExecutionContext';
-import { Task } from './Task';
+import type { Agent } from '@gramaziokohler/antikythera-ts/agents';
+import { ExecutionContext } from '@gramaziokohler/antikythera-ts/agents';
+import { Task } from '@gramaziokohler/antikythera-ts/agents';
 
 export interface UserPromptOptions {
     message: string;

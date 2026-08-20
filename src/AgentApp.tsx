@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { UserPromptDialog } from './components/UserPromptDialog'
-import { MqttService } from './services/MqttService'
-import { AgentLauncher } from './agents/AgentLauncher'
+import { MqttService } from "@gramaziokohler/antikythera-ts/agents"
+import { AgentLauncher } from "@gramaziokohler/antikythera-ts/agents"
 import { BlueprintBackground } from './components/BlueprintBackground'
 import { NotificationManager } from './components/NotificationManager'
 

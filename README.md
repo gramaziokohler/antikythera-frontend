@@ -25,7 +25,7 @@ To generate the necessary files:
 npm run proto:update
 ```
 
-The script will attempt to download `antikythera.proto` and `compas_pb` definitions from their respective GitHub repositories. If the `antikythera` repository is private, you can provide a `GITHUB_TOKEN` environment variable, or ensure the backend repository is checked out in a sibling directory named `antikythera` for a local fallback.
+The script will attempt to download `antikythera.proto` and the pinned `compas_pb` v1 definitions from their respective GitHub repositories. If the `antikythera` repository is private, you can provide a `GITHUB_TOKEN` environment variable, or ensure the backend repository is checked out in a sibling directory named `antikythera` for a local fallback.
 
 ## Configuration
 

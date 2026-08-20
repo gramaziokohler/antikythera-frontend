@@ -1,6 +1,6 @@
-import type { Agent } from './Agent';
-import { Task } from './Task';
-import { ExecutionContext } from './ExecutionContext';
+import type { Agent } from '@gramaziokohler/antikythera-ts/agents';
+import { Task } from '@gramaziokohler/antikythera-ts/agents';
+import { ExecutionContext } from '@gramaziokohler/antikythera-ts/agents';
 
 export interface NotificationOptions {
     title: string;

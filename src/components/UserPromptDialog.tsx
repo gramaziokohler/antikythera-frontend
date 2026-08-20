@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { UserPromptAgent, type UserPromptOptions } from '../agents/UserPromptAgent'
-import { MqttService } from '../services/MqttService'
-import { AgentLauncher } from '../agents/AgentLauncher'
+import { MqttService } from "@gramaziokohler/antikythera-ts/agents"
+import { AgentLauncher } from "@gramaziokohler/antikythera-ts/agents"
 
 interface PendingPrompt extends UserPromptOptions {
     taskId: string

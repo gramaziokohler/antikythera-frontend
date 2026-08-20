@@ -15,6 +15,12 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    // Vite pre-bundles dependencies and caches the result. When either SDK is linked to a
+    // local checkout (see "Working on the SDKs" in the README), that cache hides changes
+    // until it is cleared. Excluding them keeps a watch build visible on reload.
+    exclude: ['@gramaziokohler/antikythera-ts', '@gramaziokohler/compas-pb-ts'],
+  },
   server: {
     port: 5174,
     proxy: {

@@ -2,7 +2,8 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, afterEach } from 'vitest';
 import { SimulationBreakpointPanel } from '../SimulationBreakpointPanel';
 import { SimulationAgent } from '../../../agents/SimulationAgent';
-import { Task } from '../../../agents/Task';
+import { Task } from '@gramaziokohler/antikythera-ts/agents';
+import { TaskAssignmentMessage } from '@gramaziokohler/antikythera-ts';
 import { transformBlueprintToGraph } from '../../../utils/transform-blueprint';
 import type { GraphNode } from '../../../types';
 
@@ -50,11 +51,11 @@ describe('SimulationBreakpointPanel', () => {
   it('shows the held task with an editor seeded from its authored default and continues with the edit', async () => {
     const agent = new SimulationAgent();
     agent.toggleBreakpoint('task-1');
-    const task = new Task({
+    const task = new Task(new TaskAssignmentMessage({
       id: 'task-1',
       type: 'simulation.demo.tool',
       params: { __sim_out__label: { value: { stringValue: 'authored-default' } } },
-    });
+    }));
     const pending = agent.invokeTool!('demo.tool', task);
 
     const node = nodeWithOutputs('task-1', [{ name: 'label', type: 'str', value: 'authored-default' }]);
@@ -71,7 +72,7 @@ describe('SimulationBreakpointPanel', () => {
 
   it('disables Continue until every declared output has a value, for a task with no authored default', () => {
     const agent = new SimulationAgent();
-    const task = new Task({ id: 'task-2', type: 'simulation.demo.tool', params: {}, outputKeys: ['label'] });
+    const task = new Task(new TaskAssignmentMessage({ id: 'task-2', type: 'simulation.demo.tool', params: {}, outputKeys: ['label'] }));
     agent.invokeTool!('demo.tool', task);
 
     const node = nodeWithOutputs('task-2', [{ name: 'label', type: 'str' }]);
@@ -89,11 +90,11 @@ describe('SimulationBreakpointPanel', () => {
   it('seeds and continues a task held on a graph built from a live session blueprint', async () => {
     const agent = new SimulationAgent();
     agent.toggleBreakpoint('task-1');
-    const task = new Task({
+    const task = new Task(new TaskAssignmentMessage({
       id: 'task-1',
       type: 'simulation.demo.tool',
       params: { __sim_out__label: { value: { stringValue: 'authored-default' } } },
-    });
+    }));
     const pending = agent.invokeTool!('demo.tool', task);
 
     const graph = transformBlueprintToGraph({
@@ -117,7 +118,7 @@ describe('SimulationBreakpointPanel', () => {
   it('continues a breakpointed task that declares no outputs', async () => {
     const agent = new SimulationAgent();
     agent.toggleBreakpoint('task-3');
-    const task = new Task({ id: 'task-3', type: 'simulation.demo.tool', params: {}, outputKeys: [] });
+    const task = new Task(new TaskAssignmentMessage({ id: 'task-3', type: 'simulation.demo.tool', params: {}, outputKeys: [] }));
     const pending = agent.invokeTool!('demo.tool', task);
 
     render(

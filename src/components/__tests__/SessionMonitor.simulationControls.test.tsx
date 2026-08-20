@@ -18,11 +18,8 @@ class MockEventSource {
 const registerAgent = vi.fn()
 const unregisterAgent = vi.fn()
 
-vi.mock('../../services/MqttService', () => ({
+vi.mock('@gramaziokohler/antikythera-ts/agents', () => ({
   MqttService: { getInstance: vi.fn(() => ({})) },
-}))
-
-vi.mock('../../agents/AgentLauncher', () => ({
   AgentLauncher: { getInstance: vi.fn(() => ({ registerAgent, unregisterAgent })) },
 }))
 
