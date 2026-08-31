@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0](https://github.com/gramaziokohler/antikythera-frontend/compare/antikythera-frontend-v0.4.0...antikythera-frontend-v0.5.0) (2026-08-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* the frontend no longer generates protobuf code, and protobufjs is gone. Imports of ../agents/{Agent,AgentLauncher,Task, ExecutionContext} and ../services/MqttService move to @gramaziokohler/antikythera-ts/agents.
+
+### Features
+
+* add useSessionStream hook with vitest setup (issue-sse-01) ([23009a2](https://github.com/gramaziokohler/antikythera-frontend/commit/23009a2df1407527daa70c1486085fb68bff95df))
+* consume the Antikythera and compas_pb TypeScript SDKs ([090f2ae](https://github.com/gramaziokohler/antikythera-frontend/commit/090f2aee0b203ec3e7204a98bdf8826212956049))
+* optimistic pause/resume updates in SessionMonitor (issue-sse-03) ([237040c](https://github.com/gramaziokohler/antikythera-frontend/commit/237040cf487e9e652b582b6f37fb6372d426c159))
+* wire useSessionStream into SessionMonitor, remove polling loop (issue-sse-02) ([c62fd45](https://github.com/gramaziokohler/antikythera-frontend/commit/c62fd45ef113b754c2263b9f0b207bc0fc40f4f1))
+
+## Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
