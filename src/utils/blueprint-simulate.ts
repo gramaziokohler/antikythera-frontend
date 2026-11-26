@@ -11,8 +11,8 @@ export const SIMULATION_TYPE_PREFIX = 'simulation.';
 export const SIMULATION_ID_SUFFIX = '__sim';
 
 /**
- * Reserved param name prefix carrying an authored output value to the stand-in agent (see
- * SimulationAgent.ts). Unambiguous enough that the stand-in can tell a simulated output from a
+ * Reserved param name prefix carrying an authored output value to the stand-in actor (see
+ * SimulationActor.ts). Unambiguous enough that the stand-in can tell a simulated output from a
  * real param the task legitimately carries.
  */
 export const SIMULATED_OUTPUT_PARAM_PREFIX = '__sim_out__';
@@ -23,18 +23,27 @@ export function simulatedOutputParamName(outputName: string): string {
 
 /**
  * Reserved param name marking a task as opted out of simulation (ADR-0003: "Tasks may opt out
- * via a per-task toggle in the authoring tool, keeping their real type so a real agent claims
+ * via a per-task toggle in the authoring tool, keeping their real type so a real actor claims
  * them"). Lives as an ordinary param on the *source* task so it round-trips through Save/Open
  * like any other authored data, and is inert in a real run — nothing reads this param name.
  */
-export const SIMULATION_OPT_OUT_PARAM_NAME = '__sim_use_real_agent__';
+export const SIMULATION_OPT_OUT_PARAM_NAME = '__sim_use_real_actor__';
+
+/** The opt-out param's name before agents were renamed to actors. Blueprints saved back then
+ * still carry it, so it is read as an opt-out too, and replaced whenever the toggle is set. */
+export const LEGACY_SIMULATION_OPT_OUT_PARAM_NAME = '__sim_use_real_agent__';
+
+/** True for the opt-out param under its current or its legacy name. */
+export function isOptOutParamName(name: string): boolean {
+  return name === SIMULATION_OPT_OUT_PARAM_NAME || name === LEGACY_SIMULATION_OPT_OUT_PARAM_NAME;
+}
 
 /** True if `params` carries the opt-out flag. Operates on a bare param list so both the
  * derive-time rewrite and the authoring-tool panel (which only has `AuthorNodeData.params`,
  * not a full `Task`) can share one check. */
 export function isOptedOutParams(params: TaskParam[] | undefined): boolean {
   return (params ?? []).some(
-    (p) => p.name === SIMULATION_OPT_OUT_PARAM_NAME && p.value === true,
+    (p) => isOptOutParamName(p.name) && p.value === true,
   );
 }
 
@@ -47,7 +56,7 @@ export function setOptedOutOfSimulation(
   params: TaskParam[] | undefined,
   optedOut: boolean,
 ): TaskParam[] {
-  const rest = (params ?? []).filter((p) => p.name !== SIMULATION_OPT_OUT_PARAM_NAME);
+  const rest = (params ?? []).filter((p) => !isOptOutParamName(p.name));
   return optedOut ? [...rest, { name: SIMULATION_OPT_OUT_PARAM_NAME, value: true }] : rest;
 }
 
@@ -96,7 +105,7 @@ function rewriteTaskType(task: Task): string {
     return type;
   }
   // Opting out wins over an already-rewritten type: a task carried back from a previous
-  // simulation still reads `simulation.*`, and ticking "use real agent" on it has to undo that
+  // simulation still reads `simulation.*`, and ticking "use real actor" on it has to undo that
   // rewrite, not be silently outranked by it (issue-sim-05).
   if (isOptedOutOfSimulation(task)) {
     return stripSimulationTypePrefix(type);
@@ -104,7 +113,7 @@ function rewriteTaskType(task: Task): string {
   return type.startsWith(SIMULATION_TYPE_PREFIX) ? type : `${SIMULATION_TYPE_PREFIX}${type}`;
 }
 
-/** One reserved param per authored output value, so it reaches the stand-in agent as a param. */
+/** One reserved param per authored output value, so it reaches the stand-in actor as a param. */
 function simulatedOutputParams(outputs: TaskOutput[] | undefined): TaskParam[] {
   return (outputs ?? [])
     .filter((output) => output.value !== undefined)

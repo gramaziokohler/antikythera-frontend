@@ -1,6 +1,6 @@
-import type { Agent } from '@gramaziokohler/antikythera-ts/agents';
-import { Task } from '@gramaziokohler/antikythera-ts/agents';
-import { ExecutionContext } from '@gramaziokohler/antikythera-ts/agents';
+import type { Actor } from '@gramaziokohler/antikythera-ts/actors';
+import { Task } from '@gramaziokohler/antikythera-ts/actors';
+import { ExecutionContext } from '@gramaziokohler/antikythera-ts/actors';
 
 export interface NotificationOptions {
     title: string;
@@ -8,7 +8,7 @@ export interface NotificationOptions {
     level: 'info' | 'success' | 'warning' | 'error';
 }
 
-export class NotificationAgent implements Agent {
+export class NotificationActor implements Actor {
     type = "user_interaction";
     private onNotifyCallback: (taskId: string, options: NotificationOptions) => void;
 
@@ -49,7 +49,7 @@ export class NotificationAgent implements Agent {
         const interpolationData = { ...taskContext, ...inputs };
         title = interpolate(title, interpolationData);
         message = interpolate(message, interpolationData);
-        console.log(`[NotificationAgent] Resolved notification for task ${task.id}: (${JSON.stringify(interpolationData)})`);
+        console.log(`[NotificationActor] Resolved notification for task ${task.id}: (${JSON.stringify(interpolationData)})`);
 
         this.handleNotification(task.id, { title, message, level });
 
@@ -58,7 +58,7 @@ export class NotificationAgent implements Agent {
 
     private handleNotification(taskId: string, options: NotificationOptions) {
         const { title, message, level } = options;
-        console.log(`[NotificationAgent] Displaying notification: ${title}: ${message} (${level})`);
+        console.log(`[NotificationActor] Displaying notification: ${title}: ${message} (${level})`);
         this.onNotifyCallback(taskId, { title, message, level });
     }
 

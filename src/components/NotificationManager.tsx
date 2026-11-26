@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { MqttService } from "@gramaziokohler/antikythera-ts/agents"
-import { AgentLauncher } from "@gramaziokohler/antikythera-ts/agents"
-import { NotificationAgent } from '../agents/NotificationAgent'
+import { MqttService } from "@gramaziokohler/antikythera-ts/actors"
+import { ActorLauncher } from "@gramaziokohler/antikythera-ts/actors"
+import { NotificationActor } from '../actors/NotificationActor'
 import { notifications as notificationStore } from '../services/NotificationStore'
 import { NotificationOverlay, type Notification } from './NotificationOverlay'
 
@@ -16,10 +16,10 @@ export function NotificationManager() {
 
     useEffect(() => {
         const service = MqttService.getInstance();
-        const agentLauncher = AgentLauncher.getInstance(service);
+        const actorLauncher = ActorLauncher.getInstance(service);
 
-        // Register NotificationAgent
-        const notificationAgent = new NotificationAgent((taskId, options) => {
+        // Register NotificationActor
+        const notificationActor = new NotificationActor((taskId, options) => {
             // Use a unique ID for the notification to allow duplicates of the same task ID
             // (e.g. re-running the same blueprint)
             const uniqueId = `${taskId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -32,11 +32,11 @@ export function NotificationManager() {
             });
         });
 
-        agentLauncher.registerAgent(notificationAgent);
+        actorLauncher.registerActor(notificationActor);
 
         return () => {
-            agentLauncher.unregisterAgent(notificationAgent.type);
-            // notificationAgent doesn't need explicit dispose
+            actorLauncher.unregisterActor(notificationActor.type);
+            // notificationActor doesn't need explicit dispose
         }
     }, [])
 

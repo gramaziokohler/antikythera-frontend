@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { OctagonPause, Play } from 'lucide-react';
-import type { SimulationAgent } from '../../agents/SimulationAgent';
+import type { SimulationActor } from '../../actors/SimulationActor';
 import type { GraphNode } from '../../types';
 import type { TaskOutput } from '../../types/blueprint-schema';
 import { TypedValueEditor } from '../TypedValueEditor';
@@ -12,7 +12,7 @@ import '../../styles/author.css';
 import './SimulationBreakpointPanel.css';
 
 interface HeldTaskCardProps {
-  agent: SimulationAgent;
+  actor: SimulationActor;
   taskId: string;
   node: GraphNode | undefined;
 }
@@ -35,7 +35,7 @@ function typeHintOf(output: TaskOutput): string | undefined {
  * disabled until every declared output has a value, so a task held for want of one (no authored
  * default at all) reads as a prompt rather than a silent dead end.
  */
-function HeldTaskCard({ agent, taskId, node }: HeldTaskCardProps) {
+function HeldTaskCard({ actor, taskId, node }: HeldTaskCardProps) {
   const declaredOutputs = (node?.outputs ?? []) as TaskOutput[];
   const [values, setValues] = useState<Record<string, unknown>>(() => {
     const initial: Record<string, unknown> = {};
@@ -45,7 +45,7 @@ function HeldTaskCard({ agent, taskId, node }: HeldTaskCardProps) {
     return initial;
   });
 
-  const requiresValue = agent.requiresValue(taskId);
+  const requiresValue = actor.requiresValue(taskId);
   const missingValue = declaredOutputs.some((output) => values[output.name] === undefined);
   const canContinue = !missingValue;
 
@@ -90,7 +90,7 @@ function HeldTaskCard({ agent, taskId, node }: HeldTaskCardProps) {
       <button
         className="sbp-continue-btn"
         disabled={!canContinue}
-        onClick={() => agent.continueHeldTask(taskId, values)}
+        onClick={() => actor.continueHeldTask(taskId, values)}
       >
         <Play size={13} />
         <span>Continue</span>
@@ -100,7 +100,7 @@ function HeldTaskCard({ agent, taskId, node }: HeldTaskCardProps) {
 }
 
 interface SimulationBreakpointPanelProps {
-  agent: SimulationAgent;
+  actor: SimulationActor;
   heldTaskIds: string[];
   graphNodes: GraphNode[];
 }
@@ -108,7 +108,7 @@ interface SimulationBreakpointPanelProps {
 /** Session-monitor panel (issue-sim-06) listing every task the stand-in is currently holding on
  * the driving tab, letting the author inspect and edit each one's simulated output before
  * releasing it. Renders nothing when nothing is held. */
-export function SimulationBreakpointPanel({ agent, heldTaskIds, graphNodes }: SimulationBreakpointPanelProps) {
+export function SimulationBreakpointPanel({ actor, heldTaskIds, graphNodes }: SimulationBreakpointPanelProps) {
   if (heldTaskIds.length === 0) return null;
 
   const nodesById = new Map(graphNodes.map((node) => [node.id, node]));
@@ -121,7 +121,7 @@ export function SimulationBreakpointPanel({ agent, heldTaskIds, graphNodes }: Si
       </div>
       <div className="sbp-list">
         {heldTaskIds.map((taskId) => (
-          <HeldTaskCard key={taskId} agent={agent} taskId={taskId} node={nodesById.get(taskId)} />
+          <HeldTaskCard key={taskId} actor={actor} taskId={taskId} node={nodesById.get(taskId)} />
         ))}
       </div>
     </div>

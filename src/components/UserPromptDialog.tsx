@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { UserPromptAgent, type UserPromptOptions } from '../agents/UserPromptAgent'
-import { MqttService } from "@gramaziokohler/antikythera-ts/agents"
-import { AgentLauncher } from "@gramaziokohler/antikythera-ts/agents"
+import { UserPromptActor, type UserPromptOptions } from '../actors/UserPromptActor'
+import { MqttService } from "@gramaziokohler/antikythera-ts/actors"
+import { ActorLauncher } from "@gramaziokohler/antikythera-ts/actors"
 
 interface PendingPrompt extends UserPromptOptions {
     taskId: string
@@ -9,13 +9,13 @@ interface PendingPrompt extends UserPromptOptions {
 
 export function UserPromptDialog() {
     const [prompts, setPrompts] = useState<PendingPrompt[]>([])
-    const [agent, setAgent] = useState<UserPromptAgent | null>(null)
+    const [actor, setActor] = useState<UserPromptActor | null>(null)
 
     useEffect(() => {
         const mqttService = MqttService.getInstance();
-        const agentLauncher = AgentLauncher.getInstance(mqttService);
+        const actorLauncher = ActorLauncher.getInstance(mqttService);
 
-        const newAgent = new UserPromptAgent(
+        const newActor = new UserPromptActor(
             (taskId, options) => {
                 setPrompts(prev => [...prev, { taskId, ...options }])
             },
@@ -24,17 +24,17 @@ export function UserPromptDialog() {
             }
         )
 
-        agentLauncher.registerAgent(newAgent);
-        setAgent(newAgent)
+        actorLauncher.registerActor(newActor);
+        setActor(newActor)
 
         return () => {
-            agentLauncher.unregisterAgent(newAgent.type);
+            actorLauncher.unregisterActor(newActor.type);
         }
     }, [])
 
     const handleOptionClick = (taskId: string, option: string) => {
-        if (agent) {
-            agent.resolvePrompt(taskId, option)
+        if (actor) {
+            actor.resolvePrompt(taskId, option)
             setPrompts(prev => prev.filter(p => p.taskId !== taskId))
         }
     }

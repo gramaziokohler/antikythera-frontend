@@ -18,7 +18,7 @@ import {
 import {
   isOptedOutParams,
   setOptedOutOfSimulation,
-  SIMULATION_OPT_OUT_PARAM_NAME,
+  isOptOutParamName,
 } from '../../utils/blueprint-simulate';
 import { TypedValueEditor } from '../TypedValueEditor';
 
@@ -265,10 +265,10 @@ function renderOutputValueEditor(field: TaskOutput, onChange: (value: unknown) =
   return <TypedValueEditor type={field.type_hint} value={field.value} onChange={onChange} />;
 }
 
-/** A task opted out of simulation is claimed by its real agent, so an authored output value is
+/** A task opted out of simulation is claimed by its real actor, so an authored output value is
  * never used — surface that instead of an editor that would look meaningful but isn't. */
 function renderOptedOutOutputEditor(): ReactNode {
-  return <span className="tep-value-opted-out">Real agent produces this output</span>;
+  return <span className="tep-value-opted-out">Real actor produces this output</span>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -438,12 +438,12 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: Tas
                   patchData({ params: setOptedOutOfSimulation(localData.params, e.target.checked) })
                 }
               />
-              Use real agent (opt out of simulation)
+              Use real actor (opt out of simulation)
             </label>
             <p className="tep-hint">
-              Keeps this task&rsquo;s real type in a simulated run, so a real agent must be
+              Keeps this task&rsquo;s real type in a simulated run, so a real actor must be
               registered for it on the broker — otherwise the session fails with
-              NO_AGENT_CLAIMED.
+              NO_ACTOR_CLAIMED.
             </p>
           </div>
         )}
@@ -475,7 +475,7 @@ export function TaskEditPanel({ nodeId, data, onUpdate, onDelete, onClose }: Tas
         <div className="tep-section">
           <div className="tep-section-title">Parameters</div>
           <FieldList<TaskParam>
-            fields={localData.params.filter((p) => p.name !== SIMULATION_OPT_OUT_PARAM_NAME)}
+            fields={localData.params.filter((p) => !isOptOutParamName(p.name))}
             onChange={(params) => patchData({ params: setOptedOutOfSimulation(params, optedOut) })}
             addLabel="Add param"
             emptyField={() => ({ name: '' })}

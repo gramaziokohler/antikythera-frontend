@@ -165,7 +165,7 @@ export function Dashboard({ onNavigate, apiBaseUrl }: DashboardProps) {
       <section className="broker-info-banner">
         <div className="broker-info-content">
           <Wifi size={18} className="broker-info-icon" />
-          <span className="broker-info-label">Connect agents to:</span>
+          <span className="broker-info-label">Connect actors to:</span>
           <code className="broker-info-address">{brokerAddress}</code>
         </div>
         <button

@@ -6,6 +6,7 @@ import {
   simulatedOutputParamName,
   SIMULATED_OUTPUT_PARAM_PREFIX,
   CompositeTaskNotSupportedError,
+  LEGACY_SIMULATION_OPT_OUT_PARAM_NAME,
   SIMULATION_OPT_OUT_PARAM_NAME,
   isOptedOutParams,
   isOptedOutOfSimulation,
@@ -268,6 +269,17 @@ describe('opt-out helpers (issue-sim-05)', () => {
       { name: 'speed', value: 1.5 },
       { name: SIMULATION_OPT_OUT_PARAM_NAME, value: true },
     ]);
+  });
+
+  it('reads and replaces the flag under its name from before the actor rename', () => {
+    const saved = [{ name: 'speed', value: 1.5 }, { name: LEGACY_SIMULATION_OPT_OUT_PARAM_NAME, value: true }];
+
+    expect(isOptedOutParams(saved)).toBe(true);
+    expect(setOptedOutOfSimulation(saved, true)).toEqual([
+      { name: 'speed', value: 1.5 },
+      { name: SIMULATION_OPT_OUT_PARAM_NAME, value: true },
+    ]);
+    expect(setOptedOutOfSimulation(saved, false)).toEqual([{ name: 'speed', value: 1.5 }]);
   });
 
   it('setOptedOutOfSimulation removes the flag and leaves other params untouched', () => {

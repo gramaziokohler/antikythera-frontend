@@ -190,21 +190,21 @@ describe('TaskEditPanel simulation opt-out toggle (issue-sim-05)', () => {
   it('is unchecked by default and sets the reserved param when checked', () => {
     const onUpdate = renderPanel(baseData());
 
-    const checkbox = screen.getByLabelText('Use real agent (opt out of simulation)') as HTMLInputElement;
+    const checkbox = screen.getByLabelText('Use real actor (opt out of simulation)') as HTMLInputElement;
     expect(checkbox.checked).toBe(false);
 
     fireEvent.click(checkbox);
 
     const [, , updatedData] = onUpdate.mock.calls.at(-1)!;
-    expect(updatedData.params).toEqual([{ name: '__sim_use_real_agent__', value: true }]);
+    expect(updatedData.params).toEqual([{ name: '__sim_use_real_actor__', value: true }]);
   });
 
   it('is checked when the reserved param is already present, and unchecking removes it', () => {
     const onUpdate = renderPanel(
-      baseData({ params: [{ name: 'speed', value: 1.5 }, { name: '__sim_use_real_agent__', value: true }] }),
+      baseData({ params: [{ name: 'speed', value: 1.5 }, { name: '__sim_use_real_actor__', value: true }] }),
     );
 
-    const checkbox = screen.getByLabelText('Use real agent (opt out of simulation)') as HTMLInputElement;
+    const checkbox = screen.getByLabelText('Use real actor (opt out of simulation)') as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
 
     fireEvent.click(checkbox);
@@ -216,15 +216,15 @@ describe('TaskEditPanel simulation opt-out toggle (issue-sim-05)', () => {
   it('does not render the toggle for a system task', () => {
     renderPanel(baseData({ taskType: 'system.start' }));
 
-    expect(screen.queryByLabelText('Use real agent (opt out of simulation)')).toBeNull();
+    expect(screen.queryByLabelText('Use real actor (opt out of simulation)')).toBeNull();
   });
 
   it('hides the reserved param from the generic Parameters list', () => {
     renderPanel(
-      baseData({ params: [{ name: 'speed', value: 1.5 }, { name: '__sim_use_real_agent__', value: true }] }),
+      baseData({ params: [{ name: 'speed', value: 1.5 }, { name: '__sim_use_real_actor__', value: true }] }),
     );
 
-    expect(screen.queryByDisplayValue('__sim_use_real_agent__')).toBeNull();
+    expect(screen.queryByDisplayValue('__sim_use_real_actor__')).toBeNull();
     expect(screen.getByDisplayValue('speed')).toBeTruthy();
   });
 
@@ -232,11 +232,11 @@ describe('TaskEditPanel simulation opt-out toggle (issue-sim-05)', () => {
     renderPanel(
       baseData({
         outputs: [{ name: 'trajectory', type_hint: 'str', value: 'ok' }],
-        params: [{ name: '__sim_use_real_agent__', value: true }],
+        params: [{ name: '__sim_use_real_actor__', value: true }],
       }),
     );
 
-    expect(screen.getByText('Real agent produces this output')).toBeTruthy();
+    expect(screen.getByText('Real actor produces this output')).toBeTruthy();
     expect(screen.queryByPlaceholderText('value')).toBeNull();
   });
 });

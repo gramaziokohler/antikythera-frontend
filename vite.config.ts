@@ -10,7 +10,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        agent: resolve(__dirname, 'agent.html'),
+        actor: resolve(__dirname, 'actor.html'),
         author: resolve(__dirname, 'author.html'),
       },
     },

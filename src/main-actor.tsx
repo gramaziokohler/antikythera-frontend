@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import AgentApp from './AgentApp.tsx'
+import ActorApp from './ActorApp.tsx'
 
 createRoot(document.getElementById('root')!).render(
-    <AgentApp />,
+    <ActorApp />,
 )
