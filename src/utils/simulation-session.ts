@@ -1,5 +1,5 @@
 // Per-tab record of which simulated session this tab started, per ADR-0003:
-// "Only the tab that started the simulation registers a stand-in agent.
+// "Only the tab that started the simulation registers a stand-in actor.
 // Other tabs viewing the same session render the graph and register
 // nothing." sessionStorage is per-tab and per-origin and survives the
 // navigation from the authoring tool entry point to the dashboard's.
@@ -21,7 +21,7 @@ export function isDrivingSimulationSession(sessionId: string): boolean {
  * The derived blueprint id this tab started `sessionId` from, or `null` if this tab isn't
  * driving it. The orchestrator gives every task a wire id qualified by its owning blueprint's id
  * (`_create_global_id`: `{blueprint_id}.{task_id}`), but the graph and the breakpoint UI (issue-
- * sim-06) work in terms of the plain per-blueprint task id — SimulationAgent needs this value to
+ * sim-06) work in terms of the plain per-blueprint task id — SimulationActor needs this value to
  * translate between the two.
  */
 export function getDrivingSimulationBlueprintId(sessionId: string): string | null {

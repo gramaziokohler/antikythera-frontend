@@ -4,9 +4,9 @@ import { SessionMonitor } from '../SessionMonitor'
 import { markDrivingSimulationSession } from '../../utils/simulation-session'
 
 // issue-sim-07: the delay control and the driving/watching indicator. Exercises the real
-// useSessionStream, useSimulationStandIn and SimulationAgent (so the badge/control genuinely
-// reflect live graph task types and real agent state), stubbing only the two external-system
-// singletons (MqttService, AgentLauncher) the way useSimulationStandIn.test.ts already does.
+// useSessionStream, useSimulationStandIn and SimulationActor (so the badge/control genuinely
+// reflect live graph task types and real actor state), stubbing only the two external-system
+// singletons (MqttService, ActorLauncher) the way useSimulationStandIn.test.ts already does.
 
 class MockEventSource {
   onerror: ((ev: Event) => void) | null = null
@@ -15,12 +15,12 @@ class MockEventSource {
   close() {}
 }
 
-const registerAgent = vi.fn()
-const unregisterAgent = vi.fn()
+const registerActor = vi.fn()
+const unregisterActor = vi.fn()
 
-vi.mock('@gramaziokohler/antikythera-ts/agents', () => ({
+vi.mock('@gramaziokohler/antikythera-ts/actors', () => ({
   MqttService: { getInstance: vi.fn(() => ({})) },
-  AgentLauncher: { getInstance: vi.fn(() => ({ registerAgent, unregisterAgent })) },
+  ActorLauncher: { getInstance: vi.fn(() => ({ registerActor, unregisterActor })) },
 }))
 
 vi.mock('../SessionGraph', () => ({ SessionGraph: () => null }))
@@ -69,8 +69,8 @@ function makeFetchMock(blueprint: unknown) {
 
 beforeEach(() => {
   sessionStorage.clear()
-  registerAgent.mockClear()
-  unregisterAgent.mockClear()
+  registerActor.mockClear()
+  unregisterActor.mockClear()
   vi.stubGlobal('EventSource', MockEventSource)
 })
 
@@ -92,7 +92,7 @@ describe('SessionMonitor simulation controls (issue-sim-07)', () => {
     expect(document.querySelector('.sim-mode-badge')).toBeNull()
     expect(screen.queryByLabelText('Simulation delay in milliseconds')).toBeNull()
     expect(screen.queryByTitle(/Break on every task/)).toBeNull()
-    expect(registerAgent).not.toHaveBeenCalled()
+    expect(registerActor).not.toHaveBeenCalled()
   })
 
   it('shows "Driving simulation" plus the step-through and delay controls on the driving tab', async () => {
@@ -107,7 +107,7 @@ describe('SessionMonitor simulation controls (issue-sim-07)', () => {
 
     expect(document.querySelector('.sim-mode-badge')?.textContent).toBe('Driving simulation')
     expect(document.querySelector('.sim-mode-badge')?.classList.contains('driving')).toBe(true)
-    expect(registerAgent).toHaveBeenCalledTimes(1)
+    expect(registerActor).toHaveBeenCalledTimes(1)
 
     const delayInput = screen.getByLabelText('Simulation delay in milliseconds') as HTMLInputElement
     expect(delayInput.value).toBe('0')
@@ -126,7 +126,7 @@ describe('SessionMonitor simulation controls (issue-sim-07)', () => {
 
     expect(document.querySelector('.sim-mode-badge')?.textContent).toBe('Watching simulation')
     expect(document.querySelector('.sim-mode-badge')?.classList.contains('watching')).toBe(true)
-    expect(registerAgent).not.toHaveBeenCalled()
+    expect(registerActor).not.toHaveBeenCalled()
     expect(screen.queryByLabelText('Simulation delay in milliseconds')).toBeNull()
     expect(screen.queryByTitle(/Break on every task/)).toBeNull()
   })

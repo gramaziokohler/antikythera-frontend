@@ -1,33 +1,34 @@
 import { useState, useEffect } from 'react'
 import { UserPromptDialog } from './components/UserPromptDialog'
-import { MqttService } from "@gramaziokohler/antikythera-ts/agents"
-import { AgentLauncher } from "@gramaziokohler/antikythera-ts/agents"
+import { MqttService } from "@gramaziokohler/antikythera-ts/actors"
+import { ActorLauncher } from "@gramaziokohler/antikythera-ts/actors"
 import { BlueprintBackground } from './components/BlueprintBackground'
 import { NotificationManager } from './components/NotificationManager'
 
 import './styles/layout.css'
 import './styles/components.css'
 
-function AgentApp() {
+function ActorApp() {
     // We can also display connection status here
     const [connected, setConnected] = useState(false)
     const [clientId, setClientId] = useState<string>('')
     const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-        const saved = localStorage.getItem('agent-theme');
+        // 'agent-theme' is where the choice was kept before agents were renamed to actors.
+        const saved = localStorage.getItem('actor-theme') ?? localStorage.getItem('agent-theme');
         return (saved === 'dark' || saved === 'light') ? saved : 'light';
     });
 
     // Save theme selection
     useEffect(() => {
-        localStorage.setItem('agent-theme', theme);
+        localStorage.setItem('actor-theme', theme);
     }, [theme]);
 
     // Initialize/Check connection
     useEffect(() => {
-        // Just ensure service exists, UserPromptDialog will register the agent
+        // Just ensure service exists, UserPromptDialog will register the actor
         const service = MqttService.getInstance();
-        const agentLauncher = AgentLauncher.getInstance(service);
-        setClientId(agentLauncher.getAgentId());
+        const actorLauncher = ActorLauncher.getInstance(service);
+        setClientId(actorLauncher.getActorId());
     }, []);
 
     const toggleTheme = () => {
@@ -61,7 +62,7 @@ function AgentApp() {
     };
 
     return (
-        <div className="agent-app-shell" data-theme={theme} style={{
+        <div className="actor-app-shell" data-theme={theme} style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -108,7 +109,7 @@ function AgentApp() {
                 <p style={{ letterSpacing: '0.05em', color: styles.instruction.color, fontSize: '1.2rem' }}>// AWAITING INSTRUCTIONS...</p>
             </div>
 
-            {/* This component handles the actual agent logic and UI popup */}
+            {/* This component handles the actual actor logic and UI popup */}
             <div style={{ position: 'relative', zIndex: 50 }}>
                 <UserPromptDialog />
                 <NotificationManager />
@@ -117,4 +118,4 @@ function AgentApp() {
     )
 }
 
-export default AgentApp
+export default ActorApp

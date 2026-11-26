@@ -3,18 +3,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useSimulationStandIn } from '../useSimulationStandIn';
 import { markDrivingSimulationSession } from '../../utils/simulation-session';
 
-const registerAgent = vi.fn();
-const unregisterAgent = vi.fn();
+const registerActor = vi.fn();
+const unregisterActor = vi.fn();
 
-vi.mock('@gramaziokohler/antikythera-ts/agents', () => ({
+vi.mock('@gramaziokohler/antikythera-ts/actors', () => ({
   MqttService: { getInstance: vi.fn(() => ({})) },
-  AgentLauncher: {
-    getInstance: vi.fn(() => ({ registerAgent, unregisterAgent })),
+  ActorLauncher: {
+    getInstance: vi.fn(() => ({ registerActor, unregisterActor })),
   },
 }));
 
-vi.mock('../../agents/SimulationAgent', () => ({
-  SimulationAgent: class {
+vi.mock('../../actors/SimulationActor', () => ({
+  SimulationActor: class {
     type = 'simulation';
     blueprintId?: string;
     constructor(blueprintId?: string) {
@@ -25,8 +25,8 @@ vi.mock('../../agents/SimulationAgent', () => ({
 
 beforeEach(() => {
   sessionStorage.clear();
-  registerAgent.mockClear();
-  unregisterAgent.mockClear();
+  registerActor.mockClear();
+  unregisterActor.mockClear();
 });
 
 describe('useSimulationStandIn', () => {
@@ -34,20 +34,20 @@ describe('useSimulationStandIn', () => {
     markDrivingSimulationSession('sess-1', 'bp-1__sim');
     renderHook(() => useSimulationStandIn('sess-1'));
 
-    expect(registerAgent).toHaveBeenCalledTimes(1);
+    expect(registerActor).toHaveBeenCalledTimes(1);
   });
 
   it('registers nothing in a second tab/session not marked as driving', () => {
     markDrivingSimulationSession('sess-other', 'bp-other__sim');
     renderHook(() => useSimulationStandIn('sess-1'));
 
-    expect(registerAgent).not.toHaveBeenCalled();
+    expect(registerActor).not.toHaveBeenCalled();
   });
 
   it('registers nothing when there is no active session id', () => {
     renderHook(() => useSimulationStandIn(null));
 
-    expect(registerAgent).not.toHaveBeenCalled();
+    expect(registerActor).not.toHaveBeenCalled();
   });
 
   it('unregisters the stand-in on unmount', () => {
@@ -56,7 +56,7 @@ describe('useSimulationStandIn', () => {
 
     unmount();
 
-    expect(unregisterAgent).toHaveBeenCalledWith('simulation');
+    expect(unregisterActor).toHaveBeenCalledWith('simulation');
   });
 
   it('returns the registered stand-in instance on the driving tab (issue-sim-06: needed to toggle breakpoints)', () => {

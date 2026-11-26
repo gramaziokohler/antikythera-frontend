@@ -1,6 +1,6 @@
 # Antikythera Frontend
 
-A browser-based dashboard for authoring, launching, and monitoring distributed workflow executions. Workflows are defined as directed acyclic graphs of tasks, executed by agents communicating over MQTT.
+A browser-based dashboard for authoring, launching, and monitoring distributed workflow executions. Workflows are defined as directed acyclic graphs of tasks, executed by actors communicating over MQTT.
 
 ## Language
 
@@ -15,7 +15,7 @@ A single running (or completed) execution of a blueprint. Has its own lifecycle 
 _Avoid_: run, execution, instance
 
 **Task**:
-A unit of work within a blueprint. Has a type (which determines which agent executes it), inputs, outputs, parameters, and a lifecycle state.
+A unit of work within a blueprint. Has a type (which determines which actor executes it), inputs, outputs, parameters, and a lifecycle state.
 _Avoid_: node (use node only when referring to the visual graph element), step, job
 
 **Task state**:
@@ -48,27 +48,27 @@ _Avoid_: nested task, sub-task
 **Blueprint stack**:
 The navigation history of blueprint drill-downs within a session monitor. Pushing onto the stack means entering a composite task's inner blueprint; popping returns to the parent.
 
-### Agent model
+### Actor model
 
-**Agent**:
+**Actor**:
 A process (browser tab or external process) that claims and executes tasks of specific types. Communicates with the backend exclusively over MQTT.
 _Avoid_: worker, executor
 
 **Task type**:
-A string identifier (e.g. `user_prompt.confirm`) that determines which agent implementation handles a task.
+A string identifier (e.g. `user_prompt.confirm`) that determines which actor implementation handles a task.
 
-**Stand-in agent**:
-An agent that claims tasks it has no implementation for and completes them with their simulated outputs. It stands in for agents that do not exist yet.
-_Avoid_: mock agent, fake agent, dummy agent
+**Stand-in actor**:
+An actor that claims tasks it has no implementation for and completes them with their simulated outputs. It stands in for actors that do not exist yet.
+_Avoid_: mock actor, fake actor, dummy actor
 
 ### Simulation
 
 **Simulation mode**:
-Running a blueprint against stand-in agents rather than real ones, so that an author can execute a blueprint before implementing the agents it depends on. The orchestrator does not distinguish a simulated session from any other session.
+Running a blueprint against stand-in actors rather than real ones, so that an author can execute a blueprint before implementing the actors it depends on. The orchestrator does not distinguish a simulated session from any other session.
 _Avoid_: dry run, debug mode, test mode
 
 **Simulated output**:
-A value an author declares a task will produce, supplied to the stand-in agent so it can complete the task. Its shape is determined by the task's declared output `type` in the blueprint, which simulation mode treats as authoritative.
+A value an author declares a task will produce, supplied to the stand-in actor so it can complete the task. Its shape is determined by the task's declared output `type` in the blueprint, which simulation mode treats as authoritative.
 _Avoid_: mock data, fake output, canned value, stub value
 
 **Simulation profile**:
@@ -76,11 +76,11 @@ The complete set of simulated outputs for a blueprint, together with each task's
 _Avoid_: sim config, mock spec, fixture
 
 **Breakpoint**:
-A mark on a task instructing the stand-in agent to hold it rather than complete it, so the author can inspect and edit before letting execution continue. Holding at a breakpoint is **not** pausing: the orchestrator still considers the task `running`, and the stand-in agent — not the orchestrator — is what is waiting. Stepping is the case where every task carries a breakpoint.
+A mark on a task instructing the stand-in actor to hold it rather than complete it, so the author can inspect and edit before letting execution continue. Holding at a breakpoint is **not** pausing: the orchestrator still considers the task `running`, and the stand-in actor — not the orchestrator — is what is waiting. Stepping is the case where every task carries a breakpoint.
 _Avoid_: pause point, halt, stop point
 
 **Simulation delay**:
-A single artificial per-task delay applied by the stand-in agent for the whole session, so a simulation with no breakpoints progresses slowly enough to watch. Distinct from a task's real duration, which no simulation attempts to predict.
+A single artificial per-task delay applied by the stand-in actor for the whole session, so a simulation with no breakpoints progresses slowly enough to watch. Distinct from a task's real duration, which no simulation attempts to predict.
 _Avoid_: simulated duration, task duration
 
 ### Data formats
@@ -105,7 +105,7 @@ tree and wires everything together; no env overrides are needed for a host brows
 docker compose build
 ```
 
-This builds `antikythera:dev` from the backend context (orchestrator, system agents, MCP
+This builds `antikythera:dev` from the backend context (orchestrator, system actors, MCP
 server all share this image, just with different `command:`s) and
 `antikythera-frontend:dev` from `../antikythera-frontend` (this repo — both entry points,
 `index.html` and `author.html`, are included by default).
@@ -113,7 +113,7 @@ server all share this image, just with different `command:`s) and
 **Bring the stack up / down**:
 
 ```sh
-docker compose up -d      # start Redis, the MQTT broker, orchestrator, system agents,
+docker compose up -d      # start Redis, the MQTT broker, orchestrator, system actors,
                            # MCP server, and the nginx-served frontend
 docker compose down       # stop everything; add -v to also drop the Redis volume
 ```
@@ -133,7 +133,7 @@ docker compose down       # stop everything; add -v to also drop the Redis volum
 
 ```sh
 docker compose logs -f orchestrator   # session/blueprint lifecycle, scheduling
-docker compose logs -f agents         # system.* task execution (akt-agents-sys)
+docker compose logs -f actors         # system.* task execution (akt-actors-sys)
 docker compose logs -f mqtt-broker    # claim/allocate/completion traffic
 ```
 
@@ -141,7 +141,7 @@ docker compose logs -f mqtt-broker    # claim/allocate/completion traffic
 
 ```sh
 docker compose build frontend && docker compose up -d --no-deps frontend
-docker compose build orchestrator && docker compose up -d --no-deps orchestrator agents
+docker compose build orchestrator && docker compose up -d --no-deps orchestrator actors
 ```
 
 **Reset persisted state between runs**: session and blueprint data lives in the `redis-data`

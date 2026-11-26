@@ -1,12 +1,12 @@
-import type { Agent } from '@gramaziokohler/antikythera-ts/agents';
-import { Task } from '@gramaziokohler/antikythera-ts/agents';
+import type { Actor } from '@gramaziokohler/antikythera-ts/actors';
+import { Task } from '@gramaziokohler/antikythera-ts/actors';
 import { SIMULATED_OUTPUT_PARAM_PREFIX } from '../utils/blueprint-simulate';
 
-/** ADR-0003: the stand-in agent type. Claims `simulation.*` tasks and nothing else. */
-export const SIMULATION_AGENT_TYPE = 'simulation';
+/** ADR-0003: the stand-in actor type. Claims `simulation.*` tasks and nothing else. */
+export const SIMULATION_ACTOR_TYPE = 'simulation';
 
-/** A point-in-time read of the stand-in's breakpoint/hold state, for `useSimulationAgentState`. */
-export interface SimulationAgentSnapshot {
+/** A point-in-time read of the stand-in's breakpoint/hold state, for `useSimulationActorState`. */
+export interface SimulationActorSnapshot {
   /** Task ids explicitly marked with a breakpoint (does not include the break-on-every-task flag). */
   breakpoints: Set<string>;
   breakOnEveryTask: boolean;
@@ -16,7 +16,7 @@ export interface SimulationAgentSnapshot {
   delayMs: number;
 }
 
-export const EMPTY_SIMULATION_SNAPSHOT: SimulationAgentSnapshot = {
+export const EMPTY_SIMULATION_SNAPSHOT: SimulationActorSnapshot = {
   breakpoints: new Set(),
   breakOnEveryTask: false,
   heldTaskIds: [],
@@ -34,7 +34,7 @@ interface HeldTask {
 }
 
 /**
- * The stand-in agent for ADR-0003 simulation mode. Registered as agent type `simulation`,
+ * The stand-in actor for ADR-0003 simulation mode. Registered as actor type `simulation`,
  * it claims every `simulation.*` task (via canHandleTool, since it implements no per-tool
  * methods) and completes each one with the simulated outputs carried in its params under the
  * `__sim_out__` prefix (see blueprint-simulate.ts) — unless the task carries a breakpoint (see
@@ -67,22 +67,22 @@ interface HeldTask {
  * every task this instance completes without holding — a viewing aid so an unattended
  * simulation doesn't finish faster than the graph can be read. It is never a prediction of the
  * task's real duration. The wait happens inside `invokeTool`, i.e. strictly after claiming
- * (which happens in `AgentLauncher.handleTaskStart` before `invokeTool` is ever called) and
+ * (which happens in `ActorLauncher.handleTaskStart` before `invokeTool` is ever called) and
  * before completion, so a delayed task is never left in `READY` for `RedispatchPoller` to fail.
  */
-export class SimulationAgent implements Agent {
-  type = SIMULATION_AGENT_TYPE;
+export class SimulationActor implements Actor {
+  type = SIMULATION_ACTOR_TYPE;
 
   private breakpoints = new Set<string>();
   private breakOnEveryTask = false;
   private held = new Map<string, HeldTask>();
   private listeners = new Set<() => void>();
-  private snapshot: SimulationAgentSnapshot = EMPTY_SIMULATION_SNAPSHOT;
+  private snapshot: SimulationActorSnapshot = EMPTY_SIMULATION_SNAPSHOT;
   private readonly blueprintId?: string;
   private delayMs = 0;
 
   /**
-   * @param blueprintId The derived blueprint id this agent's session was started from (see
+   * @param blueprintId The derived blueprint id this actor's session was started from (see
    * `getDrivingSimulationBlueprintId`). Optional so existing unit tests that fabricate their own
    * already-plain task ids need no changes; production callers (`useSimulationStandIn`) always
    * supply it.
@@ -95,7 +95,7 @@ export class SimulationAgent implements Agent {
     return true;
   }
 
-  /** Strips this agent's `{blueprintId}.` prefix off a wire task id, if present. */
+  /** Strips this actor's `{blueprintId}.` prefix off a wire task id, if present. */
   private toGraphTaskId(wireTaskId: string): string {
     if (!this.blueprintId) return wireTaskId;
     const prefix = `${this.blueprintId}.`;
@@ -111,7 +111,7 @@ export class SimulationAgent implements Agent {
   }
 
   /** A cached, referentially-stable snapshot — safe to use as a `useSyncExternalStore` getSnapshot. */
-  getSnapshot(): SimulationAgentSnapshot {
+  getSnapshot(): SimulationActorSnapshot {
     return this.snapshot;
   }
 
@@ -185,7 +185,7 @@ export class SimulationAgent implements Agent {
     const awaitsAuthoredValue = task.outputKeys.length > 0 && !hasAuthoredOutput;
 
     if (!this.isBreakpointed(graphTaskId) && !awaitsAuthoredValue) {
-      // Applied after AgentLauncher.handleTaskStart's claim (already happened by the time
+      // Applied after ActorLauncher.handleTaskStart's claim (already happened by the time
       // invokeTool runs) and before completion — never before the claim, so a delayed task is
       // never left in READY for RedispatchPoller to fail (issue-sim-07).
       if (this.delayMs > 0) {
@@ -202,7 +202,7 @@ export class SimulationAgent implements Agent {
 
   /**
    * Releases a held task, completing it with `outputs` — plain JS values from the breakpoint
-   * editor (see SimulationBreakpointPanel.tsx), encoded fresh by `AgentLauncher.completeTask`
+   * editor (see SimulationBreakpointPanel.tsx), encoded fresh by `ActorLauncher.completeTask`
    * rather than forwarded verbatim, since there is no longer a single original wire value
    * to forward once the author may have edited it. A task held for want of an authored output
    * (`requiresValue`) cannot be continued with nothing — the caller must supply at least one

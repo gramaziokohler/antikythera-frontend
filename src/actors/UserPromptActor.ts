@@ -1,13 +1,13 @@
-import type { Agent } from '@gramaziokohler/antikythera-ts/agents';
-import { ExecutionContext } from '@gramaziokohler/antikythera-ts/agents';
-import { Task } from '@gramaziokohler/antikythera-ts/agents';
+import type { Actor } from '@gramaziokohler/antikythera-ts/actors';
+import { ExecutionContext } from '@gramaziokohler/antikythera-ts/actors';
+import { Task } from '@gramaziokohler/antikythera-ts/actors';
 
 export interface UserPromptOptions {
     message: string;
     options: string[];
 }
 
-export class UserPromptAgent implements Agent {
+export class UserPromptActor implements Actor {
     type = "user_prompt";
     private onPromptCallback: (taskId: string, options: UserPromptOptions) => void;
     private onCancelCallback?: (taskId: string) => void;
@@ -65,7 +65,7 @@ export class UserPromptAgent implements Agent {
         const resolve = this.pendingResolvers.get(taskId);
         if (resolve) {
             this.cleanup(taskId);
-            // Return object expected by AgentLauncher to be wrapped in AnyData
+            // Return object expected by ActorLauncher to be wrapped in AnyData
             resolve({ result: result });
         } else {
             console.warn(`No pending resolver found for task ${taskId}`);

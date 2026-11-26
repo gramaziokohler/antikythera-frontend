@@ -10,7 +10,7 @@ export type NotificationInput = Omit<Notification, 'id' | 'timestamp'> & { id?: 
  *
  * A singleton rather than a React context so that any component can raise a
  * notification regardless of where it sits in the tree, matching how
- * MqttService and AgentLauncher are reached.
+ * MqttService and ActorLauncher are reached.
  */
 class NotificationStore {
     private static instance: NotificationStore
